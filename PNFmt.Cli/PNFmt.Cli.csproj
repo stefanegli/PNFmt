@@ -2,12 +2,12 @@
     <PropertyGroup>
         <AssemblyName>pnfmt</AssemblyName>
         <Authors>Stefan Egli</Authors>
-        <Description>Format .NET project and resource files using EditorConfig.</Description>
+        <Description>Format .NET project, solution, resource, and configuration files.</Description>
         <OutputType>Exe</OutputType>
         <PackageId>PetchNaka.PNFmt.Cli</PackageId>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <PackageTags>dotnet-tool;editorconfig;formatter;csproj;resx</PackageTags>
+        <PackageTags>dotnet-tool;editorconfig;formatter;csproj;resx;slnx;ini</PackageTags>
         <PackAsTool>true</PackAsTool>
         <RepositoryType>git</RepositoryType>
         <RepositoryUrl>https://github.com/stefanegli/PNFmt</RepositoryUrl>

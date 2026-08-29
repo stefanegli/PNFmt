@@ -59,21 +59,53 @@ namespace PNFmt.Tests
             using (var directory = new TemporaryDirectory())
             {
                 directory.EnableFormatting();
-                directory.Write(
+                var project = directory.Write(
                     Path.Combine("nested", "Project.csproj"),
                     "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
                     + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
-                directory.Write(
+                var resource = directory.Write(
                     Path.Combine("nested", "Strings.resx"),
                     "<?xml version=\"1.0\" encoding=\"utf-8\"?><root>"
                     + "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>"
                     + "<data name=\"b\"><value>b</value></data>"
                     + "<data name=\"a\"><value>a</value></data></root>");
+                var solution = directory.Write(
+                    Path.Combine("nested", "Solution.slnx"),
+                    "<Solution><Project Path=\"Z.csproj\" />"
+                    + "<Project Path=\"A.csproj\" /></Solution>");
+                var ini = directory.Write(
+                    Path.Combine("nested", "settings.ini"),
+                    "z=2\r\na=1\r\n");
 
                 var result = Run("--recursive", directory.Path);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.Contains("Updated 2", result.Output);
+                Assert.Contains("Updated 5", result.Output);
+                Assert.True(
+                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
+                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(resource));
+                Assert.True(
+                    File.ReadAllText(solution).IndexOf("A.csproj", StringComparison.Ordinal)
+                    < File.ReadAllText(solution).IndexOf("Z.csproj", StringComparison.Ordinal));
+                Assert.Equal("a = 1\r\nz = 2\r\n", File.ReadAllText(ini));
+            }
+        }
+
+        [Fact]
+        public void Editorconfig_files_are_discovered_by_exact_file_name()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var editorConfig = directory.Write(
+                    ".editorconfig",
+                    "z=2\na=1\n");
+
+                var result = Run(directory.Path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Updated 1", result.Output);
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(editorConfig));
             }
         }
 
@@ -161,7 +193,7 @@ namespace PNFmt.Tests
                 directory.EnableFormatting();
                 var file = directory.WriteResx("duplicate.resx", "b", "a");
 
-                var result = Run(file, file, directory.Path);
+                var result = Run(file, file);
 
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Processed 1 file(s)", result.Output);
@@ -175,12 +207,14 @@ namespace PNFmt.Tests
             {
                 directory.EnableFormatting();
                 var nestedFile = directory.WriteResx(Path.Combine("nested", "nested.resx"), "b", "a");
+                var original = File.ReadAllText(nestedFile);
 
                 var nonRecursive = Run(directory.Path);
+                Assert.Equal(original, File.ReadAllText(nestedFile));
                 var recursive = Run("--recursive", directory.Path);
 
                 Assert.Equal(0, nonRecursive.ExitCode);
-                Assert.Contains("No supported files found.", nonRecursive.Output);
+                Assert.Contains("Processed 1 file(s)", nonRecursive.Output);
                 Assert.Equal(0, recursive.ExitCode);
                 Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(nestedFile));
             }

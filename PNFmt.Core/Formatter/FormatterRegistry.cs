@@ -88,7 +88,15 @@ namespace PNFmt
                 return false;
             }
 
-            return this.formattersByExtension.TryGetValue(Path.GetExtension(filePath), out formatter);
+            var extension = Path.GetExtension(filePath);
+            if (this.formattersByExtension.TryGetValue(extension, out formatter))
+            {
+                return true;
+            }
+
+            var fileName = Path.GetFileName(filePath);
+            return fileName.StartsWith(".", StringComparison.Ordinal)
+                && this.formattersByExtension.TryGetValue(fileName, out formatter);
         }
 
         private static string NormalizeExtension(string extension, string formatterName)

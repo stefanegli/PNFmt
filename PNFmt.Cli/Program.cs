@@ -245,8 +245,8 @@ namespace PNFmt.Cli
             writer.WriteLine();
             writer.WriteLine("Notes:");
             writer.WriteLine("  If no path is provided, the current directory is used.");
-            writer.WriteLine("  Registered providers format .csproj and .resx files.");
-            writer.WriteLine("  Formatting runs only when the matching EditorConfig settings enable it.");
+            writer.WriteLine("  Registered formatters support .csproj, .resx, .slnx, .editorconfig, and .ini files.");
+            writer.WriteLine("  Project and resource formatting runs only when EditorConfig enables it.");
         }
 
         private static List<string> ResolveTargetFiles(

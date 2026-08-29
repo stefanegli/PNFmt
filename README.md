@@ -1,11 +1,13 @@
 # PNFmt
 
-`pnfmt` formats .NET project and resource files according to EditorConfig.
+`pnfmt` formats .NET project, solution, resource, and configuration files.
 
 The built-in formatters are:
 
 - `.csproj`, using `CsProjFormatter`
+- `.editorconfig` and `.ini`, using `IniFormatter`
 - `.resx`, using `ResxFormatter`
+- `.slnx`, using `SlnxFormatter`
 
 All formatter code lives in `PNFmt.Core/Formatter` and uses the `PNFmt` namespace. Each formatter declares one or more file extensions. The registry maps every extension to its formatter, so adding another formatter does not change file discovery or dispatch.
 
@@ -31,7 +33,7 @@ Options:
 - `-h`, `--help`: show help
 - `-V`, `--version`: show version
 
-Formatting remains opt-in through the existing settings:
+Project and resource formatting remain opt-in through the existing settings:
 
 ```ini
 [*.csproj]
@@ -49,6 +51,10 @@ resx_formatter_sort_comparer = OrdinalIgnoreCase
 ```
 
 `csproj_formatter_sort_item_types` replaces the built-in list when set. Omit it to use the defaults. The supported resource comparers are `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, and `Ordinal`.
+
+SLNX formatting orders the schema-defined solution, folder, project, configuration, and property elements, while leaving unknown extension elements in place as ordering barriers. It uses two-space XML indentation and preserves the file's newline style.
+
+EditorConfig and INI formatting preserves section order because later EditorConfig sections can override earlier ones. Within each uninterrupted property block it sorts keys case-insensitively, normalizes assignments to `key = value`, collapses repeated blank lines, and preserves comments or unknown lines as ordering barriers. Inline `#` and `;` characters remain part of a value.
 
 The command returns `0` on success, `1` when `--check` finds pending changes or `--lint` finds project diagnostics, and `2` for usage, path, or formatting failures.
 

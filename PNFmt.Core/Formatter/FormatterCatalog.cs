@@ -10,7 +10,9 @@ namespace PNFmt
                 new IFileFormatter[]
                 {
                     new CsProjFormatter(),
+                    new IniFormatter(),
                     new ResxFormatter(),
+                    new SlnxFormatter(),
                 });
         }
     }
