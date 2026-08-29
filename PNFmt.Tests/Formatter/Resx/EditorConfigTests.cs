@@ -14,7 +14,7 @@ namespace PNFmt.Tests.Formatter.Resx
 
     using Xunit;
 
-    public class EditorConfigTests : IDisposable
+    public class ResxEditorConfigSnapshotTests : IDisposable
     {
         private readonly List<string> temporaryFiles = new List<string>();
 

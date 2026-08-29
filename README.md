@@ -80,6 +80,16 @@ The command returns `0` on success, `1` when `--check` finds pending changes or 
 
 Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its name, its `FileExtensions` collection, and a method that formats one file. `FormatterRegistry` validates registrations and performs case-insensitive extension lookup.
 
+## Snapshot tests
+
+`PNFmt.Tests` contains the complete formatter snapshot corpus from both legacy CLI projects:
+
+- 13 CsProjFormatter input/expected pairs under `Formatter/CsProj/_files`
+- 13 ResxFormatter input/expected cases under `Formatter/Resx/_files`
+- 8 ResxFormatter EditorConfig scenarios under `Formatter/Resx/_editor`
+
+The formatter snapshot theories stage disposable copies before formatting, so test runs never rewrite their source fixtures. The CsProj snapshots also run through the built `pnfmt` process to retain the old CLI-level coverage.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).

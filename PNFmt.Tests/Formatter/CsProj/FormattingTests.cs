@@ -6,6 +6,8 @@ namespace PNFmt.Tests.Formatter.CsProj
 
     using PNFmt.Tests.Formatter.CsProj.TestFoundation;
 
+    using PNFmt.Tests.Snapshots;
+
     using NFluent;
 
     using System;
@@ -14,26 +16,37 @@ namespace PNFmt.Tests.Formatter.CsProj
 
     using Xunit;
 
-    public class FormattingTests
+    public class CsProjSnapshotTests
     {
         [Theory]
-        [ClassData(typeof(CsProjTestData))]
+        [ClassData(typeof(CsProjSnapshotData))]
         public void Files_are_processed_correctly(string inputFile, string expectedFile, string caseName)
         {
             // Arrange
-            var log = new FakeLog();
-            var formatter = new CsProjFormatter();
+            var inputRoot = Path.Combine(
+                AppContext.BaseDirectory,
+                "Formatter",
+                "CsProj",
+                "_files",
+                "input");
+            using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
+            {
+                var stagedFile = stagedInput.GetPath(
+                    caseName.Replace('/', Path.DirectorySeparatorChar));
+                var log = new FakeLog();
+                var formatter = new CsProjFormatter();
 
-            // Act
-            formatter.Format(new FileFormatRequest(inputFile, true, false, log));
+                // Act
+                formatter.Format(new FileFormatRequest(stagedFile, true, false, log));
 
-            // Assert
-            Check.WithCustomMessage($"Case: {caseName} Input: {inputFile} Expected: {expectedFile}")
-                .That(File.ReadAllText(inputFile))
-                .Equals(File.ReadAllText(expectedFile));
+                // Assert
+                Check.WithCustomMessage($"Case: {caseName} Input: {inputFile} Expected: {expectedFile}")
+                    .That(File.ReadAllText(stagedFile))
+                    .Equals(File.ReadAllText(expectedFile));
+            }
         }
 
-        internal class CsProjTestData : TheoryDataBase<string, string, string>
+        internal class CsProjSnapshotData : TheoryDataBase<string, string, string>
         {
             public override IEnumerable<(string, string, string)> Create()
             {

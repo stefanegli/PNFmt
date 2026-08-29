@@ -7,17 +7,19 @@ namespace PNFmt.Tests.Formatter.Resx
     using PNFmt.Tests.Formatter.Resx.Fake;
     using PNFmt.Tests.Formatter.Resx.TestFoundation;
 
+    using System;
     using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
+    using System.Linq;
     using System.Threading;
 
     using Xunit;
 
-    public class FormattingTests
+    public class ResxSnapshotTests
     {
         [Theory]
-        [ClassData(typeof(ResxTestData))]
+        [ClassData(typeof(ResxSnapshotData))]
         public void Files_are_processed_correctly(string message, string fileName, string culture, object settings)
         {
             // Arrange
@@ -52,7 +54,29 @@ namespace PNFmt.Tests.Formatter.Resx
             }
         }
 
-        internal class ResxTestData : TheoryDataBase<string, string, string, IResxFormatSettings>
+        [Fact]
+        public void Every_legacy_snapshot_input_is_registered()
+        {
+            var fixtureRoot = Path.Combine(
+                System.AppContext.BaseDirectory,
+                "Formatter",
+                "Resx",
+                "_files");
+            var fixtureInputs = Directory.GetFiles(fixtureRoot)
+                .Where(path => path.EndsWith(".resx", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !Path.GetFileNameWithoutExtension(path)
+                    .EndsWith("-expected", StringComparison.OrdinalIgnoreCase))
+                .Select(Path.GetFileName)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
+            var registeredInputs = new ResxSnapshotData().Create()
+                .Select(testCase => testCase.Item2)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
+
+            Assert.Equal(fixtureInputs, registeredInputs);
+        }
+
+        internal class ResxSnapshotData : TheoryDataBase<string, string, string, IResxFormatSettings>
         {
             public override IEnumerable<(string, string, string, IResxFormatSettings)> Create()
             {
