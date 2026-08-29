@@ -1,0 +1,1 @@
+<Solution><Project Path="src/Z.csproj" /><!-- Tests stay documented --><Folder Name="/Tests/"><Project Path="tests/Z.csproj" /><Project Path="tests/A.csproj" /></Folder><Folder Name="/Source/"><Project Path="src/B.csproj" /><File Path="README.md" /><Project Path="src/A.csproj" /><File Path="LICENSE" /></Folder><Project Path="src/A.csproj" /></Solution>

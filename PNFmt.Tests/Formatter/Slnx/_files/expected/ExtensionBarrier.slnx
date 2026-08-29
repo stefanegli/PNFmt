@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Z.csproj" />
+  <Extension Value="keep" />
+  <Project Path="A.csproj" />
+  <Project Path="B.csproj" />
+</Solution>

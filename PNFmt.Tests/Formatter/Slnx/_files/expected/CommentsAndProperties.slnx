@@ -1,0 +1,15 @@
+<Solution>
+  <!-- Main project -->
+  <Project Path="src/App.csproj">
+    <BuildDependency Project="A.csproj" />
+    <BuildDependency Project="Z.csproj" />
+    <Properties Name="Project">
+      <Property Name="Alpha" Value="1" />
+      <Property Name="Zulu" Value="2" />
+    </Properties>
+  </Project>
+  <Properties Name="Root">
+    <Property Name="Alpha" Value="1" />
+    <Property Name="Zulu" Value="2" />
+  </Properties>
+</Solution>

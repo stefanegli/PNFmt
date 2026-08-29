@@ -1,0 +1,9 @@
+root=true
+
+[*.cs]
+tab_width=4
+indent_style = space
+# Language rules
+dotnet_diagnostic.CA2000.severity=warning
+csharp_style_namespace_declarations = file_scoped:suggestion
+value_with_hash=text # literal

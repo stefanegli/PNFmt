@@ -1,0 +1,1 @@
+<Solution><Properties Name="Root"><Property Name="Zulu" Value="2" /><Property Name="Alpha" Value="1" /></Properties><!-- Main project --><Project Path="src/App.csproj"><Properties Name="Project"><Property Name="Zulu" Value="2" /><Property Name="Alpha" Value="1" /></Properties><BuildDependency Project="Z.csproj" /><BuildDependency Project="A.csproj" /></Project></Solution>

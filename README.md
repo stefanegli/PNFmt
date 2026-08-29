@@ -87,8 +87,10 @@ Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its 
 - 13 CsProjFormatter input/expected pairs under `Formatter/CsProj/_files`
 - 13 ResxFormatter input/expected cases under `Formatter/Resx/_files`
 - 8 ResxFormatter EditorConfig scenarios under `Formatter/Resx/_editor`
+- 5 INI and EditorConfig input/expected pairs under `Formatter/Ini/_files`
+- 5 SLNX input/expected pairs under `Formatter/Slnx/_files`
 
-The formatter snapshot theories stage disposable copies before formatting, so test runs never rewrite their source fixtures. The CsProj snapshots also run through the built `pnfmt` process to retain the old CLI-level coverage.
+The formatter snapshot theories stage disposable copies before formatting, so test runs never rewrite their source fixtures. The CsProj, INI, EditorConfig, and SLNX snapshots also run through the built `pnfmt` process. This retains the old CLI-level coverage and applies it to the new file types.
 
 ## License
 

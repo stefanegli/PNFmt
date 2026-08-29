@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/Source/">
+    <File Path="LICENSE" />
+    <File Path="README.md" />
+    <Project Path="src/A.csproj" />
+    <Project Path="src/B.csproj" />
+  </Folder>
+  <!-- Tests stay documented -->
+  <Folder Name="/Tests/">
+    <Project Path="tests/A.csproj" />
+    <Project Path="tests/Z.csproj" />
+  </Folder>
+  <Project Path="src/A.csproj" />
+  <Project Path="src/Z.csproj" />
+</Solution>

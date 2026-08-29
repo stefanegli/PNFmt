@@ -1,0 +1,1 @@
+<Solution><Configurations><ProjectType TypeId="{BBBB}"><Platform Solution="x64" Project="Any CPU" /><BuildType Solution="Release" Project="Release" /><BuildType Solution="Debug" Project="Debug" /></ProjectType><Platform Name="x64" /><BuildType Name="Release" /><Platform Name="Arm64" /><BuildType Name="Debug" /><ProjectType TypeId="{AAAA}" /></Configurations></Solution>

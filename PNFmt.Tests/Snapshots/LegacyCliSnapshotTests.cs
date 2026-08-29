@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,27 +30,13 @@ namespace PNFmt.Tests.Snapshots
             string expectedFile,
             string caseName)
         {
-            var inputRoot = Path.Combine(GetCsProjFixtureRoot(), "input");
-            using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
-            {
-                var stagedFile = stagedInput.GetPath(relativePath);
-                var result = await RunCliAsync(stagedInput.Path, stagedFile);
-                var context = $"Case: {caseName}{Environment.NewLine}"
-                    + $"stdout:{Environment.NewLine}{result.StandardOutput}{Environment.NewLine}"
-                    + $"stderr:{Environment.NewLine}{result.StandardError}";
-
-                Assert.True(result.ExitCode == 0, context);
-                Assert.Contains(Path.GetFileName(relativePath), result.StandardOutput);
-                Assert.Equal(File.ReadAllText(expectedFile), File.ReadAllText(stagedFile));
-
-                if (!string.Equals(
-                    File.ReadAllText(inputFile),
-                    File.ReadAllText(expectedFile),
-                    StringComparison.Ordinal))
-                {
-                    Assert.Contains("[updated]", result.StandardOutput);
-                }
-            }
+            await CliSnapshotTestRunner.AssertMatchesAsync(
+                GetCsProjFixtureRoot(),
+                relativePath,
+                inputFile,
+                expectedFile,
+                caseName,
+                allowSkippedWhenUnchanged: true);
         }
 
         private static string GetCsProjFixtureRoot()
@@ -63,50 +48,5 @@ namespace PNFmt.Tests.Snapshots
                 "_files");
         }
 
-        private static async Task<CliRunResult> RunCliAsync(string workingDirectory, string targetFile)
-        {
-            var startInfo = new ProcessStartInfo("dotnet")
-            {
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                WorkingDirectory = workingDirectory,
-            };
-            startInfo.ArgumentList.Add(typeof(PNFmt.Cli.Program).Assembly.Location);
-            startInfo.ArgumentList.Add("--verbose");
-            startInfo.ArgumentList.Add(targetFile);
-
-            using (var process = Process.Start(startInfo))
-            {
-                if (process is null)
-                {
-                    throw new InvalidOperationException("Failed to start the PNFmt CLI process.");
-                }
-
-                var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-                var standardErrorTask = process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                return new CliRunResult(
-                    process.ExitCode,
-                    await standardOutputTask,
-                    await standardErrorTask);
-            }
-        }
-
-        private sealed class CliRunResult
-        {
-            public CliRunResult(int exitCode, string standardOutput, string standardError)
-            {
-                this.ExitCode = exitCode;
-                this.StandardOutput = standardOutput;
-                this.StandardError = standardError;
-            }
-
-            public int ExitCode { get; }
-
-            public string StandardError { get; }
-
-            public string StandardOutput { get; }
-        }
     }
 }
