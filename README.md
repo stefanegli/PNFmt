@@ -81,6 +81,38 @@ EditorConfig and INI formatting preserves section order because later EditorConf
 
 The command returns `0` on success, `1` when `--check` finds pending changes or `--lint` finds project diagnostics, and `2` for usage, path, or formatting failures.
 
+## Install as a global tool
+
+Install or update PNFmt from NuGet.org:
+
+```powershell
+dotnet tool install --global PetchNaka.PNFmt.Cli
+dotnet tool update --global PetchNaka.PNFmt.Cli
+pnfmt --version
+```
+
+## Build and publish
+
+Every branch push and pull request runs formatting verification, a Release build, all tests, package creation, and an isolated global-tool installation through `.github/workflows/build.yml`.
+
+Create and validate a package locally without publishing it:
+
+```powershell
+.\scripts\Publish-GlobalTool.ps1 -Version 0.1.0 -PackOnly
+```
+
+Without `-PackOnly`, the script pushes the validated package to NuGet.org. It reads the API key from `NUGET_API_KEY`. On Windows it can fall back to the `NuGet.ApiKey.PNFmt.Prod` Windows Credential Manager entry.
+
+Pushing a tag such as `v0.1.0` runs `.github/workflows/publish-global-tool.yml`. The workflow tests, packs, installs the package into an isolated tool directory, runs `pnfmt --version`, obtains a short-lived NuGet.org API key through trusted publishing, and pushes the same validated package.
+
+Configure the repository before the first tagged release:
+
+1. Create the GitHub environment `nuget`.
+2. Set the repository variable `NUGET_USER` to the NuGet.org profile name.
+3. Add a NuGet.org trusted-publishing policy for repository `stefanegli/PNFmt`, workflow file `publish-global-tool.yml`, and environment `nuget`.
+
+See the [NuGet trusted-publishing documentation](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing) for the NuGet.org policy setup.
+
 ## Formatter interface
 
 Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its name, its `FileExtensions` collection, and a method that formats one file. `FormatterRegistry` validates registrations and performs case-insensitive extension lookup.
