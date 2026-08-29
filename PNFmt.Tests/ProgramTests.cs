@@ -33,7 +33,9 @@ namespace PNFmt.Tests
                 var checkResult = Run("--check", projectPath, resourcePath);
 
                 Assert.Equal(1, checkResult.ExitCode);
-                Assert.Contains("[would-update]", checkResult.Output);
+                Assert.Contains("Processed 2 file(s) in ", checkResult.Output);
+                Assert.Contains("Would update 2", checkResult.Output);
+                Assert.DoesNotContain("[would-update]", checkResult.Output);
                 Assert.Equal(originalProject, File.ReadAllText(projectPath));
                 Assert.Equal(originalResource, File.ReadAllText(resourcePath));
 
@@ -135,6 +137,7 @@ namespace PNFmt.Tests
 
             Assert.Equal(0, help.ExitCode);
             Assert.Contains("Usage: pnfmt", help.Output);
+            Assert.Contains("--threads N", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
         }
@@ -182,6 +185,54 @@ namespace PNFmt.Tests
                 Assert.Equal(0, result.ExitCode);
                 Assert.Equal(original, File.ReadAllText(file));
                 Assert.Contains("Would update 1", result.Output);
+            }
+        }
+
+        [Fact]
+        public void Thread_count_is_configurable_and_must_be_positive()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var first = directory.Write("first.ini", "z=2\na=1\n");
+                var second = directory.Write("second.ini", "y=2\nb=1\n");
+
+                var result = Run("--threads", "2", first, second);
+                var equalsSyntax = Run("--threads=1", first, second);
+                var zero = Run("--threads", "0", first);
+                var missing = Run("--threads");
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Equal(0, equalsSyntax.ExitCode);
+                Assert.Contains("Processed 2 file(s) in ", result.Output);
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(first));
+                Assert.Equal("b = 1\ny = 2\n", File.ReadAllText(second));
+                Assert.Equal(2, zero.ExitCode);
+                Assert.Contains("positive integer", zero.Error);
+                Assert.Equal(2, missing.ExitCode);
+                Assert.Contains("positive integer", missing.Error);
+            }
+        }
+
+        [Fact]
+        public void Default_output_is_one_summary_line_and_verbose_output_lists_files()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var first = directory.Write("first.ini", "z=2\na=1\n");
+                var second = directory.Write("second.ini", "y=2\nb=1\n");
+
+                var normal = Run(first, second);
+                var verbose = Run("--verbose", first, second);
+
+                Assert.Single(
+                    normal.Output.Split(
+                        new[] { "\r\n", "\n" },
+                        StringSplitOptions.RemoveEmptyEntries));
+                Assert.Contains("Processed 2 file(s) in ", normal.Output);
+                Assert.DoesNotContain("first.ini", normal.Output);
+                Assert.Contains("[unchanged]", verbose.Output);
+                Assert.Contains("first.ini", verbose.Output);
+                Assert.Contains("Processed 2 file(s) in ", verbose.Output);
             }
         }
 
@@ -266,7 +317,7 @@ namespace PNFmt.Tests
                 Assert.Contains("skipped", inactiveResult.Output);
                 Assert.Equal(2, malformedResult.ExitCode);
                 Assert.Contains("failed", malformedResult.Output);
-                Assert.DoesNotContain("Processed", malformedResult.Output);
+                Assert.Contains("Processed 1 file(s) in ", malformedResult.Output);
                 Assert.Contains("System.Xml.XmlException", malformedResult.Error);
                 Assert.Equal("<root>", File.ReadAllText(malformed));
             }
@@ -330,7 +381,7 @@ namespace PNFmt.Tests
                     "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
                     + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
 
-                var result = Run("--recursive", directory.Path);
+                var result = Run("--verbose", "--recursive", directory.Path);
 
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Real.csproj", result.Output);

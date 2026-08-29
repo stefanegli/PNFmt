@@ -46,6 +46,17 @@ namespace PNFmt.Tests.Snapshots
         }
 
         [Fact]
+        public void Line_endings_are_normalized_before_comparison_and_writing()
+        {
+            using (var repository = TemporaryGitRepository.Create("first\r\nsecond\rthird\n"))
+            {
+                GitSnapshot.Verify(repository.SnapshotPath, "first\nsecond\nthird\r\n");
+
+                Assert.Equal("first\nsecond\nthird\n", File.ReadAllText(repository.SnapshotPath));
+            }
+        }
+
+        [Fact]
         public void Changed_snapshot_is_overwritten_and_reports_branch_diff()
         {
             using (var repository = TemporaryGitRepository.Create("approved\n"))

@@ -27,11 +27,14 @@ Options:
 
 - `-r`, `--recursive`: recurse into directory targets
 - `-v`, `--verbose`: show detailed formatter logging
+- `-j`, `--threads N`: process up to `N` files concurrently; defaults to the processor count
 - `-n`, `--dry-run`: preview without writing and return success
 - `--check`: preview and return `1` when a file would change
 - `--lint`: run project diagnostics and return `1` for changes or diagnostics
 - `-h`, `--help`: show help
 - `-V`, `--version`: show version
+
+The normal output is one summary line with the processed and affected file counts plus elapsed time. Use `--verbose` for per-file statuses. PNFmt formats discovered `.editorconfig` files before processing their dependent files in parallel.
 
 Project and resource formatting remain opt-in through EditorConfig:
 
@@ -91,6 +94,8 @@ Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its 
 - 5 SLNX inputs under `Formatter/Slnx/_files/input`
 
 Tests format disposable input copies, then write their current output under `Snapshots/PNFmt.Tests`. The snapshot path mirrors the test namespace, class, method, and case. The CsProj, INI, EditorConfig, and SLNX snapshots also run through the built `pnfmt` process.
+
+Snapshot text uses LF line endings. Comparison normalizes CRLF, LF, and lone CR input before checking Git, so snapshots do not change between Windows and Unix test runs.
 
 Snapshots use Git staging as approval. A test compares its output with the staged snapshot when that snapshot has index changes; otherwise it compares with the version in `HEAD`. The test always overwrites the working-tree snapshot with the current output. A difference fails with a Git patch. Review the generated file, stage it with `git add`, and rerun the test to approve it. Unstaged manual edits never count as approval.
 

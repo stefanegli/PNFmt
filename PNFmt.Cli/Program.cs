@@ -2,6 +2,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using PNFmt;
@@ -35,13 +36,45 @@ namespace PNFmt.Cli
             var check = false;
             var lint = false;
             var stopOptions = false;
+            var threadCount = Math.Max(1, Environment.ProcessorCount);
             var paths = new List<string>();
+            var arguments = args ?? Array.Empty<string>();
 
-            foreach (var arg in args ?? Array.Empty<string>())
+            for (var index = 0; index < arguments.Length; index++)
             {
+                var arg = arguments[index];
                 if (!stopOptions && string.Equals(arg, "--", StringComparison.Ordinal))
                 {
                     stopOptions = true;
+                    continue;
+                }
+
+                if (!stopOptions && (string.Equals(arg, "-j", StringComparison.Ordinal)
+                    || string.Equals(arg, "--threads", StringComparison.Ordinal)))
+                {
+                    if (index + 1 >= arguments.Length
+                        || !TryParseThreadCount(arguments[++index], out threadCount))
+                    {
+                        Console.Error.WriteLine(
+                            $"Option '{arg}' requires a positive integer thread count.");
+                        PrintUsage(Console.Error);
+                        return 2;
+                    }
+
+                    continue;
+                }
+
+                const string ThreadsPrefix = "--threads=";
+                if (!stopOptions && arg.StartsWith(ThreadsPrefix, StringComparison.Ordinal))
+                {
+                    if (!TryParseThreadCount(arg.Substring(ThreadsPrefix.Length), out threadCount))
+                    {
+                        Console.Error.WriteLine(
+                            "Option '--threads' requires a positive integer thread count.");
+                        PrintUsage(Console.Error);
+                        return 2;
+                    }
+
                     continue;
                 }
 
@@ -123,80 +156,72 @@ namespace PNFmt.Cli
                 return pathErrors.Count > 0 ? 2 : 0;
             }
 
-            var log = new ConsoleLog(verbose);
             var workingDirectory = Environment.CurrentDirectory;
             var changed = 0;
             var unchanged = 0;
             var skipped = 0;
             var failed = 0;
             var diagnosticCount = 0;
+            var run = new FormattingRunner(registry).Run(files, !dryRun, lint, threadCount);
 
-            foreach (var file in files)
+            foreach (var outcome in run.Outcomes)
             {
-                try
-                {
-                    if (!registry.TryGetFormatter(file, out var formatter))
-                    {
-                        throw new InvalidOperationException(
-                            $"No formatter is registered for '{Path.GetExtension(file)}'.");
-                    }
-
-                    var request = new FileFormatRequest(file, !dryRun, lint, log);
-                    var result = formatter.Format(request);
-                    if (result is null)
-                    {
-                        throw new InvalidOperationException(
-                            $"Formatter '{formatter.Name}' returned no result.");
-                    }
-
-                    switch (result.Status)
-                    {
-                        case FileFormatStatus.Updated:
-                            changed++;
-                            WriteStatus(dryRun ? "would-update" : "updated", file, workingDirectory);
-                            break;
-
-                        case FileFormatStatus.Unchanged:
-                            unchanged++;
-                            WriteStatus("unchanged", file, workingDirectory);
-                            break;
-
-                        case FileFormatStatus.Skipped:
-                            skipped++;
-                            WriteStatus("skipped", file, workingDirectory);
-                            break;
-
-                        default:
-                            throw new InvalidOperationException(
-                                $"Formatter '{formatter.Name}' returned an unknown status.");
-                    }
-
-                    foreach (var diagnostic in result.Diagnostics)
-                    {
-                        diagnosticCount++;
-                        WriteDiagnostic(diagnostic, file, workingDirectory);
-                    }
-                }
-                catch (Exception ex)
+                WriteLog(outcome, verbose);
+                if (outcome.Error is not null)
                 {
                     failed++;
-                    WriteStatus("failed", file, workingDirectory);
-                    Console.Error.WriteLine($"Failed to format {file}: {ex.Message}");
                     if (verbose)
                     {
-                        Console.Error.WriteLine(ex);
+                        WriteStatus("failed", outcome.File, workingDirectory);
                     }
+
+                    Console.Error.WriteLine(
+                        $"Failed to format {outcome.File}: {outcome.Error.Message}");
+                    if (verbose)
+                    {
+                        Console.Error.WriteLine(outcome.Error);
+                    }
+
+                    continue;
+                }
+
+                var status = outcome.Result.Status;
+                switch (status)
+                {
+                    case FileFormatStatus.Updated:
+                        changed++;
+                        break;
+
+                    case FileFormatStatus.Unchanged:
+                        unchanged++;
+                        break;
+
+                    case FileFormatStatus.Skipped:
+                        skipped++;
+                        break;
+                }
+
+                if (verbose)
+                {
+                    var statusLabel = status == FileFormatStatus.Updated && dryRun
+                        ? "would-update"
+                        : status.ToString().ToLowerInvariant();
+                    WriteStatus(statusLabel, outcome.File, workingDirectory);
+                }
+
+                foreach (var diagnostic in outcome.Result.Diagnostics)
+                {
+                    diagnosticCount++;
+                    WriteDiagnostic(diagnostic, outcome.File, workingDirectory);
                 }
             }
 
-            if (!verbose)
-            {
-                var changeLabel = dryRun ? "Would update" : "Updated";
-                Console.WriteLine(
-                    $"Processed {files.Count} file(s). {changeLabel} {changed}, "
-                    + $"unchanged {unchanged}, skipped {skipped}, failed {failed}"
-                    + (lint ? $", diagnostics {diagnosticCount}." : "."));
-            }
+            var changeLabel = dryRun ? "Would update" : "Updated";
+            var elapsed = run.Elapsed.TotalSeconds.ToString("0.000", CultureInfo.InvariantCulture);
+            Console.WriteLine(
+                $"Processed {files.Count} file(s) in {elapsed}s. {changeLabel} {changed}, "
+                + $"unchanged {unchanged}, skipped {skipped}, failed {failed}"
+                + (lint ? $", diagnostics {diagnosticCount}." : "."));
 
             if (failed > 0 || pathErrors.Count > 0)
             {
@@ -209,6 +234,16 @@ namespace PNFmt.Cli
             }
 
             return 0;
+        }
+
+        private static bool TryParseThreadCount(string value, out int threadCount)
+        {
+            return int.TryParse(
+                    value,
+                    NumberStyles.None,
+                    CultureInfo.InvariantCulture,
+                    out threadCount)
+                && threadCount > 0;
         }
 
         private static bool IsHelpArg(string arg)
@@ -237,6 +272,7 @@ namespace PNFmt.Cli
             writer.WriteLine("Options:");
             writer.WriteLine("  -r, --recursive   Recurse into subdirectories when a path is a directory.");
             writer.WriteLine("  -v, --verbose     Show detailed per-file logging and errors.");
+            writer.WriteLine("  -j, --threads N   Process up to N files concurrently (default: processor count).");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
@@ -382,46 +418,39 @@ namespace PNFmt.Cli
             return string.IsNullOrEmpty(relative) ? "." : relative;
         }
 
-        private sealed class ConsoleLog : IFormatterLog
+        private static void WriteLog(FileFormattingOutcome outcome, bool verbose)
         {
-            private readonly bool verbose;
-
-            public ConsoleLog(bool verbose)
-            {
-                this.verbose = verbose;
-            }
-
-            public void Write(Exception exception)
-            {
-                if (this.verbose)
-                {
-                    Console.Error.WriteLine(exception);
-                }
-            }
-
-            public void WriteLine(string message)
+            foreach (var message in outcome.LogMessages)
             {
                 if (message.IndexOf(": warning PNFMT", StringComparison.Ordinal) >= 0)
                 {
                     Console.Error.WriteLine(message);
-                    return;
+                    continue;
                 }
 
-                if (!this.verbose)
+                if (verbose && !IsRedundantFormatterMessage(message))
                 {
-                    return;
+                    Console.WriteLine(message);
                 }
-
-                if (message.StartsWith("Updating ", StringComparison.OrdinalIgnoreCase)
-                    || message.StartsWith("Would update ", StringComparison.OrdinalIgnoreCase)
-                    || message.StartsWith("Skipping ", StringComparison.OrdinalIgnoreCase)
-                    || message.StartsWith("Update was not required", StringComparison.OrdinalIgnoreCase))
-                {
-                    return;
-                }
-
-                Console.WriteLine(message);
             }
+
+            if (verbose)
+            {
+                foreach (var exception in outcome.LoggedExceptions)
+                {
+                    Console.Error.WriteLine(exception);
+                }
+            }
+        }
+
+        private static bool IsRedundantFormatterMessage(string message)
+        {
+            return message.StartsWith("Updating ", StringComparison.OrdinalIgnoreCase)
+                || message.StartsWith("Would update ", StringComparison.OrdinalIgnoreCase)
+                || message.StartsWith("Skipping ", StringComparison.OrdinalIgnoreCase)
+                || message.StartsWith(
+                    "Update was not required",
+                    StringComparison.OrdinalIgnoreCase);
         }
     }
 }

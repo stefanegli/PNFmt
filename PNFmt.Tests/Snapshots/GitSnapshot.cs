@@ -77,9 +77,20 @@ namespace PNFmt.Tests.Snapshots
                     .Replace(Path.DirectorySeparatorChar, '/');
                 var statusBeforeRun = repository.RetrieveStatus(relativePath);
                 var useIndex = (statusBeforeRun & IndexChanges) != 0;
+                var approved = ReadApprovedSnapshot(repository, relativePath, useIndex);
+                var normalizedActual = NormalizeLineEndings(actual);
 
                 Directory.CreateDirectory(Path.GetDirectoryName(fullSnapshotPath));
-                File.WriteAllText(fullSnapshotPath, actual, new UTF8Encoding(false));
+                File.WriteAllText(fullSnapshotPath, normalizedActual, new UTF8Encoding(false));
+
+                if (approved is not null
+                    && string.Equals(
+                        NormalizeLineEndings(approved),
+                        normalizedActual,
+                        StringComparison.Ordinal))
+                {
+                    return;
+                }
 
                 using (var patch = CreatePatch(repository, relativePath, useIndex))
                 {
@@ -164,6 +175,27 @@ namespace PNFmt.Tests.Snapshots
             }
 
             return repository.Diff.Compare<Patch>(paths, includeUntracked: true);
+        }
+
+        private static string NormalizeLineEndings(string value)
+        {
+            return value.Replace("\r\n", "\n").Replace('\r', '\n');
+        }
+
+        private static string ReadApprovedSnapshot(
+            Repository repository,
+            string relativePath,
+            bool useIndex)
+        {
+            if (useIndex)
+            {
+                var indexEntry = repository.Index[relativePath];
+                return indexEntry is null
+                    ? null
+                    : repository.Lookup<Blob>(indexEntry.Id)?.GetContentText();
+            }
+
+            return (repository.Head.Tip?.Tree[relativePath]?.Target as Blob)?.GetContentText();
         }
 
         private static void EnsureInsideRepository(string workingDirectory, string snapshotPath)
