@@ -48,11 +48,11 @@ namespace PNFmt
 
     internal static class EditorConfigSettingNames
     {
-        public const string EmptyLinesBetweenGroups = "pnfmt_empty_lines_between_groups";
-        public const string RemoveDocumentationComment = "pnfmt_remove_documentation_comment";
-        public const string RemoveXsdSchema = "pnfmt_remove_xsd_schema";
-        public const string SortComparer = "pnfmt_sort_comparer";
+        public const string CsProjEmptyLinesBetweenGroups = "pnfmt_csproj_empty_lines_between_groups";
+        public const string CsProjSortItemTypes = "pnfmt_csproj_sort_item_types";
+        public const string ResxRemoveDocumentationComment = "pnfmt_resx_remove_documentation_comment";
+        public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
+        public const string ResxSortComparer = "pnfmt_resx_sort_comparer";
         public const string SortEntries = "pnfmt_sort_entries";
-        public const string SortItemTypes = "pnfmt_sort_item_types";
     }
 }

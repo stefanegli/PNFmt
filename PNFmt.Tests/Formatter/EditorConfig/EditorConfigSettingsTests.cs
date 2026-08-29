@@ -16,8 +16,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 "root = true\n\n"
                 + "[*.csproj]\n"
                 + "pnfmt_sort_entries = true\n"
-                + "pnfmt_empty_lines_between_groups = 0\n"
-                + "pnfmt_sort_item_types = Protobuf, PackageReference, protobuf\n"
+                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
+                + "pnfmt_csproj_sort_item_types = Protobuf, PackageReference, protobuf\n"
                 + "indent_style = tab\n"
                 + "tab_width = 8\n"
                 + "end_of_line = lf\n";
@@ -59,8 +59,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 Assert.Equal(3, log.Messages.Count);
                 Assert.All(log.Messages, message => Assert.Contains("warning PNFMT001", message));
                 Assert.Contains(log.Messages, message => message.Contains("pnfmt_sort_entries"));
-                Assert.Contains(log.Messages, message => message.Contains("pnfmt_empty_lines_between_groups"));
-                Assert.Contains(log.Messages, message => message.Contains("pnfmt_sort_item_types"));
+                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_empty_lines_between_groups"));
+                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_sort_item_types"));
             }
         }
 
@@ -72,9 +72,9 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 + "[*.csproj]\n"
                 + "pnfmt_sort_entries = false\n"
                 + "csproj_formatter_sort_entries = true\n"
-                + "pnfmt_empty_lines_between_groups = 0\n"
+                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
                 + "csproj_formatter_empty_lines_between_groups = 3\n"
-                + "pnfmt_sort_item_types = Compile\n"
+                + "pnfmt_csproj_sort_item_types = Compile\n"
                 + "csproj_formatter_sort_item_types = None\n";
 
             using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
@@ -97,9 +97,9 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 "root = true\n\n"
                 + "[*.resx]\n"
                 + "pnfmt_sort_entries = true\n"
-                + "pnfmt_remove_xsd_schema = true\n"
-                + "pnfmt_remove_documentation_comment = false\n"
-                + "pnfmt_sort_comparer = OrdinalIgnoreCase\n";
+                + "pnfmt_resx_remove_xsd_schema = true\n"
+                + "pnfmt_resx_remove_documentation_comment = false\n"
+                + "pnfmt_resx_sort_comparer = OrdinalIgnoreCase\n";
 
             using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
             {
@@ -148,11 +148,11 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 + "[*.resx]\n"
                 + "pnfmt_sort_entries = true\n"
                 + "resx_formatter_sort_entries = false\n"
-                + "pnfmt_remove_xsd_schema = false\n"
+                + "pnfmt_resx_remove_xsd_schema = false\n"
                 + "resx_formatter_remove_xsd_schema = true\n"
-                + "pnfmt_remove_documentation_comment = false\n"
+                + "pnfmt_resx_remove_documentation_comment = false\n"
                 + "resx_formatter_remove_documentation_comment = true\n"
-                + "pnfmt_sort_comparer = OrdinalIgnoreCase\n"
+                + "pnfmt_resx_sort_comparer = OrdinalIgnoreCase\n"
                 + "resx_formatter_sort_comparer = InvariantCulture\n";
 
             using (var target = TemporaryTarget.Create("Strings.resx", Configuration))

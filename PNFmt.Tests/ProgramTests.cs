@@ -383,8 +383,8 @@ namespace PNFmt.Tests
                     + "pnfmt_sort_entries=true\r\n\r\n"
                     + "[*.resx]\r\n"
                     + "pnfmt_sort_entries=true\r\n"
-                    + "pnfmt_remove_xsd_schema=true\r\n"
-                    + "pnfmt_remove_documentation_comment=true\r\n");
+                    + "pnfmt_resx_remove_xsd_schema=true\r\n"
+                    + "pnfmt_resx_remove_documentation_comment=true\r\n");
             }
 
             public static string[] ReadNames(string path)

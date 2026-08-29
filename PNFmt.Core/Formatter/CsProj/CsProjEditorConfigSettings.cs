@@ -56,7 +56,7 @@ namespace PNFmt
                 }
 
                 if (resolver.TryGet(
-                        EditorConfigSettingNames.EmptyLinesBetweenGroups,
+                        EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups,
                         "csproj_formatter_empty_lines_between_groups",
                         out var emptyLinesBetweenGroups)
                     && int.TryParse(emptyLinesBetweenGroups, out var parsedEmptyLinesBetweenGroups)
@@ -67,7 +67,7 @@ namespace PNFmt
                 }
 
                 if (resolver.TryGet(
-                    EditorConfigSettingNames.SortItemTypes,
+                    EditorConfigSettingNames.CsProjSortItemTypes,
                     "csproj_formatter_sort_item_types",
                     out var sortItemTypes))
                 {

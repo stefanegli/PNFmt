@@ -22,7 +22,7 @@ namespace PNFmt
                 }
 
                 if (resolver.TryGet(
-                    EditorConfigSettingNames.RemoveXsdSchema,
+                    EditorConfigSettingNames.ResxRemoveXsdSchema,
                     "resx_formatter_remove_xsd_schema",
                     out var removeSchema))
                 {
@@ -31,7 +31,7 @@ namespace PNFmt
                 }
 
                 if (resolver.TryGet(
-                    EditorConfigSettingNames.RemoveDocumentationComment,
+                    EditorConfigSettingNames.ResxRemoveDocumentationComment,
                     "resx_formatter_remove_documentation_comment",
                     out var removeComment))
                 {
@@ -40,7 +40,7 @@ namespace PNFmt
                 }
 
                 if (resolver.TryGet(
-                        EditorConfigSettingNames.SortComparer,
+                        EditorConfigSettingNames.ResxSortComparer,
                         "resx_formatter_sort_comparer",
                         out var comparerString)
                     && this.SortEntries)
