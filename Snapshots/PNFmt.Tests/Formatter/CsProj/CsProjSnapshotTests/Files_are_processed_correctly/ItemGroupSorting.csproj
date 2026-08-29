@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Alpha\Alpha.csproj" />
+        <ProjectReference Include="..\Beta\Beta.csproj" />
+        <ProjectReference Include="..\Zeta\Zeta.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="System" />
+        <Reference Include="System.Core" />
+        <Reference Include="System.Xml" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="a.txt" />
+        <None Include="b.txt" />
+        <None Include="c.txt" />
+    </ItemGroup>
+</Project>

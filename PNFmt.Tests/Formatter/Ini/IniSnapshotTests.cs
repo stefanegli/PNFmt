@@ -12,12 +12,11 @@ namespace PNFmt.Tests.Formatter.Ini
     public sealed class IniSnapshotTests
     {
         public static IEnumerable<object[]> Snapshots =>
-            FileSnapshotCaseSource.Create(GetFixtureRoot())
+            FileSnapshotCaseSource.Create(GetFixtureRoot(), ".editorconfig", ".ini")
                 .Select(testCase => new object[]
                 {
                     testCase.RelativePath,
                     testCase.InputFile,
-                    testCase.ExpectedFile,
                     testCase.CaseName,
                 });
 
@@ -26,16 +25,15 @@ namespace PNFmt.Tests.Formatter.Ini
         public void Formatter_matches_snapshot(
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName)
         {
-            FormatterSnapshotTestRunner.AssertMatches(
+            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
                 new IniFormatter(),
                 GetFixtureRoot(),
                 relativePath,
                 inputFile,
-                expectedFile,
                 caseName);
+            GitSnapshot.Match(actual, typeof(IniSnapshotTests), caseName);
         }
 
         private static string GetFixtureRoot()

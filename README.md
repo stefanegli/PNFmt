@@ -84,13 +84,15 @@ Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its 
 
 `PNFmt.Tests` contains the complete formatter snapshot corpus from both legacy CLI projects:
 
-- 13 CsProjFormatter input/expected pairs under `Formatter/CsProj/_files`
-- 13 ResxFormatter input/expected cases under `Formatter/Resx/_files`
+- 13 CsProjFormatter inputs under `Formatter/CsProj/_files/input`
+- 13 ResxFormatter inputs under `Formatter/Resx/_files`
 - 8 ResxFormatter EditorConfig scenarios under `Formatter/Resx/_editor`
-- 5 INI and EditorConfig input/expected pairs under `Formatter/Ini/_files`
-- 5 SLNX input/expected pairs under `Formatter/Slnx/_files`
+- 5 INI and EditorConfig inputs under `Formatter/Ini/_files/input`
+- 5 SLNX inputs under `Formatter/Slnx/_files/input`
 
-The formatter snapshot theories stage disposable copies before formatting, so test runs never rewrite their source fixtures. The CsProj, INI, EditorConfig, and SLNX snapshots also run through the built `pnfmt` process. This retains the old CLI-level coverage and applies it to the new file types.
+Tests format disposable input copies, then write their current output under `Snapshots/PNFmt.Tests`. The snapshot path mirrors the test namespace, class, method, and case. The CsProj, INI, EditorConfig, and SLNX snapshots also run through the built `pnfmt` process.
+
+Snapshots use Git staging as approval. A test compares its output with the staged snapshot when that snapshot has index changes; otherwise it compares with the version in `HEAD`. The test always overwrites the working-tree snapshot with the current output. A difference fails with a Git patch. Review the generated file, stage it with `git add`, and rerun the test to approve it. Unstaged manual edits never count as approval.
 
 ## License
 

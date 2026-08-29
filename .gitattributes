@@ -2,3 +2,6 @@
 *.csproj text eol=crlf
 *.props text eol=crlf
 *.slnx text eol=crlf
+Snapshots/** -whitespace
+Snapshots/**/*.abc text eol=crlf
+Snapshots/**/*.resx text eol=crlf

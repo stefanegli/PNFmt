@@ -5,10 +5,7 @@ namespace PNFmt.Tests.Formatter.CsProj
     using PNFmt;
 
     using PNFmt.Tests.Formatter.CsProj.TestFoundation;
-
     using PNFmt.Tests.Snapshots;
-
-    using NFluent;
 
     using System;
     using System.Collections.Generic;
@@ -20,46 +17,33 @@ namespace PNFmt.Tests.Formatter.CsProj
     {
         [Theory]
         [ClassData(typeof(CsProjSnapshotData))]
-        public void Files_are_processed_correctly(string inputFile, string expectedFile, string caseName)
+        public void Files_are_processed_correctly(string inputFile, string relativePath, string caseName)
         {
-            // Arrange
-            var inputRoot = Path.Combine(
-                AppContext.BaseDirectory,
-                "Formatter",
-                "CsProj",
-                "_files",
-                "input");
-            using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
-            {
-                var stagedFile = stagedInput.GetPath(
-                    caseName.Replace('/', Path.DirectorySeparatorChar));
-                var log = new FakeLog();
-                var formatter = new CsProjFormatter();
-
-                // Act
-                formatter.Format(new FileFormatRequest(stagedFile, true, false, log));
-
-                // Assert
-                Check.WithCustomMessage($"Case: {caseName} Input: {inputFile} Expected: {expectedFile}")
-                    .That(File.ReadAllText(stagedFile))
-                    .Equals(File.ReadAllText(expectedFile));
-            }
+            var fixtureRoot = GetFixtureRoot();
+            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
+                new CsProjFormatter(),
+                fixtureRoot,
+                relativePath,
+                inputFile,
+                caseName,
+                allowSkippedWhenUnchanged: true);
+            GitSnapshot.Match(actual, typeof(CsProjSnapshotTests), caseName);
         }
 
         internal class CsProjSnapshotData : TheoryDataBase<string, string, string>
         {
             public override IEnumerable<(string, string, string)> Create()
             {
-                var outputRoot = Path.Combine(
-                    AppContext.BaseDirectory,
-                    "Formatter",
-                    "CsProj",
-                    "_files");
-                foreach (var testCase in FormattingCaseSource.Create(outputRoot))
+                foreach (var testCase in FileSnapshotCaseSource.Create(GetFixtureRoot(), ".csproj"))
                 {
-                    yield return (testCase.InputFile, testCase.ExpectedFile, testCase.CaseName);
+                    yield return (testCase.InputFile, testCase.RelativePath, testCase.CaseName);
                 }
             }
+        }
+
+        private static string GetFixtureRoot()
+        {
+            return Path.Combine(AppContext.BaseDirectory, "Formatter", "CsProj", "_files");
         }
     }
 }

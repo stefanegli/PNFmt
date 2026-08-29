@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using PNFmt.Tests.Formatter.CsProj.TestFoundation;
 using Xunit;
 
 namespace PNFmt.Tests.Snapshots
@@ -13,12 +12,11 @@ namespace PNFmt.Tests.Snapshots
     public sealed class LegacyCliSnapshotTests
     {
         public static IEnumerable<object[]> CsProjSnapshots =>
-            FormattingCaseSource.Create(GetCsProjFixtureRoot())
+            FileSnapshotCaseSource.Create(GetCsProjFixtureRoot(), ".csproj")
                 .Select(testCase => new object[]
                 {
                     testCase.RelativePath,
                     testCase.InputFile,
-                    testCase.ExpectedFile,
                     testCase.CaseName,
                 });
 
@@ -27,16 +25,15 @@ namespace PNFmt.Tests.Snapshots
         public async Task Unified_cli_matches_every_legacy_csproj_snapshot(
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName)
         {
-            await CliSnapshotTestRunner.AssertMatchesAsync(
+            var actual = await CliSnapshotTestRunner.RunAndAssertAsync(
                 GetCsProjFixtureRoot(),
                 relativePath,
                 inputFile,
-                expectedFile,
                 caseName,
                 allowSkippedWhenUnchanged: true);
+            GitSnapshot.Match(actual, typeof(LegacyCliSnapshotTests), caseName);
         }
 
         private static string GetCsProjFixtureRoot()

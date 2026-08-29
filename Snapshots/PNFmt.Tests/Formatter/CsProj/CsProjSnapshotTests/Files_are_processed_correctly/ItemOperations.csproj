@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" />
+        <None Remove="z.txt" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Z.Package" Version="1.0.0" />
+        <PackageReference Remove="Z.Package" />
+    </ItemGroup>
+</Project>

@@ -12,12 +12,11 @@ namespace PNFmt.Tests.Formatter.Slnx
     public sealed class SlnxSnapshotTests
     {
         public static IEnumerable<object[]> Snapshots =>
-            FileSnapshotCaseSource.Create(GetFixtureRoot())
+            FileSnapshotCaseSource.Create(GetFixtureRoot(), ".slnx")
                 .Select(testCase => new object[]
                 {
                     testCase.RelativePath,
                     testCase.InputFile,
-                    testCase.ExpectedFile,
                     testCase.CaseName,
                 });
 
@@ -26,16 +25,15 @@ namespace PNFmt.Tests.Formatter.Slnx
         public void Formatter_matches_snapshot(
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName)
         {
-            FormatterSnapshotTestRunner.AssertMatches(
+            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
                 new SlnxFormatter(),
                 GetFixtureRoot(),
                 relativePath,
                 inputFile,
-                expectedFile,
                 caseName);
+            GitSnapshot.Match(actual, typeof(SlnxSnapshotTests), caseName);
         }
 
         private static string GetFixtureRoot()

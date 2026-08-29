@@ -10,11 +10,10 @@ namespace PNFmt.Tests.Snapshots
 {
     internal static class CliSnapshotTestRunner
     {
-        public static async Task AssertMatchesAsync(
+        public static async Task<string> RunAndAssertAsync(
             string fixtureRoot,
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName,
             bool allowSkippedWhenUnchanged = false)
         {
@@ -23,17 +22,17 @@ namespace PNFmt.Tests.Snapshots
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
                 var result = await RunCliAsync(stagedInput.Path, stagedFile);
+                var actual = File.ReadAllText(stagedFile);
                 var context = $"Case: {caseName}{Environment.NewLine}"
                     + $"stdout:{Environment.NewLine}{result.StandardOutput}{Environment.NewLine}"
                     + $"stderr:{Environment.NewLine}{result.StandardError}";
                 var changed = !string.Equals(
                     File.ReadAllText(inputFile),
-                    File.ReadAllText(expectedFile),
+                    actual,
                     StringComparison.Ordinal);
 
                 Assert.True(result.ExitCode == 0, context);
                 Assert.Contains(Path.GetFileName(relativePath), result.StandardOutput);
-                Assert.Equal(File.ReadAllText(expectedFile), File.ReadAllText(stagedFile));
                 if (changed)
                 {
                     Assert.Contains("[updated]", result.StandardOutput);
@@ -49,6 +48,8 @@ namespace PNFmt.Tests.Snapshots
                 {
                     Assert.Contains("[unchanged]", result.StandardOutput);
                 }
+
+                return actual;
             }
         }
 

@@ -9,38 +9,28 @@ namespace PNFmt.Tests.Snapshots
 {
     internal static class FileSnapshotCaseSource
     {
-        public static IEnumerable<(string RelativePath, string InputFile, string ExpectedFile, string CaseName)> Create(
-            string fixtureRoot)
+        public static IEnumerable<(string RelativePath, string InputFile, string CaseName)> Create(
+            string fixtureRoot,
+            params string[] extensions)
         {
             var inputRoot = Path.Combine(fixtureRoot, "input");
-            var expectedRoot = Path.Combine(fixtureRoot, "expected");
             if (!Directory.Exists(inputRoot))
             {
                 throw new InvalidOperationException($"Input folder not found: {inputRoot}");
             }
 
-            if (!Directory.Exists(expectedRoot))
+            if (extensions is null || extensions.Length == 0)
             {
-                throw new InvalidOperationException($"Expected folder not found: {expectedRoot}");
+                throw new ArgumentException("At least one file extension is required.", nameof(extensions));
             }
 
-            var inputs = GetRelativeFiles(inputRoot);
-            var expected = GetRelativeFiles(expectedRoot);
-            var missingExpected = inputs.Except(expected, StringComparer.OrdinalIgnoreCase).ToArray();
-            var missingInputs = expected.Except(inputs, StringComparer.OrdinalIgnoreCase).ToArray();
-            if (missingExpected.Length > 0 || missingInputs.Length > 0)
-            {
-                throw new InvalidOperationException(
-                    $"Snapshot fixture mismatch. Missing expected: {string.Join(", ", missingExpected)}. "
-                    + $"Missing input: {string.Join(", ", missingInputs)}.");
-            }
-
+            var inputs = GetRelativeFiles(inputRoot)
+                .Where(path => extensions.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase));
             foreach (var relativePath in inputs)
             {
                 yield return (
                     relativePath,
                     Path.Combine(inputRoot, relativePath),
-                    Path.Combine(expectedRoot, relativePath),
                     relativePath.Replace(Path.DirectorySeparatorChar, '/'));
             }
         }

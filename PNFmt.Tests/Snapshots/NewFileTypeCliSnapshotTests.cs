@@ -21,15 +21,14 @@ namespace PNFmt.Tests.Snapshots
             string fixtureRoot,
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName)
         {
-            await CliSnapshotTestRunner.AssertMatchesAsync(
+            var actual = await CliSnapshotTestRunner.RunAndAssertAsync(
                 fixtureRoot,
                 relativePath,
                 inputFile,
-                expectedFile,
                 caseName);
+            GitSnapshot.Match(actual, typeof(NewFileTypeCliSnapshotTests), caseName);
         }
 
         [Theory]
@@ -38,15 +37,14 @@ namespace PNFmt.Tests.Snapshots
             string fixtureRoot,
             string relativePath,
             string inputFile,
-            string expectedFile,
             string caseName)
         {
-            await CliSnapshotTestRunner.AssertMatchesAsync(
+            var actual = await CliSnapshotTestRunner.RunAndAssertAsync(
                 fixtureRoot,
                 relativePath,
                 inputFile,
-                expectedFile,
                 caseName);
+            GitSnapshot.Match(actual, typeof(NewFileTypeCliSnapshotTests), caseName);
         }
 
         private static IEnumerable<object[]> CreateData(string formatterDirectory)
@@ -56,13 +54,15 @@ namespace PNFmt.Tests.Snapshots
                 "Formatter",
                 formatterDirectory,
                 "_files");
-            return FileSnapshotCaseSource.Create(fixtureRoot)
+            var extensions = string.Equals(formatterDirectory, "Ini", StringComparison.Ordinal)
+                ? new[] { ".editorconfig", ".ini" }
+                : new[] { ".slnx" };
+            return FileSnapshotCaseSource.Create(fixtureRoot, extensions)
                 .Select(testCase => new object[]
                 {
                     fixtureRoot,
                     testCase.RelativePath,
                     testCase.InputFile,
-                    testCase.ExpectedFile,
                     testCase.CaseName,
                 });
         }

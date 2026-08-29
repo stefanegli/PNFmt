@@ -1,11 +1,10 @@
 namespace PNFmt.Tests.Formatter.Resx
 {
-    using NFluent;
-
     using PNFmt;
 
     using PNFmt.Tests.Formatter.Resx.Fake;
     using PNFmt.Tests.Formatter.Resx.TestFoundation;
+    using PNFmt.Tests.Snapshots;
 
     using System;
     using System.Collections.Generic;
@@ -15,6 +14,7 @@ namespace PNFmt.Tests.Formatter.Resx
     using System.Threading;
 
     using Xunit;
+    using Xunit.Sdk;
 
     public class ResxSnapshotTests
     {
@@ -30,7 +30,6 @@ namespace PNFmt.Tests.Formatter.Resx
                 "Resx",
                 "_files");
             var sourceFile = Path.Combine(fixtureRoot, fileName);
-            var expectedFile = Path.Combine(fixtureRoot, $"{baseFileName}-expected.resx");
             using (var actualFile = TemporaryFile.Copy(sourceFile))
             {
                 var formatter = new ResxDocumentFormatter((IResxFormatSettings)settings, new FakeLog());
@@ -43,9 +42,15 @@ namespace PNFmt.Tests.Formatter.Resx
                     formatter.Run(actualFile.Path);
 
                     // Assert
-                    var actual = TextNormalization.NormalizeLineEndings(File.ReadAllText(actualFile.Path));
-                    var expected = TextNormalization.NormalizeLineEndings(File.ReadAllText(expectedFile));
-                    Check.WithCustomMessage(message).That(actual).Equals(expected);
+                    var actual = File.ReadAllText(actualFile.Path);
+                    try
+                    {
+                        GitSnapshot.Match(actual, typeof(ResxSnapshotTests), $"{baseFileName}.resx");
+                    }
+                    catch (XunitException exception)
+                    {
+                        throw new XunitException($"{message}{Environment.NewLine}{exception.Message}");
+                    }
                 }
                 finally
                 {

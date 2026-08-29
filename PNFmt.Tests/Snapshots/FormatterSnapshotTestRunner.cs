@@ -8,35 +8,51 @@ namespace PNFmt.Tests.Snapshots
 {
     internal static class FormatterSnapshotTestRunner
     {
-        public static void AssertMatches(
+        public static string FormatAndAssertIdempotent(
             IFileFormatter formatter,
             string fixtureRoot,
             string relativePath,
             string inputFile,
-            string expectedFile,
-            string caseName)
+            string caseName,
+            bool allowSkippedWhenUnchanged = false)
         {
             var inputRoot = Path.Combine(fixtureRoot, "input");
             using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
-                var expectedText = File.ReadAllText(expectedFile);
-                var changed = !string.Equals(
-                    File.ReadAllText(inputFile),
-                    expectedText,
-                    StringComparison.Ordinal);
+                var inputText = File.ReadAllText(inputFile);
 
                 var firstRun = formatter.Format(
                     new FileFormatRequest(stagedFile, true, false, NullFormatterLog.Instance));
+                var actual = File.ReadAllText(stagedFile);
                 var secondRun = formatter.Format(
                     new FileFormatRequest(stagedFile, true, false, NullFormatterLog.Instance));
 
-                Assert.Equal(changed ? FileFormatStatus.Updated : FileFormatStatus.Unchanged, firstRun.Status);
-                Assert.Equal(FileFormatStatus.Unchanged, secondRun.Status);
-                Assert.True(
-                    string.Equals(expectedText, File.ReadAllText(stagedFile), StringComparison.Ordinal),
-                    $"Snapshot mismatch for {caseName}.");
+                var changed = !string.Equals(inputText, actual, StringComparison.Ordinal);
+                if (changed)
+                {
+                    Assert.Equal(FileFormatStatus.Updated, firstRun.Status);
+                }
+                else
+                {
+                    AssertUnchangedOrSkipped(firstRun.Status, allowSkippedWhenUnchanged, caseName);
+                }
+
+                AssertUnchangedOrSkipped(secondRun.Status, allowSkippedWhenUnchanged, caseName);
+                Assert.Equal(actual, File.ReadAllText(stagedFile));
+                return actual;
             }
+        }
+
+        private static void AssertUnchangedOrSkipped(
+            FileFormatStatus status,
+            bool allowSkipped,
+            string caseName)
+        {
+            Assert.True(
+                status == FileFormatStatus.Unchanged
+                || (allowSkipped && status == FileFormatStatus.Skipped),
+                $"Expected unchanged status for {caseName}, but received {status}.");
         }
 
         private sealed class NullFormatterLog : IFormatterLog
