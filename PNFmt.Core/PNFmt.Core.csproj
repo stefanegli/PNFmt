@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <RootNamespace>PNFmt</RootNamespace>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\CsProjFormatter.Core\CsProjFormatter.Core.csproj" />
+        <ProjectReference Include="..\ResxFormatter.Core\ResxFormatter.Core.csproj" />
+    </ItemGroup>
+</Project>

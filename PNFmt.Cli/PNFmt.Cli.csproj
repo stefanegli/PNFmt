@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>pnfmt</AssemblyName>
+        <Authors>Stefan Egli</Authors>
+        <Description>Format .NET project and resource files using EditorConfig.</Description>
+        <OutputType>Exe</OutputType>
+        <PackageId>PetchNaka.PNFmt.Cli</PackageId>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageTags>dotnet-tool;editorconfig;formatter;csproj;resx</PackageTags>
+        <PackAsTool>true</PackAsTool>
+        <RepositoryType>git</RepositoryType>
+        <RepositoryUrl>https://github.com/stefanegli/PNFmt</RepositoryUrl>
+        <RootNamespace>PNFmt.Cli</RootNamespace>
+        <TargetFramework>net10.0</TargetFramework>
+        <ToolCommandName>pnfmt</ToolCommandName>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="..\README.md" Pack="true" PackagePath="\">
+            <Link>README.md</Link>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\PNFmt.Core\PNFmt.Core.csproj" />
+    </ItemGroup>
+</Project>

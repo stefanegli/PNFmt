@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Source/">
+    <Project Path="PNFmt.Core/PNFmt.Core.csproj" />
+    <Project Path="PNFmt.Cli/PNFmt.Cli.csproj" />
+    <Project Path="CsProjFormatter.Core/CsProjFormatter.Core.csproj" />
+    <Project Path="ResxFormatter.Core/ResxFormatter.Core.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="PNFmt.Tests/PNFmt.Tests.csproj" />
+  </Folder>
+</Solution>
+

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <RootNamespace>ResxFormatter</RootNamespace>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="editorconfig" Version="0.15.0" />
+    </ItemGroup>
+</Project>

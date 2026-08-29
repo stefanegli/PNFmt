@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <AssemblyName>CsProjFormatter.Core</AssemblyName>
+        <RootNamespace>CsProjFormatter</RootNamespace>
+        <TargetFramework>netstandard2.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="editorconfig" Version="0.15.0" />
+    </ItemGroup>
+</Project>
