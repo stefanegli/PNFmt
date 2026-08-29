@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Protobuf Include="a.proto" />
+        <Protobuf Include="z.proto" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Z.Package" Version="1.0.0" />
+        <PackageReference Include="A.Package" Version="1.0.0" />
+    </ItemGroup>
+</Project>

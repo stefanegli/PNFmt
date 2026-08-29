@@ -11,6 +11,7 @@
 
     <ItemGroup>
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+        <PackageReference Include="NFluent" Version="3.1.0" />
         <PackageReference Include="xunit" Version="2.9.3" />
         <PackageReference Include="xunit.analyzers" Version="1.27.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -20,5 +21,23 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <EmbeddedResource Remove="Formatter\CsProj\_files\**\*" />
+        <EmbeddedResource Remove="Formatter\Resx\_editor\**\*" />
+        <EmbeddedResource Remove="Formatter\Resx\_files\**\*" />
+        <None Remove="Formatter\CsProj\_files\**\*" />
+        <None Remove="Formatter\Resx\_editor\**\*" />
+        <None Remove="Formatter\Resx\_files\**\*" />
+        <Content Include="Formatter\CsProj\_files\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Formatter\Resx\_editor\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Formatter\Resx\_files\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
     </ItemGroup>
 </Project>

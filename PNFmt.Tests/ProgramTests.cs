@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
 using PNFmt.Cli;
 using Xunit;
@@ -94,6 +95,187 @@ namespace PNFmt.Tests
             }
         }
 
+        [Fact]
+        public void Help_and_version_are_available()
+        {
+            var help = Run("--help");
+            var version = Run("--version");
+
+            Assert.Equal(0, help.ExitCode);
+            Assert.Contains("Usage: pnfmt", help.Output);
+            Assert.Equal(0, version.ExitCode);
+            Assert.StartsWith("pnfmt ", version.Output);
+        }
+
+        [Fact]
+        public void Invalid_path_syntax_is_reported_instead_of_crashing()
+        {
+            var result = Run("invalid\0path");
+
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains("Unable to access path", result.Error);
+            Assert.Contains("No supported files found.", result.Output);
+        }
+
+        [Fact]
+        public void Path_errors_remain_errors_when_another_file_succeeds()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var file = directory.WriteResx("valid.resx", "b", "a");
+                var wrongExtension = directory.Write("not-supported.txt", "text");
+                var missing = Path.Combine(directory.Path, "missing.resx");
+
+                var result = Run(file, missing, wrongExtension);
+
+                Assert.Equal(2, result.ExitCode);
+                Assert.Contains("Path not found", result.Error);
+                Assert.Contains("supported file type", result.Error);
+                Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(file));
+            }
+        }
+
+        [Fact]
+        public void Dry_run_succeeds_without_writing()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var file = directory.WriteResx("dry.resx", "b", "a");
+                var original = File.ReadAllText(file);
+
+                var result = Run("--dry-run", file);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Equal(original, File.ReadAllText(file));
+                Assert.Contains("Would update 1", result.Output);
+            }
+        }
+
+        [Fact]
+        public void Duplicate_targets_are_processed_once()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var file = directory.WriteResx("duplicate.resx", "b", "a");
+
+                var result = Run(file, file, directory.Path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Processed 1 file(s)", result.Output);
+            }
+        }
+
+        [Fact]
+        public void Recursive_option_is_required_for_nested_files()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var nestedFile = directory.WriteResx(Path.Combine("nested", "nested.resx"), "b", "a");
+
+                var nonRecursive = Run(directory.Path);
+                var recursive = Run("--recursive", directory.Path);
+
+                Assert.Equal(0, nonRecursive.ExitCode);
+                Assert.Contains("No supported files found.", nonRecursive.Output);
+                Assert.Equal(0, recursive.ExitCode);
+                Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(nestedFile));
+            }
+        }
+
+        [Fact]
+        public void Inactive_and_malformed_files_have_distinct_outcomes()
+        {
+            using (var inactiveDirectory = new TemporaryDirectory())
+            using (var malformedDirectory = new TemporaryDirectory())
+            {
+                var inactive = inactiveDirectory.WriteResx("inactive.resx", "b", "a");
+                var malformed = malformedDirectory.Write("malformed.resx", "<root>");
+                malformedDirectory.EnableFormatting();
+
+                var inactiveResult = Run(inactive);
+                var malformedResult = Run("--verbose", malformed);
+
+                Assert.Equal(0, inactiveResult.ExitCode);
+                Assert.Contains("skipped", inactiveResult.Output);
+                Assert.Equal(2, malformedResult.ExitCode);
+                Assert.Contains("failed", malformedResult.Output);
+                Assert.DoesNotContain("Processed", malformedResult.Output);
+                Assert.Contains("System.Xml.XmlException", malformedResult.Error);
+                Assert.Equal("<root>", File.ReadAllText(malformed));
+            }
+        }
+
+        [Fact]
+        public void Option_terminator_allows_a_dash_prefixed_file_name()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var file = directory.WriteResx("-input.resx", "b", "a");
+                var originalDirectory = Environment.CurrentDirectory;
+                try
+                {
+                    Environment.CurrentDirectory = directory.Path;
+                    var result = Run("--", "-input.resx");
+
+                    Assert.Equal(0, result.ExitCode);
+                    Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(file));
+                }
+                finally
+                {
+                    Environment.CurrentDirectory = originalDirectory;
+                }
+            }
+        }
+
+        [Fact]
+        public void Lint_reports_diagnostics_without_editorconfig()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var project = directory.Write(
+                    "LintProject.csproj",
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<TargetFramework>net10.0</TargetFramework>"
+                    + "<TargetFrameworks>net10.0;net9.0</TargetFrameworks>"
+                    + "</PropertyGroup><ItemGroup /></Project>");
+
+                var result = Run("--lint", project);
+
+                Assert.Equal(1, result.ExitCode);
+                Assert.Contains("warning CSPROJ001", result.Output);
+                Assert.Contains("warning CSPROJ004", result.Output);
+            }
+        }
+
+        [Fact]
+        public void Recursive_processing_skips_generated_directories()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                directory.Write(
+                    "Real.csproj",
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
+                var generated = directory.Write(
+                    Path.Combine("bin", "Debug", "Generated.csproj"),
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
+
+                var result = Run("--recursive", directory.Path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Real.csproj", result.Output);
+                Assert.DoesNotContain("Generated.csproj", result.Output);
+                Assert.Contains("<Zeta>z</Zeta><Alpha>a</Alpha>", File.ReadAllText(generated));
+            }
+        }
+
         private static (int ExitCode, string Output, string Error) Run(params string[] args)
         {
             var originalOut = Console.Out;
@@ -142,6 +324,28 @@ namespace PNFmt.Tests
                     + "resx_formatter_remove_documentation_comment=true\r\n");
             }
 
+            public static string[] ReadNames(string path)
+            {
+                var document = XDocument.Load(path);
+                return document.Root
+                    .Elements("data")
+                    .Select(element => (string)element.Attribute("name"))
+                    .ToArray();
+            }
+
+            public string WriteResx(string relativePath, params string[] names)
+            {
+                var entries = string.Join(
+                    string.Empty,
+                    names.Select(name => $"<data name=\"{name}\"><value>{name}</value></data>"));
+                return this.Write(
+                    relativePath,
+                    "<?xml version=\"1.0\" encoding=\"utf-8\"?><root>"
+                    + "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>"
+                    + entries
+                    + "</root>");
+            }
+
             public string Write(string relativePath, string contents)
             {
                 var path = System.IO.Path.Combine(this.Path, relativePath);
@@ -165,4 +369,3 @@ namespace PNFmt.Tests
         }
     }
 }
-

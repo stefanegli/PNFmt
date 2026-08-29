@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Z.Framework" />
+    <FrameworkReference Include="A.Framework" />
+  </ItemGroup>
+  <ItemGroup>
+    <Analyzer Include="tools\z.dll" />
+    <Analyzer Include="tools\a.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <AdditionalFiles Include="z.json" />
+    <AdditionalFiles Include="a.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Z.Namespace" />
+    <Using Include="A.Namespace" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Z.Tests" />
+    <InternalsVisibleTo Include="A.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <AssemblyMetadata Include="ZKey" Value="z" />
+    <AssemblyMetadata Include="AKey" Value="a" />
+  </ItemGroup>
+  <ItemGroup>
+    <TrimmerRootAssembly Include="Z.Assembly" />
+    <TrimmerRootAssembly Include="A.Assembly" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Shared\Z.cs" Link="Z.cs" />
+    <Compile Include="..\Shared\A.cs" Link="A.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="z.txt" />
+    <Content Include="a.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="z.resx" />
+    <EmbeddedResource Include="a.resx" />
+  </ItemGroup>
+</Project>

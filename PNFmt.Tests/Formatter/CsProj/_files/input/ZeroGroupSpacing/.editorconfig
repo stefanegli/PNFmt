@@ -1,0 +1,8 @@
+root = false
+
+[*.csproj]
+csproj_formatter_sort_entries=true
+csproj_formatter_empty_lines_between_groups=0
+end_of_line = crlf
+tab_width = 4
+indent_style = space

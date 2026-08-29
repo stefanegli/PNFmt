@@ -108,7 +108,7 @@ namespace PNFmt.Cli
                 paths.Add(".");
             }
 
-            var registry = FormatterProviderCatalog.CreateDefault();
+            var registry = FormatterCatalog.CreateDefault();
             var pathErrors = new List<string>();
             var files = ResolveTargetFiles(paths, recursive, registry, pathErrors);
 
@@ -135,18 +135,18 @@ namespace PNFmt.Cli
             {
                 try
                 {
-                    if (!registry.TryGetProvider(file, out var provider))
+                    if (!registry.TryGetFormatter(file, out var formatter))
                     {
                         throw new InvalidOperationException(
-                            $"No formatter provider is registered for '{Path.GetExtension(file)}'.");
+                            $"No formatter is registered for '{Path.GetExtension(file)}'.");
                     }
 
                     var request = new FileFormatRequest(file, !dryRun, lint, log);
-                    var result = provider.Format(request);
+                    var result = formatter.Format(request);
                     if (result is null)
                     {
                         throw new InvalidOperationException(
-                            $"Formatter provider '{provider.Name}' returned no result.");
+                            $"Formatter '{formatter.Name}' returned no result.");
                     }
 
                     switch (result.Status)
@@ -168,7 +168,7 @@ namespace PNFmt.Cli
 
                         default:
                             throw new InvalidOperationException(
-                                $"Formatter provider '{provider.Name}' returned an unknown status.");
+                                $"Formatter '{formatter.Name}' returned an unknown status.");
                     }
 
                     foreach (var diagnostic in result.Diagnostics)
@@ -252,7 +252,7 @@ namespace PNFmt.Cli
         private static List<string> ResolveTargetFiles(
             IEnumerable<string> paths,
             bool recursive,
-            FormatterProviderRegistry registry,
+            FormatterRegistry registry,
             List<string> errors)
         {
             var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -277,7 +277,7 @@ namespace PNFmt.Cli
 
                 if (File.Exists(fullPath))
                 {
-                    if (registry.TryGetProvider(fullPath, out _))
+                    if (registry.TryGetFormatter(fullPath, out _))
                     {
                         results.Add(fullPath);
                     }
@@ -304,7 +304,7 @@ namespace PNFmt.Cli
         private static void CollectDirectoryFiles(
             string directoryPath,
             bool recursive,
-            FormatterProviderRegistry registry,
+            FormatterRegistry registry,
             HashSet<string> results,
             List<string> errors)
         {
@@ -312,7 +312,7 @@ namespace PNFmt.Cli
             {
                 foreach (var file in Directory.EnumerateFiles(directoryPath, "*", SearchOption.TopDirectoryOnly))
                 {
-                    if (registry.TryGetProvider(file, out _))
+                    if (registry.TryGetFormatter(file, out _))
                     {
                         results.Add(Path.GetFullPath(file));
                     }
@@ -417,4 +417,3 @@ namespace PNFmt.Cli
         }
     }
 }
-

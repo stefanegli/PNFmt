@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Condition="'$(Configuration)' == 'Debug'" PrivateAssets="all" Include="Tooling.Package" Version="1.2.3" ExcludeAssets="runtime">
+      <PrivateAssets>all</PrivateAssets>
+      <ExcludeAssets>runtime</ExcludeAssets>
+      <IncludeAssets>build;analyzers</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Condition="Exists('asset.txt')" CopyToPublishDirectory="PreserveNewest" Link="Assets\asset.txt" Include="asset.txt" CopyToOutputDirectory="PreserveNewest">
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      <DependentUpon>parent.txt</DependentUpon>
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <Link>Assets\asset.txt</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="semantic.txt">
+      <Z>%(A)</Z>
+      <A>value</A>
+      <Generator>CustomGenerator</Generator>
+    </Content>
+  </ItemGroup>
+</Project>
