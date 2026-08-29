@@ -36,7 +36,7 @@ namespace PNFmt.Cli
             var check = false;
             var lint = false;
             var stopOptions = false;
-            var threadCount = Math.Max(1, Environment.ProcessorCount);
+            var maxCpuCount = 1;
             var paths = new List<string>();
             var arguments = args ?? Array.Empty<string>();
 
@@ -49,28 +49,16 @@ namespace PNFmt.Cli
                     continue;
                 }
 
-                if (!stopOptions && (string.Equals(arg, "-j", StringComparison.Ordinal)
-                    || string.Equals(arg, "--threads", StringComparison.Ordinal)))
+                if (!stopOptions && TryGetMaxCpuCountValue(arg, out var maxCpuCountValue))
                 {
-                    if (index + 1 >= arguments.Length
-                        || !TryParseThreadCount(arguments[++index], out threadCount))
+                    if (maxCpuCountValue is null)
                     {
-                        Console.Error.WriteLine(
-                            $"Option '{arg}' requires a positive integer thread count.");
-                        PrintUsage(Console.Error);
-                        return 2;
+                        maxCpuCount = Math.Max(1, Environment.ProcessorCount);
                     }
-
-                    continue;
-                }
-
-                const string ThreadsPrefix = "--threads=";
-                if (!stopOptions && arg.StartsWith(ThreadsPrefix, StringComparison.Ordinal))
-                {
-                    if (!TryParseThreadCount(arg.Substring(ThreadsPrefix.Length), out threadCount))
+                    else if (!TryParseMaxCpuCount(maxCpuCountValue, out maxCpuCount))
                     {
                         Console.Error.WriteLine(
-                            "Option '--threads' requires a positive integer thread count.");
+                            $"Option '{arg}' requires a positive integer after ':'.");
                         PrintUsage(Console.Error);
                         return 2;
                     }
@@ -162,7 +150,7 @@ namespace PNFmt.Cli
             var skipped = 0;
             var failed = 0;
             var diagnosticCount = 0;
-            var run = new FormattingRunner(registry).Run(files, !dryRun, lint, threadCount);
+            var run = new FormattingRunner(registry).Run(files, !dryRun, lint, maxCpuCount);
 
             foreach (var outcome in run.Outcomes)
             {
@@ -236,14 +224,43 @@ namespace PNFmt.Cli
             return 0;
         }
 
-        private static bool TryParseThreadCount(string value, out int threadCount)
+        private static bool TryGetMaxCpuCountValue(string arg, out string value)
+        {
+            const string ShortOption = "-m";
+            const string LongOption = "-maxCpuCount";
+            if (string.Equals(arg, ShortOption, StringComparison.OrdinalIgnoreCase)
+                || string.Equals(arg, LongOption, StringComparison.OrdinalIgnoreCase))
+            {
+                value = null;
+                return true;
+            }
+
+            var shortPrefix = ShortOption + ":";
+            if (arg.StartsWith(shortPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = arg.Substring(shortPrefix.Length);
+                return true;
+            }
+
+            var longPrefix = LongOption + ":";
+            if (arg.StartsWith(longPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                value = arg.Substring(longPrefix.Length);
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        private static bool TryParseMaxCpuCount(string value, out int maxCpuCount)
         {
             return int.TryParse(
                     value,
                     NumberStyles.None,
                     CultureInfo.InvariantCulture,
-                    out threadCount)
-                && threadCount > 0;
+                    out maxCpuCount)
+                && maxCpuCount > 0;
         }
 
         private static bool IsHelpArg(string arg)
@@ -272,7 +289,8 @@ namespace PNFmt.Cli
             writer.WriteLine("Options:");
             writer.WriteLine("  -r, --recursive   Recurse into subdirectories when a path is a directory.");
             writer.WriteLine("  -v, --verbose     Show detailed per-file logging and errors.");
-            writer.WriteLine("  -j, --threads N   Process up to N files concurrently (default: processor count).");
+            writer.WriteLine("  -m[:N], -maxCpuCount[:N]");
+            writer.WriteLine("                     Process up to N files concurrently; omit N to use all CPUs.");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");

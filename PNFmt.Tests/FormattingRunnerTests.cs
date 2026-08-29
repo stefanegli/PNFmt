@@ -28,7 +28,7 @@ namespace PNFmt.Tests
         }
 
         [Fact]
-        public void Runner_rejects_non_positive_thread_counts()
+        public void Runner_rejects_non_positive_parallelism()
         {
             var registry = new FormatterRegistry(new[] { new NoOpFormatter() });
             var runner = new FormattingRunner(registry);

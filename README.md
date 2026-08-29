@@ -27,12 +27,14 @@ Options:
 
 - `-r`, `--recursive`: recurse into directory targets
 - `-v`, `--verbose`: show detailed formatter logging
-- `-j`, `--threads N`: process up to `N` files concurrently; defaults to the processor count
+- `-m[:N]`, `-maxCpuCount[:N]`: process up to `N` files concurrently; omit `N` to use the processor count
 - `-n`, `--dry-run`: preview without writing and return success
 - `--check`: preview and return `1` when a file would change
 - `--lint`: run project diagnostics and return `1` for changes or diagnostics
 - `-h`, `--help`: show help
 - `-V`, `--version`: show version
+
+PNFmt follows MSBuild's parallelism behavior. Without `-m`, it processes one file at a time. `-m` uses the processor count, while `-m:4` or `-maxCpuCount:4` limits processing to four concurrent files.
 
 The normal output is one summary line with the processed and affected file counts plus elapsed time. Use `--verbose` for per-file statuses. PNFmt formats discovered `.editorconfig` files before processing their dependent files in parallel.
 

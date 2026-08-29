@@ -137,7 +137,7 @@ namespace PNFmt.Tests
 
             Assert.Equal(0, help.ExitCode);
             Assert.Contains("Usage: pnfmt", help.Output);
-            Assert.Contains("--threads N", help.Output);
+            Assert.Contains("-m[:N], -maxCpuCount[:N]", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
         }
@@ -189,27 +189,29 @@ namespace PNFmt.Tests
         }
 
         [Fact]
-        public void Thread_count_is_configurable_and_must_be_positive()
+        public void Max_cpu_count_matches_msbuild_syntax_and_semantics()
         {
             using (var directory = new TemporaryDirectory())
             {
                 var first = directory.Write("first.ini", "z=2\na=1\n");
                 var second = directory.Write("second.ini", "y=2\nb=1\n");
 
-                var result = Run("--threads", "2", first, second);
-                var equalsSyntax = Run("--threads=1", first, second);
-                var zero = Run("--threads", "0", first);
-                var missing = Run("--threads");
+                var result = Run("-m:2", first, second);
+                var longSyntax = Run("-maxCpuCount:1", first, second);
+                var processorCount = Run("-m", first, second);
+                var zero = Run("-m:0", first);
+                var removedOption = Run("--threads", "2", first);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.Equal(0, equalsSyntax.ExitCode);
+                Assert.Equal(0, longSyntax.ExitCode);
+                Assert.Equal(0, processorCount.ExitCode);
                 Assert.Contains("Processed 2 file(s) in ", result.Output);
                 Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(first));
                 Assert.Equal("b = 1\ny = 2\n", File.ReadAllText(second));
                 Assert.Equal(2, zero.ExitCode);
                 Assert.Contains("positive integer", zero.Error);
-                Assert.Equal(2, missing.ExitCode);
-                Assert.Contains("positive integer", missing.Error);
+                Assert.Equal(2, removedOption.ExitCode);
+                Assert.Contains("Unknown option", removedOption.Error);
             }
         }
 

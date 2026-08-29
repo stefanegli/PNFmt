@@ -23,18 +23,18 @@ namespace PNFmt.Cli
             IReadOnlyList<string> files,
             bool writeChanges,
             bool lint,
-            int threadCount)
+            int maxDegreeOfParallelism)
         {
             if (files is null)
             {
                 throw new ArgumentNullException(nameof(files));
             }
 
-            if (threadCount <= 0)
+            if (maxDegreeOfParallelism <= 0)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(threadCount),
-                    "The thread count must be greater than zero.");
+                    nameof(maxDegreeOfParallelism),
+                    "The maximum degree of parallelism must be greater than zero.");
             }
 
             var outcomes = new FileFormattingOutcome[files.Count];
@@ -45,7 +45,10 @@ namespace PNFmt.Cli
             var otherIndexes = Enumerable.Range(0, files.Count)
                 .Where(index => !IsEditorConfig(files[index]))
                 .ToArray();
-            var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = threadCount };
+            var parallelOptions = new ParallelOptions
+            {
+                MaxDegreeOfParallelism = maxDegreeOfParallelism,
+            };
             this.FormatFiles(
                 files,
                 editorConfigIndexes,
