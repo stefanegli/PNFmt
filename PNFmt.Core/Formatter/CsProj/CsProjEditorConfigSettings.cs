@@ -14,7 +14,11 @@ namespace PNFmt
             {
                 var parser = new EditorConfig.Core.EditorConfigParser();
                 var settings = parser.Parse(targetFile).Properties;
-                if (settings.TryGetValue("csproj_formatter_sort_entries", out var sortEntries))
+                var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+                if (resolver.TryGet(
+                    EditorConfigSettingNames.SortEntries,
+                    "csproj_formatter_sort_entries",
+                    out var sortEntries))
                 {
                     isActive = true;
                     this.SortEntries = IsEnabled(sortEntries);
@@ -51,7 +55,10 @@ namespace PNFmt
                     this.EndOfLine = ResolveEndOfLine(endOfLine);
                 }
 
-                if (settings.TryGetValue("csproj_formatter_empty_lines_between_groups", out var emptyLinesBetweenGroups)
+                if (resolver.TryGet(
+                        EditorConfigSettingNames.EmptyLinesBetweenGroups,
+                        "csproj_formatter_empty_lines_between_groups",
+                        out var emptyLinesBetweenGroups)
                     && int.TryParse(emptyLinesBetweenGroups, out var parsedEmptyLinesBetweenGroups)
                     && parsedEmptyLinesBetweenGroups >= 0)
                 {
@@ -59,7 +66,10 @@ namespace PNFmt
                     this.EmptyLinesBetweenGroups = parsedEmptyLinesBetweenGroups;
                 }
 
-                if (settings.TryGetValue("csproj_formatter_sort_item_types", out var sortItemTypes))
+                if (resolver.TryGet(
+                    EditorConfigSettingNames.SortItemTypes,
+                    "csproj_formatter_sort_item_types",
+                    out var sortItemTypes))
                 {
                     isActive = true;
                     var parsedItemTypes = sortItemTypes

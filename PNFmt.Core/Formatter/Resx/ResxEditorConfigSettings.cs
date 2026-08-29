@@ -11,25 +11,39 @@ namespace PNFmt
             {
                 var parser = new EditorConfig.Core.EditorConfigParser();
                 var settings = parser.Parse(targetFile).Properties;
-                if (settings.TryGetValue("resx_formatter_sort_entries", out var sortEntries))
+                var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+                if (resolver.TryGet(
+                    EditorConfigSettingNames.SortEntries,
+                    "resx_formatter_sort_entries",
+                    out var sortEntries))
                 {
                     isActive = true;
                     this.SortEntries = IsEnabled(sortEntries);
                 }
 
-                if (settings.TryGetValue("resx_formatter_remove_xsd_schema", out var removeSchema))
+                if (resolver.TryGet(
+                    EditorConfigSettingNames.RemoveXsdSchema,
+                    "resx_formatter_remove_xsd_schema",
+                    out var removeSchema))
                 {
                     isActive = true;
                     this.RemoveXsdSchema = IsEnabled(removeSchema);
                 }
 
-                if (settings.TryGetValue("resx_formatter_remove_documentation_comment", out var removeComment))
+                if (resolver.TryGet(
+                    EditorConfigSettingNames.RemoveDocumentationComment,
+                    "resx_formatter_remove_documentation_comment",
+                    out var removeComment))
                 {
                     isActive = true;
                     this.RemoveDocumentationComment = IsEnabled(removeComment);
                 }
 
-                if (this.SortEntries && settings.TryGetValue("resx_formatter_sort_comparer", out var comparerString))
+                if (resolver.TryGet(
+                        EditorConfigSettingNames.SortComparer,
+                        "resx_formatter_sort_comparer",
+                        out var comparerString)
+                    && this.SortEntries)
                 {
                     this.Comparer = Comparer(comparerString);
                 }

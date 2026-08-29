@@ -247,6 +247,7 @@ namespace PNFmt.Cli
             writer.WriteLine("  If no path is provided, the current directory is used.");
             writer.WriteLine("  Registered formatters support .csproj, .resx, .slnx, .editorconfig, and .ini files.");
             writer.WriteLine("  Project and resource formatting runs only when EditorConfig enables it.");
+            writer.WriteLine("  PNFmt settings use the pnfmt_ prefix; legacy formatter settings remain fallbacks.");
         }
 
         private static List<string> ResolveTargetFiles(
@@ -399,6 +400,12 @@ namespace PNFmt.Cli
 
             public void WriteLine(string message)
             {
+                if (message.IndexOf(": warning PNFMT", StringComparison.Ordinal) >= 0)
+                {
+                    Console.Error.WriteLine(message);
+                    return;
+                }
+
                 if (!this.verbose)
                 {
                     return;

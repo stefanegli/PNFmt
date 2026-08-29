@@ -33,24 +33,40 @@ Options:
 - `-h`, `--help`: show help
 - `-V`, `--version`: show version
 
-Project and resource formatting remain opt-in through the existing settings:
+Project and resource formatting remain opt-in through EditorConfig:
 
 ```ini
 [*.csproj]
-csproj_formatter_sort_entries = true
-csproj_formatter_empty_lines_between_groups = 1
+pnfmt_sort_entries = true
+pnfmt_empty_lines_between_groups = 1
 indent_style = space
 tab_width = 4
 end_of_line = crlf
 
 [*.resx]
-resx_formatter_sort_entries = true
-resx_formatter_remove_xsd_schema = true
-resx_formatter_remove_documentation_comment = true
-resx_formatter_sort_comparer = OrdinalIgnoreCase
+pnfmt_sort_entries = true
+pnfmt_remove_xsd_schema = true
+pnfmt_remove_documentation_comment = true
+pnfmt_sort_comparer = OrdinalIgnoreCase
 ```
 
-`csproj_formatter_sort_item_types` replaces the built-in list when set. Omit it to use the defaults. The supported resource comparers are `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, and `Ordinal`.
+`pnfmt_sort_item_types` replaces the built-in project item list when set. Omit it to use the defaults. The supported resource comparers are `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, and `Ordinal`.
+
+### Legacy setting compatibility
+
+PNFmt reads the old tool settings as fallbacks:
+
+| PNFmt setting | Legacy fallback |
+| --- | --- |
+| `pnfmt_sort_entries` | `csproj_formatter_sort_entries` for `.csproj` files |
+| `pnfmt_sort_entries` | `resx_formatter_sort_entries` for `.resx` files |
+| `pnfmt_empty_lines_between_groups` | `csproj_formatter_empty_lines_between_groups` |
+| `pnfmt_sort_item_types` | `csproj_formatter_sort_item_types` |
+| `pnfmt_remove_xsd_schema` | `resx_formatter_remove_xsd_schema` |
+| `pnfmt_remove_documentation_comment` | `resx_formatter_remove_documentation_comment` |
+| `pnfmt_sort_comparer` | `resx_formatter_sort_comparer` |
+
+When a legacy setting applies, PNFmt writes warning `PNFMT001` to standard error. If both names apply, the `pnfmt_` setting wins and the warning states that PNFmt ignored the legacy value. These warnings do not change the command's exit code. Standard EditorConfig layout settings such as `indent_style`, `indent_size`, `tab_width`, and `end_of_line` keep their standard names.
 
 SLNX formatting orders the schema-defined solution, folder, project, configuration, and property elements, while leaving unknown extension elements in place as ordering barriers. It uses two-space XML indentation and preserves the file's newline style.
 

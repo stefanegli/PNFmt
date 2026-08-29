@@ -186,6 +186,35 @@ namespace PNFmt.Tests
         }
 
         [Fact]
+        public void Legacy_settings_warn_without_verbose_and_pnfmt_settings_win()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(
+                    ".editorconfig",
+                    "root = true\r\n\r\n"
+                    + "[*.csproj]\r\n"
+                    + "csproj_formatter_sort_entries = true\r\n"
+                    + "pnfmt_sort_entries = false\r\n");
+                var project = directory.Write(
+                    "Project.csproj",
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
+                var result = Run(project);
+                var formatted = File.ReadAllText(project);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.True(
+                    formatted.IndexOf("<Zeta>", StringComparison.Ordinal)
+                    < formatted.IndexOf("<Alpha>", StringComparison.Ordinal));
+                Assert.Contains("warning PNFMT001", result.Error);
+                Assert.Contains("csproj_formatter_sort_entries", result.Error);
+                Assert.Contains("pnfmt_sort_entries", result.Error);
+                Assert.Contains("deprecated and ignored", result.Error);
+            }
+        }
+
+        [Fact]
         public void Duplicate_targets_are_processed_once()
         {
             using (var directory = new TemporaryDirectory())
@@ -351,11 +380,11 @@ namespace PNFmt.Tests
                     ".editorconfig",
                     "root = true\r\n\r\n"
                     + "[*.csproj]\r\n"
-                    + "csproj_formatter_sort_entries=true\r\n\r\n"
+                    + "pnfmt_sort_entries=true\r\n\r\n"
                     + "[*.resx]\r\n"
-                    + "resx_formatter_sort_entries=true\r\n"
-                    + "resx_formatter_remove_xsd_schema=true\r\n"
-                    + "resx_formatter_remove_documentation_comment=true\r\n");
+                    + "pnfmt_sort_entries=true\r\n"
+                    + "pnfmt_remove_xsd_schema=true\r\n"
+                    + "pnfmt_remove_documentation_comment=true\r\n");
             }
 
             public static string[] ReadNames(string path)
