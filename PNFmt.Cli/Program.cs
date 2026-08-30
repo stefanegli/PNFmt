@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using PNFmt;
 
 namespace PNFmt.Cli
@@ -338,7 +339,11 @@ namespace PNFmt.Cli
 
         private static void PrintVersion()
         {
-            var version = typeof(Program).Assembly.GetName().Version?.ToString() ?? "unknown";
+            var version = typeof(Program).Assembly
+                .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+                .InformationalVersion
+                .Split('+')[0]
+                ?? "unknown";
             Console.WriteLine($"{ToolName} {version}");
         }
 

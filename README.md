@@ -1,48 +1,89 @@
 # PNFmt
 
-`pnfmt` formats .NET project, solution, resource, and configuration files.
+> [!WARNING]
+> PNFmt is currently alpha software and has not yet been tested for production use. Use it with source control and review the changes it makes.
 
-The built-in formatters are:
+`pnfmt` is a .NET global tool that formats these files:
 
-- `.csproj`, using `CsProjFormatter`
-- `.editorconfig` and `.ini`, using `IniFormatter`
-- `.resx`, using `ResxFormatter`
-- `.slnx`, using `SlnxFormatter`
+- `.csproj` project files
+- `.editorconfig` and `.ini` configuration files
+- `.resx` resource files
+- `.slnx` solution files
 
-All formatter code lives in `PNFmt.Core/Formatter` and uses the `PNFmt` namespace. Each formatter declares one or more file extensions. The registry maps every extension to its formatter, so adding another formatter does not change file discovery or dispatch.
+Project and resource formatting follows the settings in the applicable `.editorconfig` file. EditorConfig, INI, and SLNX formatting works without formatter-specific configuration.
+
+## Installation
+
+Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then install PNFmt from NuGet.org:
+
+```powershell
+dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1
+```
+
+Update an existing installation with:
+
+```powershell
+dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1
+```
+
+Verify the installation:
+
+```powershell
+pnfmt --version
+```
 
 ## Usage
+
+Run `pnfmt` from the directory containing the files you want to format:
 
 ```text
 pnfmt [options] [<path> ...]
 ```
 
-With no path, `pnfmt` processes the current directory. Directories are non-recursive unless `--recursive` is supplied.
+Without a path, PNFmt processes the current directory. Directory processing is non-recursive unless you pass `--recursive`.
 
 ```powershell
-dotnet run --project PNFmt.Cli\PNFmt.Cli.csproj -- --check --recursive .
+# Format supported files in the current directory and its subdirectories
+pnfmt --recursive .
+
+# Check formatting without changing files
+pnfmt --check --recursive .
+
+# Preview changes without changing files or returning a failing check result
+pnfmt --dry-run --recursive .
+
+# Lint project files and check their formatting
+pnfmt --lint --recursive .
+
+# Format only test project files
+pnfmt --recursive --file-pattern "**/*Tests.csproj" .
+
+# Run only the project and resource formatters
+pnfmt --recursive --formatter csproj,resx .
 ```
 
-Options:
+### Options
 
-- `-r`, `--recursive`: recurse into directory targets
-- `-v`, `--verbose`: show detailed formatter logging
-- `-m[:N]`, `-maxCpuCount[:N]`: process up to `N` files concurrently; omit `N` to use the processor count
-- `--file-pattern <glob>`: include only files matching the glob; repeat to include more patterns
-- `--formatter <name>[,<name>...]`: enable only the named formatters; repeat the option or separate names with commas
-- `-n`, `--dry-run`: preview without writing and return success
-- `--check`: preview and return `1` when a file would change
-- `--lint`: run project diagnostics and return `1` for changes or diagnostics
-- `-h`, `--help`: show help
-- `-V`, `--version`: show version
+| Option | Description |
+| --- | --- |
+| `-r`, `--recursive` | Process directory targets recursively. |
+| `-v`, `--verbose` | Show per-file statuses and detailed errors. |
+| `-m[:N]`, `-maxCpuCount[:N]` | Process up to `N` files at once. Without `N`, use the processor count. |
+| `--file-pattern <glob>` | Include files matching the glob. Repeat the option to add patterns. |
+| `--formatter <name>[,<name>...]` | Run only the named formatters. Available names are `csproj`, `ini`, `resx`, and `slnx`. |
+| `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
+| `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
+| `--lint` | Check project formatting and report project diagnostics without writing files. |
+| `-h`, `--help` | Show help. |
+| `-V`, `--version` | Show the CLI version. |
 
-PNFmt follows MSBuild's parallelism behavior. Without `-m`, it processes one file at a time. `-m` uses the processor count, while `-m:4` or `-maxCpuCount:4` limits processing to four concurrent files.
+File patterns support `*` for characters within one path segment, `?` for one character, and `**` for any number of directories. PNFmt processes one file at a time by default. Use `-m`, `-m:4`, or `-maxCpuCount:4` to enable parallel processing.
 
-File patterns use `*` for any characters other than a directory separator, `?` for one character, and `**` for any number of directories. A pattern without a directory separator matches file names at any depth. For example, `pnfmt --recursive --file-pattern "**/*Tests.csproj" .` formats only matching project files. The available formatter names are `csproj`, `ini`, `resx`, and `slnx`.
+The command returns exit code `0` on success, `1` when `--check` finds changes or `--lint` finds changes or diagnostics, and `2` for usage, path, or formatting errors.
 
-The normal output is one summary line with the processed and affected file counts plus elapsed time. Use `--verbose` for per-file statuses. PNFmt formats discovered `.editorconfig` files before processing their dependent files in parallel.
+## Configuration
 
-Project and resource formatting remain opt-in through EditorConfig:
+Add the settings you want to an `.editorconfig` file. At least one supported PNFmt setting must apply before PNFmt formats a `.csproj` or `.resx` file.
 
 ```ini
 [*.csproj]
@@ -59,84 +100,42 @@ pnfmt_resx_remove_documentation_comment = true
 pnfmt_resx_sort_comparer = OrdinalIgnoreCase
 ```
 
-`pnfmt_csproj_sort_item_types` replaces the built-in project item list when set. Omit it to use the defaults. The supported resource comparers are `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, and `Ordinal`.
+### Project settings
 
-Settings shared by multiple formatters use the `pnfmt_` prefix directly. Settings that only make sense for one format use `pnfmt_csproj_` or `pnfmt_resx_`.
-
-### Legacy setting compatibility
-
-PNFmt reads the old tool settings as fallbacks:
-
-| PNFmt setting | Legacy fallback |
+| Setting | Description |
 | --- | --- |
-| `pnfmt_sort_entries` | `csproj_formatter_sort_entries` for `.csproj` files |
-| `pnfmt_sort_entries` | `resx_formatter_sort_entries` for `.resx` files |
-| `pnfmt_csproj_empty_lines_between_groups` | `csproj_formatter_empty_lines_between_groups` |
-| `pnfmt_csproj_sort_item_types` | `csproj_formatter_sort_item_types` |
-| `pnfmt_resx_remove_xsd_schema` | `resx_formatter_remove_xsd_schema` |
-| `pnfmt_resx_remove_documentation_comment` | `resx_formatter_remove_documentation_comment` |
-| `pnfmt_resx_sort_comparer` | `resx_formatter_sort_comparer` |
+| `pnfmt_sort_entries` | Sort eligible properties and items when set to `true`. |
+| `pnfmt_csproj_empty_lines_between_groups` | Set the number of empty lines between top-level groups. |
+| `pnfmt_csproj_sort_item_types` | Replace the built-in list of sortable item types. Separate names with commas or semicolons, or use `*` for any homogeneous item type. |
+| `indent_style`, `indent_size`, `tab_width`, `end_of_line` | Control standard XML layout through EditorConfig. |
 
-When a legacy setting applies, PNFmt writes warning `PNFMT001` to standard error. If both names apply, the `pnfmt_` setting wins and the warning states that PNFmt ignored the legacy value. These warnings do not change the command's exit code. Standard EditorConfig layout settings such as `indent_style`, `indent_size`, `tab_width`, and `end_of_line` keep their standard names.
+Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list. Sorting keeps evaluation-sensitive project entries in their original order.
 
-SLNX formatting orders the schema-defined solution, folder, project, configuration, and property elements, while leaving unknown extension elements in place as ordering barriers. It uses two-space XML indentation and preserves the file's newline style.
+### Resource settings
 
-EditorConfig and INI formatting preserves section order because later EditorConfig sections can override earlier ones. Within each uninterrupted property block it sorts keys case-insensitively, normalizes assignments to `key = value`, collapses repeated blank lines, and preserves comments or unknown lines as ordering barriers. Inline `#` and `;` characters remain part of a value.
+| Setting | Description |
+| --- | --- |
+| `pnfmt_sort_entries` | Sort resource entries when set to `true`. |
+| `pnfmt_resx_remove_xsd_schema` | Remove the embedded XSD schema when set to `true`. |
+| `pnfmt_resx_remove_documentation_comment` | Remove the standard documentation comment when set to `true`. |
+| `pnfmt_resx_sort_comparer` | Set the entry comparer to `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, or `Ordinal`. |
 
-The command returns `0` on success, `1` when `--check` finds pending changes or `--lint` finds project diagnostics, and `2` for usage, path, or formatting failures.
+PNFmt still accepts the legacy `csproj_formatter_*` and `resx_formatter_*` setting names as fallbacks. It reports warning `PNFMT001` when it uses or ignores a legacy setting. A matching `pnfmt_*` setting takes precedence.
 
-## Install as a global tool
+## Contributing
 
-Install or update PNFmt from NuGet.org:
-
-```powershell
-dotnet tool install --global PetchNaka.PNFmt.Cli
-dotnet tool update --global PetchNaka.PNFmt.Cli
-pnfmt --version
-```
-
-## Build and publish
-
-Every branch push and pull request runs formatting verification, a Release build, all tests, package creation, and an isolated global-tool installation through `.github/workflows/build.yml`.
-
-Create and validate a package locally without publishing it:
-
-```powershell
-.\scripts\Publish-GlobalTool.ps1 -Version 0.1.0 -PackOnly
-```
-
-Without `-PackOnly`, the script pushes the validated package to NuGet.org. It reads the API key from `NUGET_API_KEY`. On Windows it can fall back to the `NuGet.ApiKey.PNFmt.Prod` Windows Credential Manager entry.
-
-Pushing a tag such as `v0.1.0` runs `.github/workflows/publish-global-tool.yml`. The workflow tests, packs, installs the package into an isolated tool directory, runs `pnfmt --version`, obtains a short-lived NuGet.org API key through trusted publishing, and pushes the same validated package.
-
-Configure the repository before the first tagged release:
-
-1. Create the GitHub environment `nuget`.
-2. Set the repository variable `NUGET_USER` to the NuGet.org profile name.
-3. Add a NuGet.org trusted-publishing policy for repository `stefanegli/PNFmt`, workflow file `publish-global-tool.yml`, and environment `nuget`.
-
-See the [NuGet trusted-publishing documentation](https://learn.microsoft.com/nuget/nuget-org/trusted-publishing) for the NuGet.org policy setup.
-
-## Formatter interface
-
-Formatters implement `IFileFormatter` in `PNFmt.Core`. A formatter supplies its name, its `FileExtensions` collection, and a method that formats one file. `FormatterRegistry` validates registrations and performs case-insensitive extension lookup.
-
-## Snapshot tests
-
-`PNFmt.Tests` contains the complete formatter snapshot corpus from both legacy CLI projects:
-
-- 13 CsProjFormatter inputs under `Formatter/CsProj/_files/input`
-- 13 ResxFormatter inputs under `Formatter/Resx/_files`
-- 8 ResxFormatter EditorConfig scenarios under `Formatter/Resx/_editor`
-- 5 INI and EditorConfig inputs under `Formatter/Ini/_files/input`
-- 5 SLNX inputs under `Formatter/Slnx/_files/input`
-
-Tests format disposable input copies, then write their current output under `Snapshots/PNFmt.Tests`. The snapshot path mirrors the test namespace, class, method, and case. The CsProj, INI, EditorConfig, and SLNX snapshots also run through the built `pnfmt` process.
-
-Snapshot text uses LF line endings. Comparison normalizes CRLF, LF, and lone CR input before checking Git, so snapshots do not change between Windows and Unix test runs.
-
-Snapshots use Git staging as approval. A test compares its output with the staged snapshot when that snapshot has index changes; otherwise it compares with the version in `HEAD`. The test always overwrites the working-tree snapshot with the current output. A difference fails with a Git patch. Review the generated file, stage it with `git add`, and rerun the test to approve it. Unstaged manual edits never count as approval.
+Please use the [issue tracker](https://github.com/stefanegli/PNFmt/issues) for submitting bug reports or feature requests.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+[MIT License](LICENSE)
+
+### Third party licenses
+
+| Library | License |
+| --- | --- |
+| [EditorConfig .NET Core](https://github.com/editorconfig/editorconfig-core-net) | [MIT License](https://github.com/editorconfig/editorconfig-core-net/blob/master/LICENSE) |
+| [LibGit2Sharp](https://github.com/libgit2/libgit2sharp) | [MIT License](https://github.com/libgit2/libgit2sharp/blob/master/LICENSE.md) |
+| [Microsoft.NET.Test.Sdk](https://github.com/microsoft/vstest) | [MIT License](https://github.com/microsoft/vstest/blob/main/LICENSE) |
+| [xUnit](https://github.com/xunit/xunit) | [Apache License 2.0 / MIT License](https://github.com/xunit/xunit/blob/main/LICENSE) |
+| [NFluent](https://github.com/tpierrain/NFluent) | [Apache License 2.0](https://github.com/tpierrain/NFluent/blob/master/LICENSE) |
