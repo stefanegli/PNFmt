@@ -22,7 +22,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Alternate_sort_method_can_be_configured()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\sort", "Sort");
+            var actualFile = this.PrepareFile("sort", "Sort");
 
             var formatter = new ResxFormatter();
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-Us");
@@ -41,7 +41,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Different_file_extensions_can_be_processed()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\filetype", "Sort", "abc");
+            var actualFile = this.PrepareFile("filetype", "Sort", "abc");
 
             var formatter = new ResxFormatter();
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-Us");
@@ -60,8 +60,8 @@ namespace PNFmt.Tests.Formatter.Resx
         public void EditorConfig_files_can_be_specified_per_folder()
         {
             // Arrange
-            var actualFile1 = this.PrepareFile(@"_editor\config1", "Sort");
-            var actualFile2 = this.PrepareFile(@"_editor\config2", "Sort");
+            var actualFile1 = this.PrepareFile("config1", "Sort");
+            var actualFile2 = this.PrepareFile("config2", "Sort");
 
             var formatter = new ResxFormatter();
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-Us");
@@ -85,7 +85,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Resx_comment_and_schema_are_inserted_if_necessary()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\insertCommentAndSchema", "Sort");
+            var actualFile = this.PrepareFile("insertCommentAndSchema", "Sort");
 
             var formatter = new ResxFormatter();
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-Us");
@@ -104,7 +104,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Resx_comment_is_inserted_if_necessary()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\insertComment", "Sort");
+            var actualFile = this.PrepareFile("insertComment", "Sort");
 
             var formatter = new ResxFormatter();
             Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-Us");
@@ -123,7 +123,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Xsd_schema_can_be_removed()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\removeXsdSchema", "Schema");
+            var actualFile = this.PrepareFile("removeXsdSchema", "Schema");
 
             var formatter = new ResxFormatter();
 
@@ -141,7 +141,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Formatter_reports_inactive_if_EditorConfig_does_not_enable_it()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\inactive", "Sort");
+            var actualFile = this.PrepareFile("inactive", "Sort");
             var formatter = new ResxFormatter();
 
             // Act
@@ -161,7 +161,7 @@ namespace PNFmt.Tests.Formatter.Resx
         public void Dry_run_detects_changes_without_writing_the_file()
         {
             // Arrange
-            var actualFile = this.PrepareFile(@"_editor\sort", "Sort");
+            var actualFile = this.PrepareFile("sort", "Sort");
             var formatter = new ResxFormatter();
             var original = File.ReadAllText(actualFile);
 
@@ -190,13 +190,14 @@ namespace PNFmt.Tests.Formatter.Resx
             return new FileFormatRequest(filePath, writeChanges, false, new FakeLog());
         }
 
-        private string PrepareFile(string folder, string baseFileName, string extension = "resx")
+        private string PrepareFile(string fixtureName, string baseFileName, string extension = "resx")
         {
             var fixtureFolder = Path.Combine(
                 AppContext.BaseDirectory,
                 "Formatter",
                 "Resx",
-                folder);
+                "_editor",
+                fixtureName);
             var sourceFile = Path.Combine(fixtureFolder, $"{baseFileName}.{extension}");
             var actualFile = Path.Combine(fixtureFolder, $"{baseFileName}-actual-{Guid.NewGuid():N}.{extension}");
 
