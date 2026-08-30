@@ -28,6 +28,8 @@ Options:
 - `-r`, `--recursive`: recurse into directory targets
 - `-v`, `--verbose`: show detailed formatter logging
 - `-m[:N]`, `-maxCpuCount[:N]`: process up to `N` files concurrently; omit `N` to use the processor count
+- `--file-pattern <glob>`: include only files matching the glob; repeat to include more patterns
+- `--formatter <name>[,<name>...]`: enable only the named formatters; repeat the option or separate names with commas
 - `-n`, `--dry-run`: preview without writing and return success
 - `--check`: preview and return `1` when a file would change
 - `--lint`: run project diagnostics and return `1` for changes or diagnostics
@@ -35,6 +37,8 @@ Options:
 - `-V`, `--version`: show version
 
 PNFmt follows MSBuild's parallelism behavior. Without `-m`, it processes one file at a time. `-m` uses the processor count, while `-m:4` or `-maxCpuCount:4` limits processing to four concurrent files.
+
+File patterns use `*` for any characters other than a directory separator, `?` for one character, and `**` for any number of directories. A pattern without a directory separator matches file names at any depth. For example, `pnfmt --recursive --file-pattern "**/*Tests.csproj" .` formats only matching project files. The available formatter names are `csproj`, `ini`, `resx`, and `slnx`.
 
 The normal output is one summary line with the processed and affected file counts plus elapsed time. Use `--verbose` for per-file statuses. PNFmt formats discovered `.editorconfig` files before processing their dependent files in parallel.
 

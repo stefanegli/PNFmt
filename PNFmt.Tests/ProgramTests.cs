@@ -138,6 +138,8 @@ namespace PNFmt.Tests
             Assert.Equal(0, help.ExitCode);
             Assert.Contains("Usage: pnfmt", help.Output);
             Assert.Contains("-m[:N], -maxCpuCount[:N]", help.Output);
+            Assert.Contains("--file-pattern", help.Output);
+            Assert.Contains("--formatter", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
         }
@@ -300,6 +302,90 @@ namespace PNFmt.Tests
                 Assert.Equal(0, recursive.ExitCode);
                 Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(nestedFile));
             }
+        }
+
+        [Fact]
+        public void File_pattern_limits_directory_discovery()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var project = directory.Write(
+                    Path.Combine("nested", "Project.csproj"),
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
+                var resource = directory.WriteResx(
+                    Path.Combine("nested", "Strings.resx"),
+                    "b",
+                    "a");
+                var originalResource = File.ReadAllText(resource);
+
+                var result = Run(
+                    "--recursive",
+                    "--file-pattern",
+                    "nested/**/*.csproj",
+                    directory.Path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Processed 1 file(s)", result.Output);
+                Assert.Contains("Updated 1", result.Output);
+                Assert.True(
+                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
+                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(originalResource, File.ReadAllText(resource));
+            }
+        }
+
+        [Fact]
+        public void Formatter_option_limits_active_formatters()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var project = directory.Write(
+                    "Project.csproj",
+                    "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
+                    + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
+                var resource = directory.WriteResx("Strings.resx", "b", "a");
+                var originalResource = File.ReadAllText(resource);
+
+                var result = Run("--formatter", "csproj", directory.Path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Processed 1 file(s)", result.Output);
+                Assert.Contains("Updated 1", result.Output);
+                Assert.True(
+                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
+                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(originalResource, File.ReadAllText(resource));
+            }
+        }
+
+        [Fact]
+        public void Formatter_option_skips_explicit_files_for_inactive_formatters()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var resource = directory.WriteResx("Strings.resx", "b", "a");
+                var originalResource = File.ReadAllText(resource);
+
+                var result = Run("--formatter", "csproj", resource);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("No supported files found.", result.Output);
+                Assert.Equal(originalResource, File.ReadAllText(resource));
+            }
+        }
+
+        [Fact]
+        public void Formatter_option_rejects_unknown_names()
+        {
+            var result = Run("--formatter", "not-a-formatter");
+
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains("Unknown formatter", result.Error);
+            Assert.Contains("csproj", result.Error);
         }
 
         [Fact]

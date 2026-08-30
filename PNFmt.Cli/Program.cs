@@ -37,6 +37,8 @@ namespace PNFmt.Cli
             var lint = false;
             var stopOptions = false;
             var maxCpuCount = 1;
+            var filePatterns = new List<string>();
+            var formatterNames = new List<string>();
             var paths = new List<string>();
             var arguments = args ?? Array.Empty<string>();
 
@@ -59,6 +61,46 @@ namespace PNFmt.Cli
                     {
                         Console.Error.WriteLine(
                             $"Option '{arg}' requires a positive integer after ':'.");
+                        PrintUsage(Console.Error);
+                        return 2;
+                    }
+
+                    continue;
+                }
+
+                if (!stopOptions
+                    && TryReadOptionValue(
+                        arguments,
+                        ref index,
+                        arg,
+                        "file pattern",
+                        out var filePattern,
+                        "--file-pattern",
+                        "--filepattern"))
+                {
+                    if (filePattern is null)
+                    {
+                        PrintUsage(Console.Error);
+                        return 2;
+                    }
+
+                    filePatterns.Add(filePattern);
+                    continue;
+                }
+
+                if (!stopOptions
+                    && TryReadOptionValue(
+                        arguments,
+                        ref index,
+                        arg,
+                        "formatter",
+                        out var formatterValue,
+                        "--formatter",
+                        "--formatters"))
+                {
+                    if (formatterValue is null
+                        || !TryAddFormatterNames(formatterValue, arg, formatterNames))
+                    {
                         PrintUsage(Console.Error);
                         return 2;
                     }
@@ -129,9 +171,27 @@ namespace PNFmt.Cli
                 paths.Add(".");
             }
 
-            var registry = FormatterCatalog.CreateDefault();
+            var allFormatters = FormatterCatalog.CreateDefault();
+            if (!TryCreateActiveRegistry(
+                    allFormatters,
+                    formatterNames,
+                    out var registry,
+                    out var formatterError))
+            {
+                Console.Error.WriteLine(formatterError);
+                PrintUsage(Console.Error);
+                return 2;
+            }
+
+            var filePatternMatcher = new FilePatternMatcher(filePatterns);
             var pathErrors = new List<string>();
-            var files = ResolveTargetFiles(paths, recursive, registry, pathErrors);
+            var files = ResolveTargetFiles(
+                paths,
+                recursive,
+                registry,
+                allFormatters,
+                filePatternMatcher,
+                pathErrors);
 
             foreach (var error in pathErrors)
             {
@@ -291,6 +351,11 @@ namespace PNFmt.Cli
             writer.WriteLine("  -v, --verbose     Show detailed per-file logging and errors.");
             writer.WriteLine("  -m[:N], -maxCpuCount[:N]");
             writer.WriteLine("                     Process up to N files concurrently; omit N to use all CPUs.");
+            writer.WriteLine("      --file-pattern <glob>");
+            writer.WriteLine("                     Include only files matching the glob; repeat to include more.");
+            writer.WriteLine("      --formatter <name>[,<name>...]");
+            writer.WriteLine("                     Enable only the named formatters; repeat or use comma-separated names.");
+            writer.WriteLine("                     Available names: csproj, ini, resx, slnx.");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
@@ -309,6 +374,8 @@ namespace PNFmt.Cli
             IEnumerable<string> paths,
             bool recursive,
             FormatterRegistry registry,
+            FormatterRegistry allFormatters,
+            FilePatternMatcher filePatternMatcher,
             List<string> errors)
         {
             var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -333,11 +400,18 @@ namespace PNFmt.Cli
 
                 if (File.Exists(fullPath))
                 {
+                    if (!filePatternMatcher.IsMatch(
+                            fullPath,
+                            Path.GetDirectoryName(fullPath)))
+                    {
+                        continue;
+                    }
+
                     if (registry.TryGetFormatter(fullPath, out _))
                     {
                         results.Add(fullPath);
                     }
-                    else
+                    else if (!allFormatters.TryGetFormatter(fullPath, out _))
                     {
                         errors.Add($"Path is not a supported file type: {fullPath}");
                     }
@@ -347,7 +421,14 @@ namespace PNFmt.Cli
 
                 if (Directory.Exists(fullPath))
                 {
-                    CollectDirectoryFiles(fullPath, recursive, registry, results, errors);
+                    CollectDirectoryFiles(
+                        fullPath,
+                        fullPath,
+                        recursive,
+                        registry,
+                        filePatternMatcher,
+                        results,
+                        errors);
                     continue;
                 }
 
@@ -359,8 +440,10 @@ namespace PNFmt.Cli
 
         private static void CollectDirectoryFiles(
             string directoryPath,
+            string rootDirectory,
             bool recursive,
             FormatterRegistry registry,
+            FilePatternMatcher filePatternMatcher,
             HashSet<string> results,
             List<string> errors)
         {
@@ -368,7 +451,8 @@ namespace PNFmt.Cli
             {
                 foreach (var file in Directory.EnumerateFiles(directoryPath, "*", SearchOption.TopDirectoryOnly))
                 {
-                    if (registry.TryGetFormatter(file, out _))
+                    if (filePatternMatcher.IsMatch(file, rootDirectory)
+                        && registry.TryGetFormatter(file, out _))
                     {
                         results.Add(Path.GetFullPath(file));
                     }
@@ -394,13 +478,134 @@ namespace PNFmt.Cli
                         continue;
                     }
 
-                    CollectDirectoryFiles(childDirectory, true, registry, results, errors);
+                    CollectDirectoryFiles(
+                        childDirectory,
+                        rootDirectory,
+                        true,
+                        registry,
+                        filePatternMatcher,
+                        results,
+                        errors);
                 }
             }
             catch (Exception ex) when (IsPathException(ex))
             {
                 errors.Add($"Unable to access path '{directoryPath}': {ex.Message}");
             }
+        }
+
+        private static bool TryReadOptionValue(
+            IReadOnlyList<string> arguments,
+            ref int index,
+            string arg,
+            string optionDescription,
+            out string value,
+            params string[] optionNames)
+        {
+            value = null;
+            foreach (var optionName in optionNames)
+            {
+                if (string.Equals(arg, optionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (index + 1 >= arguments.Count
+                        || arguments[index + 1].StartsWith("-", StringComparison.Ordinal))
+                    {
+                        Console.Error.WriteLine(
+                            $"Option '{arg}' requires a {optionDescription}.");
+                        return true;
+                    }
+
+                    value = arguments[++index];
+                    if (string.IsNullOrWhiteSpace(value))
+                    {
+                        Console.Error.WriteLine(
+                            $"Option '{arg}' requires a {optionDescription}.");
+                        value = null;
+                    }
+
+                    return true;
+                }
+
+                foreach (var separator in new[] { ":", "=" })
+                {
+                    var prefix = optionName + separator;
+                    if (arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        value = arg.Substring(prefix.Length);
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            Console.Error.WriteLine(
+                                $"Option '{arg}' requires a {optionDescription}.");
+                            value = null;
+                        }
+
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryAddFormatterNames(
+            string value,
+            string option,
+            List<string> formatterNames)
+        {
+            var names = value.Split(new[] { ',' }, StringSplitOptions.None);
+            foreach (var name in names)
+            {
+                var trimmedName = name.Trim();
+                if (trimmedName.Length == 0)
+                {
+                    Console.Error.WriteLine(
+                        $"Option '{option}' contains an empty formatter name.");
+                    return false;
+                }
+
+                formatterNames.Add(trimmedName);
+            }
+
+            return true;
+        }
+
+        private static bool TryCreateActiveRegistry(
+            FormatterRegistry allFormatters,
+            IReadOnlyCollection<string> requestedNames,
+            out FormatterRegistry activeFormatters,
+            out string error)
+        {
+            if (requestedNames.Count == 0)
+            {
+                activeFormatters = allFormatters;
+                error = null;
+                return true;
+            }
+
+            var availableNames = new HashSet<string>(
+                allFormatters.Formatters.Select(formatter => formatter.Name),
+                StringComparer.OrdinalIgnoreCase);
+            var unknownNames = requestedNames
+                .Where(name => !availableNames.Contains(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+            if (unknownNames.Length > 0)
+            {
+                error = $"Unknown formatter(s): {string.Join(", ", unknownNames.Select(name => $"'{name}'"))}. "
+                    + $"Available formatters: {string.Join(", ", allFormatters.Formatters.Select(formatter => formatter.Name))}.";
+                activeFormatters = null;
+                return false;
+            }
+
+            var requestedNameSet = new HashSet<string>(
+                requestedNames,
+                StringComparer.OrdinalIgnoreCase);
+            activeFormatters = new FormatterRegistry(
+                allFormatters.Formatters
+                    .Where(formatter => requestedNameSet.Contains(formatter.Name))
+                    .ToArray());
+            error = null;
+            return true;
         }
 
         private static bool IsPathException(Exception exception)
