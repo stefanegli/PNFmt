@@ -17,13 +17,13 @@ Project and resource formatting follows the settings in the applicable `.editorc
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then install PNFmt from NuGet.org:
 
 ```powershell
-dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1
+dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha
 ```
 
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1
+dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha
 ```
 
 Verify the installation:
