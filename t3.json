@@ -1,0 +1,17 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "scripts": [
+    {
+      "name": "Push GitHub",
+      "command": "git push github master",
+      "icon": "play",
+      "runOnWorktreeCreate": false
+    },
+    {
+      "name": "Run Tests",
+      "command": "dotnet test .\\PNFmt.slnx --configuration Release",
+      "icon": "play",
+      "runOnWorktreeCreate": false
+    }
+  ]
+}
