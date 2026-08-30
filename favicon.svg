@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="256"
+     height="256"
+     viewBox="0 0 256 256"
+     role="img"
+     aria-labelledby="title">
+  <title id="title">PNFmt code brackets icon</title>
+  <rect x="10"
+        y="10"
+        width="236"
+        height="236"
+        rx="52"
+        fill="#A855F7" />
+  <path d="M104 58 42 128l62 70 24-25-40-45 40-45Z"
+        fill="#4A102A" />
+  <path d="m152 58-24 25 40 45-40 45 24 25 62-70Z"
+        fill="#4A102A" />
+</svg>
