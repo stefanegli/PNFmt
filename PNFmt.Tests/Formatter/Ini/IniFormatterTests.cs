@@ -90,6 +90,26 @@ namespace PNFmt.Tests.Formatter.Ini
             }
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Explicit_true_setting_is_required(string settingValue)
+        {
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                "z=2\na=1\n",
+                settingValue))
+            {
+                var formatter = new IniFormatter();
+                var result = formatter.Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal("z=2\na=1\n", File.ReadAllText(file.Path));
+            }
+        }
+
         private sealed class TemporaryFile : IDisposable
         {
             private TemporaryFile(string directoryPath, string path)
@@ -102,13 +122,23 @@ namespace PNFmt.Tests.Formatter.Ini
 
             public string Path { get; }
 
-            public static TemporaryFile Create(string name, string contents)
+            public static TemporaryFile Create(
+                string name,
+                string contents,
+                string settingValue = "true")
             {
                 var directory = System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
                     "PNFmtIniTests",
                     Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(directory);
+                if (settingValue is not null)
+                {
+                    File.WriteAllText(
+                        System.IO.Path.Combine(directory, ".editorconfig"),
+                        "root = true\n\n[*.ini]\npnfmt_sort_entries = " + settingValue + "\n");
+                }
+
                 var path = System.IO.Path.Combine(directory, name);
                 File.WriteAllText(path, contents);
                 return new TemporaryFile(directory, path);

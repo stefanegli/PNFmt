@@ -101,13 +101,23 @@ namespace PNFmt.Tests
             {
                 var editorConfig = directory.Write(
                     ".editorconfig",
-                    "z=2\na=1\n");
+                    "root=true\n"
+                    + "z=2\n"
+                    + "a=1\n"
+                    + "\n"
+                    + "[*.editorconfig]\n"
+                    + "pnfmt_sort_entries=true\n");
 
                 var result = Run(directory.Path);
 
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Updated 1", result.Output);
-                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(editorConfig));
+                Assert.Equal(
+                    "a = 1\nroot = true\nz = 2\n"
+                    + "\n"
+                    + "[*.editorconfig]\n"
+                    + "pnfmt_sort_entries = true\n",
+                    File.ReadAllText(editorConfig));
             }
         }
 
@@ -195,6 +205,7 @@ namespace PNFmt.Tests
         {
             using (var directory = new TemporaryDirectory())
             {
+                directory.EnableFormatting();
                 var first = directory.Write("first.ini", "z=2\na=1\n");
                 var second = directory.Write("second.ini", "y=2\nb=1\n");
 
@@ -222,6 +233,7 @@ namespace PNFmt.Tests
         {
             using (var directory = new TemporaryDirectory())
             {
+                directory.EnableFormatting();
                 var first = directory.Write("first.ini", "z=2\na=1\n");
                 var second = directory.Write("second.ini", "y=2\nb=1\n");
 
@@ -412,6 +424,28 @@ namespace PNFmt.Tests
         }
 
         [Fact]
+        public void Ini_and_slnx_files_are_skipped_without_explicit_settings()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var ini = directory.Write("settings.ini", "z=2\na=1\n");
+                var slnx = directory.Write(
+                    "Solution.slnx",
+                    "<Solution><Project Path=\"Z.csproj\" />"
+                    + "<Project Path=\"A.csproj\" /></Solution>");
+                var originalIni = File.ReadAllText(ini);
+                var originalSlnx = File.ReadAllText(slnx);
+
+                var result = Run("--verbose", ini, slnx);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("skipped 2", result.Output);
+                Assert.Equal(originalIni, File.ReadAllText(ini));
+                Assert.Equal(originalSlnx, File.ReadAllText(slnx));
+            }
+        }
+
+        [Fact]
         public void Option_terminator_allows_a_dash_prefixed_file_name()
         {
             using (var directory = new TemporaryDirectory())
@@ -523,7 +557,13 @@ namespace PNFmt.Tests
                     + "[*.resx]\r\n"
                     + "pnfmt_sort_entries=true\r\n"
                     + "pnfmt_resx_remove_xsd_schema=true\r\n"
-                    + "pnfmt_resx_remove_documentation_comment=true\r\n");
+                    + "pnfmt_resx_remove_documentation_comment=true\r\n\r\n"
+                    + "[*.editorconfig]\r\n"
+                    + "pnfmt_sort_entries=true\r\n\r\n"
+                    + "[*.ini]\r\n"
+                    + "pnfmt_sort_entries=true\r\n\r\n"
+                    + "[*.slnx]\r\n"
+                    + "pnfmt_sort_entries=true\r\n");
             }
 
             public static string[] ReadNames(string path)

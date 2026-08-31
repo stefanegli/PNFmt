@@ -370,8 +370,9 @@ namespace PNFmt.Cli
             writer.WriteLine("Notes:");
             writer.WriteLine("  If no path is provided, the current directory is used.");
             writer.WriteLine("  Registered formatters support .csproj, .resx, .slnx, .editorconfig, and .ini files.");
-            writer.WriteLine("  Project and resource formatting runs only when EditorConfig enables it.");
-            writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add csproj_ or resx_.");
+            writer.WriteLine("  Every formatter requires applicable EditorConfig settings.");
+            writer.WriteLine("  INI and SLNX formatting require pnfmt_sort_entries = true.");
+            writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
         }
 

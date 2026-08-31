@@ -10,20 +10,20 @@
 - `.resx` resource files
 - `.slnx` solution files
 
-Project and resource formatting follows the settings in the applicable `.editorconfig` file. EditorConfig, INI, and SLNX formatting works without formatter-specific configuration.
+Every formatter is opt-in. PNFmt skips a file unless the applicable `.editorconfig` explicitly enables formatting for that file type.
 
 ## Installation
 
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then install PNFmt from NuGet.org:
 
 ```powershell
-dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha
+dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.1
 ```
 
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha
+dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.1
 ```
 
 Verify the installation:
@@ -83,7 +83,7 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Add the settings you want to an `.editorconfig` file. At least one supported PNFmt setting must apply before PNFmt formats a `.csproj` or `.resx` file.
+Add the settings you want to an `.editorconfig` file. Every file type requires explicit configuration. PNFmt reports files for which no supported setting enables a formatter as `skipped`.
 
 ```ini
 [*.csproj]
@@ -98,6 +98,15 @@ pnfmt_sort_entries = true
 pnfmt_resx_remove_xsd_schema = true
 pnfmt_resx_remove_documentation_comment = true
 pnfmt_resx_sort_comparer = OrdinalIgnoreCase
+
+[*.editorconfig]
+pnfmt_sort_entries = true
+
+[*.ini]
+pnfmt_sort_entries = true
+
+[*.slnx]
+pnfmt_sort_entries = true
 ```
 
 ### Project settings
@@ -119,6 +128,18 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list. Sorting 
 | `pnfmt_resx_remove_xsd_schema` | Remove the embedded XSD schema when set to `true`. |
 | `pnfmt_resx_remove_documentation_comment` | Remove the standard documentation comment when set to `true`. |
 | `pnfmt_resx_sort_comparer` | Set the entry comparer to `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, or `Ordinal`. |
+
+### Configuration-file settings
+
+Set `pnfmt_sort_entries = true` for each `.editorconfig` or `.ini` pattern that PNFmt should format. The formatter sorts keys within uninterrupted property blocks, normalizes assignments to `key = value`, collapses repeated blank lines, and preserves section order, comments, and unknown lines.
+
+An `.editorconfig` file with `root = true` must contain its own matching `[*.editorconfig]` section because it does not inherit settings from a parent file.
+
+### Solution settings
+
+Set `pnfmt_sort_entries = true` for each `.slnx` pattern that PNFmt should format. The formatter orders known solution elements, uses two-space XML indentation, and preserves unknown extension elements as ordering barriers.
+
+For INI and SLNX files, only `pnfmt_sort_entries = true` enables the formatter. Missing settings, `false`, and invalid values leave the file unchanged with status `skipped`.
 
 PNFmt still accepts the legacy `csproj_formatter_*` and `resx_formatter_*` setting names as fallbacks. It reports warning `PNFMT001` when it uses or ignores a legacy setting. A matching `pnfmt_*` setting takes precedence.
 

@@ -1,0 +1,4 @@
+root = true
+
+[*.slnx]
+pnfmt_sort_entries = true

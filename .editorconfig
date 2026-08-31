@@ -9,3 +9,12 @@ tab_width = 4
 [*.csproj]
 pnfmt_csproj_empty_lines_between_groups = 1
 pnfmt_sort_entries = true
+
+[*.editorconfig]
+pnfmt_sort_entries = true
+
+[*.ini]
+pnfmt_sort_entries = true
+
+[*.slnx]
+pnfmt_sort_entries = true

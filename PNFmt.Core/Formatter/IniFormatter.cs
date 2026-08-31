@@ -23,6 +23,14 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
+            if (!EditorConfigFormatterActivation.IsEnabled(
+                request.FilePath,
+                EditorConfigSettingNames.SortEntries,
+                request.Log))
+            {
+                return new FileFormatResult(FileFormatStatus.Skipped);
+            }
+
             var original = File.ReadAllText(request.FilePath);
             var formatted = IniDocumentFormatter.Format(original);
             if (string.Equals(original, formatted, StringComparison.Ordinal))

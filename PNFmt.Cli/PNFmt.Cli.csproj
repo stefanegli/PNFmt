@@ -14,7 +14,7 @@
         <RootNamespace>PNFmt.Cli</RootNamespace>
         <TargetFramework>net10.0</TargetFramework>
         <ToolCommandName>pnfmt</ToolCommandName>
-        <Version>0.1.0-alpha</Version>
+        <Version>0.1.0-alpha.1</Version>
     </PropertyGroup>
 
     <ItemGroup>

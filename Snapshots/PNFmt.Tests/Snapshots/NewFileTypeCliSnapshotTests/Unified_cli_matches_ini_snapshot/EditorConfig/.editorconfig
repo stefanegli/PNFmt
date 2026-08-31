@@ -1,5 +1,8 @@
 root = true
 
+[*.editorconfig]
+pnfmt_sort_entries = true
+
 [*.cs]
 indent_style = space
 tab_width = 4
