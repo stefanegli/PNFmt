@@ -17,13 +17,13 @@ Every formatter is opt-in. PNFmt skips a file unless the applicable `.editorconf
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then install PNFmt from NuGet.org:
 
 ```powershell
-dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.1
+dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.2
 ```
 
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.1
+dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.2
 ```
 
 Verify the installation:
