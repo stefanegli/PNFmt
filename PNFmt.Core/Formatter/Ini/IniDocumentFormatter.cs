@@ -8,7 +8,7 @@ namespace PNFmt
 {
     internal static class IniDocumentFormatter
     {
-        public static string Format(string text)
+        public static string Format(string text, bool sortEntries = true, bool sortGroups = false)
         {
             if (text is null)
             {
@@ -32,7 +32,7 @@ namespace PNFmt
                     continue;
                 }
 
-                FlushProperties(properties, output);
+                FlushProperties(properties, output, sortEntries);
                 if (trimmed.Length == 0)
                 {
                     if (output.Count > 0 && output[output.Count - 1].Length > 0)
@@ -46,15 +46,16 @@ namespace PNFmt
                 output.Add(IsSectionHeader(trimmed) ? trimmed : line.TrimEnd());
             }
 
-            FlushProperties(properties, output);
+            FlushProperties(properties, output, sortEntries);
             while (output.Count > 0 && output[output.Count - 1].Length == 0)
             {
                 output.RemoveAt(output.Count - 1);
             }
 
-            return output.Count == 0
+            var orderedOutput = sortGroups ? SortGroups(output) : output;
+            return orderedOutput.Count == 0
                 ? string.Empty
-                : string.Join(newLine, output) + newLine;
+                : string.Join(newLine, orderedOutput) + newLine;
         }
 
         private static string DetectNewLine(string text)
@@ -72,13 +73,66 @@ namespace PNFmt
             return "\n";
         }
 
-        private static void FlushProperties(List<PropertyLine> properties, List<string> output)
+        private static void FlushProperties(
+            List<PropertyLine> properties,
+            List<string> output,
+            bool sortEntries)
         {
-            output.AddRange(
-                properties
-                    .OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
-                    .Select(property => property.Formatted));
+            IEnumerable<PropertyLine> orderedProperties = sortEntries
+                ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
+                : properties;
+            output.AddRange(orderedProperties.Select(property => property.Formatted));
             properties.Clear();
+        }
+
+        private static List<string> SortGroups(IReadOnlyList<string> lines)
+        {
+            var sectionStarts = Enumerable.Range(0, lines.Count)
+                .Where(index => IsSectionHeader(lines[index]))
+                .ToArray();
+            if (sectionStarts.Length < 2)
+            {
+                return lines.ToList();
+            }
+
+            var output = lines.Take(sectionStarts[0]).ToList();
+            var groups = new List<SectionGroup>();
+            var separators = new List<IReadOnlyCollection<string>>();
+            for (var index = 0; index < sectionStarts.Length; index++)
+            {
+                var start = sectionStarts[index];
+                var end = index + 1 < sectionStarts.Length
+                    ? sectionStarts[index + 1]
+                    : lines.Count;
+                var contentEnd = end;
+                if (index + 1 < sectionStarts.Length)
+                {
+                    while (contentEnd > start + 1 && lines[contentEnd - 1].Length == 0)
+                    {
+                        contentEnd--;
+                    }
+
+                    separators.Add(lines.Skip(contentEnd).Take(end - contentEnd).ToArray());
+                }
+
+                groups.Add(new SectionGroup(
+                    lines[start],
+                    lines.Skip(start).Take(contentEnd - start).ToArray()));
+            }
+
+            var orderedGroups = groups.OrderBy(
+                group => group.Name,
+                StringComparer.OrdinalIgnoreCase).ToArray();
+            for (var index = 0; index < orderedGroups.Length; index++)
+            {
+                output.AddRange(orderedGroups[index].Lines);
+                if (index < separators.Count)
+                {
+                    output.AddRange(separators[index]);
+                }
+            }
+
+            return output;
         }
 
         private static bool IsSectionHeader(string line)
@@ -127,6 +181,19 @@ namespace PNFmt
             public string Formatted { get; }
 
             public string Key { get; }
+        }
+
+        private sealed class SectionGroup
+        {
+            public SectionGroup(string name, IReadOnlyCollection<string> lines)
+            {
+                this.Name = name;
+                this.Lines = lines;
+            }
+
+            public IReadOnlyCollection<string> Lines { get; }
+
+            public string Name { get; }
         }
     }
 }

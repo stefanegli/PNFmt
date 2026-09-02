@@ -110,6 +110,91 @@ namespace PNFmt.Tests.Formatter.Ini
             }
         }
 
+        [Fact]
+        public void Sorts_groups_without_sorting_entries_when_only_group_sorting_is_enabled()
+        {
+            const string Input =
+                "root=z\n"
+                + "mode=a\n"
+                + "\n"
+                + "[second]\n"
+                + "z=2\n"
+                + "a=1\n"
+                + "\n"
+                + "[first]\n"
+                + "d=4\n"
+                + "c=3\n";
+            const string Expected =
+                "root = z\n"
+                + "mode = a\n"
+                + "\n"
+                + "[first]\n"
+                + "d = 4\n"
+                + "c = 3\n"
+                + "\n"
+                + "[second]\n"
+                + "z = 2\n"
+                + "a = 1\n";
+
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                groupSettingValue: "true"))
+            {
+                var formatter = new IniFormatter();
+                var result = formatter.Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.Equal(Expected, File.ReadAllText(file.Path));
+            }
+        }
+
+        [Fact]
+        public void Sorts_group_contents_with_their_section_header()
+        {
+            const string Input =
+                "[zeta]\n"
+                + "; Zeta comment\n"
+                + "value=z\n"
+                + "[alpha]\n"
+                + "# Alpha comment\n"
+                + "value=a\n";
+            const string Expected =
+                "[alpha]\n"
+                + "# Alpha comment\n"
+                + "value = a\n"
+                + "[zeta]\n"
+                + "; Zeta comment\n"
+                + "value = z\n";
+
+            Assert.Equal(
+                Expected,
+                IniDocumentFormatter.Format(Input, sortEntries: true, sortGroups: true));
+        }
+
+        [Theory]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Group_sorting_requires_true(string settingValue)
+        {
+            const string Input = "[second]\nz=2\n[first]\na=1\n";
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                groupSettingValue: settingValue))
+            {
+                var formatter = new IniFormatter();
+                var result = formatter.Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Input, File.ReadAllText(file.Path));
+            }
+        }
+
         private sealed class TemporaryFile : IDisposable
         {
             private TemporaryFile(string directoryPath, string path)
@@ -125,18 +210,30 @@ namespace PNFmt.Tests.Formatter.Ini
             public static TemporaryFile Create(
                 string name,
                 string contents,
-                string settingValue = "true")
+                string settingValue = "true",
+                string groupSettingValue = null)
             {
                 var directory = System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
                     "PNFmtIniTests",
                     Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(directory);
-                if (settingValue is not null)
+                if (settingValue is not null || groupSettingValue is not null)
                 {
+                    var settings = "root = true\n\n[*.ini]\n";
+                    if (settingValue is not null)
+                    {
+                        settings += "pnfmt_sort_entries = " + settingValue + "\n";
+                    }
+
+                    if (groupSettingValue is not null)
+                    {
+                        settings += "pnfmt_ini_sort_groups = " + groupSettingValue + "\n";
+                    }
+
                     File.WriteAllText(
                         System.IO.Path.Combine(directory, ".editorconfig"),
-                        "root = true\n\n[*.ini]\npnfmt_sort_entries = " + settingValue + "\n");
+                        settings);
                 }
 
                 var path = System.IO.Path.Combine(directory, name);

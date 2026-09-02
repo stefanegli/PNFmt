@@ -104,6 +104,7 @@ pnfmt_sort_entries = true
 
 [*.ini]
 pnfmt_sort_entries = true
+pnfmt_ini_sort_groups = true
 
 [*.slnx]
 pnfmt_sort_entries = true
@@ -131,15 +132,22 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list. Sorting 
 
 ### Configuration-file settings
 
-Set `pnfmt_sort_entries = true` for each `.editorconfig` or `.ini` pattern that PNFmt should format. The formatter sorts keys within uninterrupted property blocks, normalizes assignments to `key = value`, collapses repeated blank lines, and preserves section order, comments, and unknown lines.
+| Setting | Description |
+| --- | --- |
+| `pnfmt_sort_entries` | Sort keys within uninterrupted property blocks. |
+| `pnfmt_ini_sort_groups` | Sort named sections by their headers using ordinal, case-insensitive comparison. The preamble stays at the top, and each header moves with everything up to the next header. |
+
+Set at least one of these settings to `true` for each `.editorconfig` or `.ini` pattern that PNFmt should format. The formatter also normalizes assignments to `key = value` and collapses repeated blank lines. It preserves comments and unknown lines.
 
 An `.editorconfig` file with `root = true` must contain its own matching `[*.editorconfig]` section because it does not inherit settings from a parent file.
+
+Section order can affect how tools interpret duplicate INI sections. It also controls precedence between matching sections in `.editorconfig` files. Enable `pnfmt_ini_sort_groups` only when changing that order is safe.
 
 ### Solution settings
 
 Set `pnfmt_sort_entries = true` for each `.slnx` pattern that PNFmt should format. The formatter orders known solution elements, uses two-space XML indentation, and preserves unknown extension elements as ordering barriers.
 
-For INI and SLNX files, only `pnfmt_sort_entries = true` enables the formatter. Missing settings, `false`, and invalid values leave the file unchanged with status `skipped`.
+For SLNX files, only `pnfmt_sort_entries = true` enables the formatter. PNFmt skips INI and SLNX files when none of their activation settings are `true`. Missing settings, `false`, and invalid values do not activate a formatter.
 
 PNFmt still accepts the legacy `csproj_formatter_*` and `resx_formatter_*` setting names as fallbacks. It reports warning `PNFMT001` when it uses or ignores a legacy setting. A matching `pnfmt_*` setting takes precedence.
 

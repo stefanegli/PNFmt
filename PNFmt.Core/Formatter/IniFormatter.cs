@@ -23,16 +23,17 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            if (!EditorConfigFormatterActivation.IsEnabled(
-                request.FilePath,
-                EditorConfigSettingNames.SortEntries,
-                request.Log))
+            var settings = new IniEditorConfigSettings(request.FilePath, request.Log);
+            if (!settings.IsActive)
             {
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
             var original = File.ReadAllText(request.FilePath);
-            var formatted = IniDocumentFormatter.Format(original);
+            var formatted = IniDocumentFormatter.Format(
+                original,
+                settings.SortEntries,
+                settings.SortGroups);
             if (string.Equals(original, formatted, StringComparison.Ordinal))
             {
                 return new FileFormatResult(FileFormatStatus.Unchanged);

@@ -50,6 +50,7 @@ namespace PNFmt
     {
         public const string CsProjEmptyLinesBetweenGroups = "pnfmt_csproj_empty_lines_between_groups";
         public const string CsProjSortItemTypes = "pnfmt_csproj_sort_item_types";
+        public const string IniSortGroups = "pnfmt_ini_sort_groups";
         public const string ResxRemoveDocumentationComment = "pnfmt_resx_remove_documentation_comment";
         public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
         public const string ResxSortComparer = "pnfmt_resx_sort_comparer";
