@@ -32,9 +32,29 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 Assert.Equal(0, settings.EmptyLinesBetweenGroups);
                 Assert.Equal(new[] { "Protobuf", "PackageReference" }, settings.SortItemTypes);
                 Assert.Equal('\t', settings.IndentStyle);
-                Assert.Equal(8, settings.TabWidth);
+                Assert.Equal(8, settings.IndentSize);
                 Assert.Equal("\n", settings.EndOfLine);
                 Assert.Empty(log.Messages);
+            }
+        }
+
+        [Fact]
+        public void Csproj_indent_size_controls_space_indentation_and_wins_over_tab_width()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.csproj]\n"
+                + "indent_style = space\n"
+                + "indent_size = 4\n"
+                + "tab_width = 8\n";
+
+            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            {
+                var settings = new CsProjEditorConfigSettings(target.Path);
+
+                Assert.Equal(' ', settings.IndentStyle);
+                Assert.Equal(4, settings.IndentSize);
+                Assert.Equal("    ", settings.ResolveIndentChars());
             }
         }
 

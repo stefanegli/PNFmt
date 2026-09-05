@@ -11,7 +11,7 @@ namespace PNFmt
                 return "\t";
             }
 
-            var width = settings.TabWidth > 0 ? settings.TabWidth : 2;
+            var width = settings.IndentSize > 0 ? settings.IndentSize : 2;
             return new string(settings.IndentStyle, width);
         }
 

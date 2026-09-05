@@ -27,23 +27,37 @@ namespace PNFmt
                 this.IndentStyle = ResolveIndentStyle(indentStyle);
             }
 
-            if (settings.TryGetValue("tab_width", out var tabWidth)
-                && int.TryParse(tabWidth, out var parsedTabWidth)
-                && parsedTabWidth > 0)
+            int? parsedTabWidth = null;
+            if (settings.TryGetValue("tab_width", out var tabWidth))
             {
                 isActive = true;
-                this.TabWidth = parsedTabWidth;
+                if (int.TryParse(tabWidth, out var width) && width > 0)
+                {
+                    parsedTabWidth = width;
+                }
             }
 
-            if (settings.TryGetValue("indent_size", out var indentSize)
-                && int.TryParse(indentSize, out var parsedIndentSize)
-                && parsedIndentSize > 0)
+            var hasIndentSize = false;
+            if (settings.TryGetValue("indent_size", out var indentSize))
             {
                 isActive = true;
-                if (this.TabWidth == 0)
+                if (int.TryParse(indentSize, out var parsedIndentSize)
+                    && parsedIndentSize > 0)
                 {
-                    this.TabWidth = parsedIndentSize;
+                    this.IndentSize = parsedIndentSize;
+                    hasIndentSize = true;
                 }
+                else if (string.Equals(indentSize, "tab", StringComparison.OrdinalIgnoreCase)
+                    && parsedTabWidth.HasValue)
+                {
+                    this.IndentSize = parsedTabWidth.Value;
+                    hasIndentSize = true;
+                }
+            }
+
+            if (!hasIndentSize && parsedTabWidth.HasValue)
+            {
+                this.IndentSize = parsedTabWidth.Value;
             }
 
             if (settings.TryGetValue("end_of_line", out var endOfLine))
@@ -90,9 +104,9 @@ namespace PNFmt
 
         public System.Collections.Generic.IReadOnlyCollection<string> SortItemTypes { get; private set; } = CsProjItemSorting.Defaults;
 
-        public char IndentStyle { get; } = ' ';
+        public int IndentSize { get; } = 2;
 
-        public int TabWidth { get; } = 2;
+        public char IndentStyle { get; } = ' ';
 
         public string EndOfLine { get; } = "\r\n";
 
