@@ -30,11 +30,17 @@
         <EmbeddedResource Remove="Formatter\Resx\_editor\**\*" />
         <EmbeddedResource Remove="Formatter\Resx\_files\**\*" />
         <EmbeddedResource Remove="Formatter\Slnx\_files\**\*" />
+    </ItemGroup>
+
+    <ItemGroup>
         <None Remove="Formatter\CsProj\_files\**\*" />
         <None Remove="Formatter\Ini\_files\**\*" />
         <None Remove="Formatter\Resx\_editor\**\*" />
         <None Remove="Formatter\Resx\_files\**\*" />
         <None Remove="Formatter\Slnx\_files\**\*" />
+    </ItemGroup>
+
+    <ItemGroup>
         <Content Include="Formatter\CsProj\_files\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
