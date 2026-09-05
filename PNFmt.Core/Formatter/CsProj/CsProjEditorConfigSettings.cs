@@ -13,8 +13,7 @@ namespace PNFmt
             var settings = EditorConfigSettings.Load(targetFile, log);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
-                EditorConfigSettingNames.SortEntries,
-                "csproj_formatter_sort_entries",
+                LegacyEditorConfigSettingAliases.CsProjSortEntries,
                 out var sortEntries))
             {
                 isActive = true;
@@ -67,8 +66,7 @@ namespace PNFmt
             }
 
             if (resolver.TryGet(
-                    EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups,
-                    "csproj_formatter_empty_lines_between_groups",
+                    LegacyEditorConfigSettingAliases.CsProjEmptyLinesBetweenGroups,
                     out var emptyLinesBetweenGroups)
                 && int.TryParse(emptyLinesBetweenGroups, out var parsedEmptyLinesBetweenGroups)
                 && parsedEmptyLinesBetweenGroups >= 0)
@@ -78,8 +76,7 @@ namespace PNFmt
             }
 
             if (resolver.TryGet(
-                EditorConfigSettingNames.CsProjSortItemTypes,
-                "csproj_formatter_sort_item_types",
+                LegacyEditorConfigSettingAliases.CsProjSortItemTypes,
                 out var sortItemTypes))
             {
                 isActive = true;

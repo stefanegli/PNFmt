@@ -10,8 +10,7 @@ namespace PNFmt
             var settings = EditorConfigSettings.Load(targetFile, log);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
-                EditorConfigSettingNames.SortEntries,
-                "resx_formatter_sort_entries",
+                LegacyEditorConfigSettingAliases.ResxSortEntries,
                 out var sortEntries))
             {
                 isActive = true;
@@ -19,8 +18,7 @@ namespace PNFmt
             }
 
             if (resolver.TryGet(
-                EditorConfigSettingNames.ResxRemoveXsdSchema,
-                "resx_formatter_remove_xsd_schema",
+                LegacyEditorConfigSettingAliases.ResxRemoveXsdSchema,
                 out var removeSchema))
             {
                 isActive = true;
@@ -28,8 +26,7 @@ namespace PNFmt
             }
 
             if (resolver.TryGet(
-                EditorConfigSettingNames.ResxRemoveDocumentationComment,
-                "resx_formatter_remove_documentation_comment",
+                LegacyEditorConfigSettingAliases.ResxRemoveDocumentationComment,
                 out var removeComment))
             {
                 isActive = true;
@@ -37,8 +34,7 @@ namespace PNFmt
             }
 
             if (resolver.TryGet(
-                    EditorConfigSettingNames.ResxSortComparer,
-                    "resx_formatter_sort_comparer",
+                    LegacyEditorConfigSettingAliases.ResxSortComparer,
                     out var comparerString)
                 && this.SortEntries)
             {

@@ -21,17 +21,20 @@ namespace PNFmt
             this.log = log;
         }
 
-        public bool TryGet(string settingName, string legacySettingName, out string value)
+        public bool TryGet(EditorConfigSettingAlias setting, out string value)
         {
-            var hasSetting = this.properties.TryGetValue(settingName, out var settingValue);
-            var hasLegacySetting = this.properties.TryGetValue(legacySettingName, out var legacySettingValue);
+            var hasSetting = this.properties.TryGetValue(setting.CurrentName, out var settingValue);
+            var hasLegacySetting = this.properties.TryGetValue(
+                setting.LegacyName,
+                out var legacySettingValue);
 
             if (hasLegacySetting)
             {
                 var message = hasSetting
-                    ? $"EditorConfig setting '{legacySettingName}' is deprecated and ignored because "
-                        + $"'{settingName}' is set."
-                    : $"EditorConfig setting '{legacySettingName}' is deprecated; use '{settingName}' instead.";
+                    ? $"EditorConfig setting '{setting.LegacyName}' is deprecated and ignored because "
+                        + $"'{setting.CurrentName}' is set."
+                    : $"EditorConfig setting '{setting.LegacyName}' is deprecated; use "
+                        + $"'{setting.CurrentName}' instead.";
                 this.log?.WriteLine($"{this.targetFile}: warning PNFMT001: {message}");
             }
 

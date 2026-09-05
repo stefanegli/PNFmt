@@ -12,7 +12,10 @@ namespace PNFmt
         public const string EndMarker = "# </pnfmt-defaults>";
         public const string StartMarker = "# <pnfmt-defaults>";
 
-        public static string Update(string text)
+        public static string Update(
+            string text,
+            bool migrateLegacySettings = false,
+            bool removeLegacySettings = false)
         {
             if (text is null)
             {
@@ -31,17 +34,10 @@ namespace PNFmt
                     "The EditorConfig file contains incomplete or duplicate PNFmt default markers.");
             }
 
-            var output = new List<string>();
+            IReadOnlyList<string> existingLines;
             if (startIndexes.Count == 0)
             {
-                AddWithoutTrailingBlankLines(output, lines);
-                if (output.Count == 0)
-                {
-                    output.Add("root = true");
-                }
-
-                AddBlankLine(output);
-                output.AddRange(CreateDefaultBlock());
+                existingLines = lines;
             }
             else
             {
@@ -53,16 +49,40 @@ namespace PNFmt
                         "The PNFmt default configuration end marker appears before its start marker.");
                 }
 
-                AddWithoutTrailingBlankLines(output, lines.Take(startIndex));
-                AddBlankLine(output);
-                output.AddRange(CreateDefaultBlock());
+                existingLines = lines.Take(startIndex)
+                    .Concat(lines.Skip(endIndex + 1))
+                    .ToArray();
+            }
 
-                var suffix = lines.Skip(endIndex + 1).SkipWhile(string.IsNullOrWhiteSpace).ToArray();
-                if (suffix.Length > 0)
-                {
-                    AddBlankLine(output);
-                    AddWithoutTrailingBlankLines(output, suffix);
-                }
+            existingLines = LegacyEditorConfigSettingsMigration.Apply(
+                existingLines,
+                migrateLegacySettings,
+                removeLegacySettings);
+            var firstSectionIndex = Enumerable.Range(0, existingLines.Count)
+                .FirstOrDefault(index => IsSectionHeader(existingLines[index]));
+            if (firstSectionIndex == 0 && !IsSectionHeader(existingLines[0]))
+            {
+                firstSectionIndex = existingLines.Count;
+            }
+
+            var output = new List<string>();
+            AddWithoutTrailingBlankLines(output, existingLines.Take(firstSectionIndex));
+            if (output.Count == 0)
+            {
+                output.Add("root = true");
+            }
+
+            AddBlankLine(output);
+            output.AddRange(CreateDefaultBlock());
+
+            var suffix = existingLines
+                .Skip(firstSectionIndex)
+                .SkipWhile(string.IsNullOrWhiteSpace)
+                .ToArray();
+            if (suffix.Length > 0)
+            {
+                AddBlankLine(output);
+                AddWithoutTrailingBlankLines(output, suffix);
             }
 
             return string.Join(newLine, output) + newLine;
@@ -122,6 +142,14 @@ namespace PNFmt
                 string.Empty,
                 EndMarker,
             };
+        }
+
+        private static bool IsSectionHeader(string line)
+        {
+            var trimmed = line.Trim();
+            return trimmed.Length >= 2
+                && trimmed[0] == '['
+                && trimmed[trimmed.Length - 1] == ']';
         }
 
         private static IReadOnlyList<int> FindMarkerIndexes(
