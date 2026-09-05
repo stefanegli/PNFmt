@@ -14,17 +14,6 @@ namespace PNFmt.Cli
     {
         private const string ToolName = "pnfmt";
 
-        private static readonly HashSet<string> IgnoredRecursiveDirectories =
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ".git",
-                ".vs",
-                "artifacts",
-                "bin",
-                "node_modules",
-                "obj",
-            };
-
         private static readonly int StatusColumnWidth =
             new[] { "updated", "unchanged", "skipped", "would-update", "failed" }
                 .Max(x => x.Length) + 2;
@@ -185,16 +174,13 @@ namespace PNFmt.Cli
             }
 
             var filePatternMatcher = new FilePatternMatcher(filePatterns);
-            var pathErrors = new List<string>();
-            var files = ResolveTargetFiles(
-                paths,
-                recursive,
+            var targets = new TargetFileResolver(
                 registry,
                 allFormatters,
-                filePatternMatcher,
-                pathErrors);
+                filePatternMatcher).Resolve(paths, recursive);
+            var files = targets.Files;
 
-            foreach (var error in pathErrors)
+            foreach (var error in targets.Errors)
             {
                 Console.Error.WriteLine(error);
             }
@@ -202,7 +188,7 @@ namespace PNFmt.Cli
             if (files.Count == 0)
             {
                 Console.WriteLine("No supported files found.");
-                return pathErrors.Count > 0 ? 2 : 0;
+                return targets.Errors.Count > 0 ? 2 : 0;
             }
 
             var workingDirectory = Environment.CurrentDirectory;
@@ -272,7 +258,7 @@ namespace PNFmt.Cli
                 + $"unchanged {unchanged}, skipped {skipped}, failed {failed}"
                 + (lint ? $", diagnostics {diagnosticCount}." : "."));
 
-            if (failed > 0 || pathErrors.Count > 0)
+            if (failed > 0 || targets.Errors.Count > 0)
             {
                 return 2;
             }
@@ -375,130 +361,6 @@ namespace PNFmt.Cli
             writer.WriteLine("  SLNX formatting requires pnfmt_sort_entries = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
-        }
-
-        private static List<string> ResolveTargetFiles(
-            IEnumerable<string> paths,
-            bool recursive,
-            FormatterRegistry registry,
-            FormatterRegistry allFormatters,
-            FilePatternMatcher filePatternMatcher,
-            List<string> errors)
-        {
-            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var rawPath in paths)
-            {
-                if (string.IsNullOrWhiteSpace(rawPath))
-                {
-                    continue;
-                }
-
-                string fullPath;
-                try
-                {
-                    fullPath = Path.GetFullPath(rawPath);
-                }
-                catch (Exception ex) when (IsPathException(ex))
-                {
-                    errors.Add($"Unable to access path '{rawPath}': {ex.Message}");
-                    continue;
-                }
-
-                if (File.Exists(fullPath))
-                {
-                    if (!filePatternMatcher.IsMatch(
-                            fullPath,
-                            Path.GetDirectoryName(fullPath)))
-                    {
-                        continue;
-                    }
-
-                    if (registry.TryGetFormatter(fullPath, out _))
-                    {
-                        results.Add(fullPath);
-                    }
-                    else if (!allFormatters.TryGetFormatter(fullPath, out _))
-                    {
-                        errors.Add($"Path is not a supported file type: {fullPath}");
-                    }
-
-                    continue;
-                }
-
-                if (Directory.Exists(fullPath))
-                {
-                    CollectDirectoryFiles(
-                        fullPath,
-                        fullPath,
-                        recursive,
-                        registry,
-                        filePatternMatcher,
-                        results,
-                        errors);
-                    continue;
-                }
-
-                errors.Add($"Path not found: {fullPath}");
-            }
-
-            return results.OrderBy(x => x, StringComparer.OrdinalIgnoreCase).ToList();
-        }
-
-        private static void CollectDirectoryFiles(
-            string directoryPath,
-            string rootDirectory,
-            bool recursive,
-            FormatterRegistry registry,
-            FilePatternMatcher filePatternMatcher,
-            HashSet<string> results,
-            List<string> errors)
-        {
-            try
-            {
-                foreach (var file in Directory.EnumerateFiles(directoryPath, "*", SearchOption.TopDirectoryOnly))
-                {
-                    if (filePatternMatcher.IsMatch(file, rootDirectory)
-                        && registry.TryGetFormatter(file, out _))
-                    {
-                        results.Add(Path.GetFullPath(file));
-                    }
-                }
-
-                if (!recursive)
-                {
-                    return;
-                }
-
-                foreach (var childDirectory in Directory.EnumerateDirectories(
-                    directoryPath,
-                    "*",
-                    SearchOption.TopDirectoryOnly))
-                {
-                    if (IgnoredRecursiveDirectories.Contains(Path.GetFileName(childDirectory)))
-                    {
-                        continue;
-                    }
-
-                    if ((File.GetAttributes(childDirectory) & FileAttributes.ReparsePoint) != 0)
-                    {
-                        continue;
-                    }
-
-                    CollectDirectoryFiles(
-                        childDirectory,
-                        rootDirectory,
-                        true,
-                        registry,
-                        filePatternMatcher,
-                        results,
-                        errors);
-                }
-            }
-            catch (Exception ex) when (IsPathException(ex))
-            {
-                errors.Add($"Unable to access path '{directoryPath}': {ex.Message}");
-            }
         }
 
         private static bool TryReadOptionValue(
@@ -613,14 +475,6 @@ namespace PNFmt.Cli
                     .ToArray());
             error = null;
             return true;
-        }
-
-        private static bool IsPathException(Exception exception)
-        {
-            return exception is ArgumentException
-                || exception is IOException
-                || exception is NotSupportedException
-                || exception is UnauthorizedAccessException;
         }
 
         private static void WriteStatus(string status, string file, string workingDirectory)
