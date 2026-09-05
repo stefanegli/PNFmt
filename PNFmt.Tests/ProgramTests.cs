@@ -156,6 +156,8 @@ namespace PNFmt.Tests
             Assert.Contains("--file-pattern", help.Output);
             Assert.Contains("--formatter", help.Output);
             Assert.Contains("--write-default-config", help.Output);
+            Assert.Contains("--migrate-legacy-config", help.Output);
+            Assert.Contains("--remove-legacy-config", help.Output);
             Assert.Contains(".rsp", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
@@ -194,6 +196,68 @@ namespace PNFmt.Tests
 
             Assert.Equal(2, result.ExitCode);
             Assert.Contains("cannot be combined", result.Error);
+        }
+
+        [Fact]
+        public void Default_configuration_prompts_to_migrate_and_keep_legacy_settings()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var editorConfig = directory.Write(
+                    ".editorconfig",
+                    "root = true\n\n[*.resx]\n"
+                    + "resx_formatter_sort_entries = false\n");
+
+                var result = RunWithInput(
+                    "yes\nno\n",
+                    "--write-default-config",
+                    editorConfig);
+                var updated = File.ReadAllText(editorConfig);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Migrate 1 legacy formatter setting", result.Output);
+                Assert.Contains("Remove the 1 legacy formatter setting", result.Output);
+                Assert.Contains("resx_formatter_sort_entries = false", updated);
+                Assert.Contains("pnfmt_sort_entries = false", updated);
+            }
+        }
+
+        [Fact]
+        public void Default_configuration_migration_answers_can_be_passed_as_options()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var editorConfig = directory.Write(
+                    ".editorconfig",
+                    "root = true\n\n[*.resx]\n"
+                    + "resx_formatter_sort_comparer = InvariantCulture\n");
+
+                var result = Run(
+                    "--write-default-config",
+                    "--migrate-legacy-config=true",
+                    "--remove-legacy-config=true",
+                    editorConfig);
+                var updated = File.ReadAllText(editorConfig);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.DoesNotContain("Migrate", result.Output);
+                Assert.DoesNotContain("resx_formatter_sort_comparer", updated);
+                Assert.Contains("pnfmt_resx_sort_comparer = InvariantCulture", updated);
+            }
+        }
+
+        [Fact]
+        public void Default_configuration_migration_options_are_validated()
+        {
+            var withoutCommand = Run("--migrate-legacy-config=true");
+            var invalidBoolean = Run(
+                "--write-default-config",
+                "--remove-legacy-config=perhaps");
+
+            Assert.Equal(2, withoutCommand.ExitCode);
+            Assert.Contains("require '--write-default-config'", withoutCommand.Error);
+            Assert.Equal(2, invalidBoolean.ExitCode);
+            Assert.Contains("true or false", invalidBoolean.Error);
         }
 
         [Fact]
@@ -559,15 +623,29 @@ namespace PNFmt.Tests
 
         private static (int ExitCode, string Output, string Error) Run(params string[] args)
         {
+            return RunWithInput(null, args);
+        }
+
+        private static (int ExitCode, string Output, string Error) RunWithInput(
+            string input,
+            params string[] args)
+        {
             var originalOut = Console.Out;
             var originalError = Console.Error;
+            var originalInput = Console.In;
             using (var output = new StringWriter())
             using (var error = new StringWriter())
+            using (var inputReader = input is null ? null : new StringReader(input))
             {
                 try
                 {
                     Console.SetOut(output);
                     Console.SetError(error);
+                    if (inputReader is not null)
+                    {
+                        Console.SetIn(inputReader);
+                    }
+
                     var exitCode = Program.Main(args);
                     return (exitCode, output.ToString(), error.ToString());
                 }
@@ -575,6 +653,7 @@ namespace PNFmt.Tests
                 {
                     Console.SetOut(originalOut);
                     Console.SetError(originalError);
+                    Console.SetIn(originalInput);
                 }
             }
         }

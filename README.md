@@ -64,6 +64,9 @@ pnfmt --recursive --formatter csproj,resx .
 
 # Write an all-enabled PNFmt configuration to .editorconfig
 pnfmt --write-default-config .
+
+# Migrate legacy formatter settings and remove their old names without prompting
+pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config=true .
 ```
 
 ### Options
@@ -79,6 +82,8 @@ pnfmt --write-default-config .
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check project formatting and report project diagnostics without writing files. |
 | `--write-default-config` | Write an all-enabled PNFmt block to `.editorconfig`. Accepts one directory or `.editorconfig` path. |
+| `--migrate-legacy-config <true\|false>` | Import legacy formatter settings using current PNFmt names. Used only with `--write-default-config`. |
+| `--remove-legacy-config <true\|false>` | Remove legacy formatter settings after optional migration. Used only with `--write-default-config`. |
 | `-h`, `--help` | Show help. |
 | `-V`, `--version` | Show the CLI version. |
 
@@ -94,7 +99,13 @@ Every file type requires explicit configuration. To enable every formatter and o
 pnfmt --write-default-config .
 ```
 
-When `.editorconfig` already exists, the command preserves its other rules and appends a marked PNFmt block. Later runs replace that block, so the command is safe to repeat. A new file also gets `root = true`.
+When `.editorconfig` already exists, the command preserves its other rules and writes a marked PNFmt block before its sections, allowing the user's existing settings to override the defaults. Later runs replace that block, so the command is safe to repeat. A new file also gets `root = true`.
+
+If legacy `csproj_formatter_*` or `resx_formatter_*` settings are present, the command asks separately whether to migrate them and whether to remove their old names. Migration adds the equivalent `pnfmt_*` setting in the same section, preserving its scope. For non-interactive use, pass both answers explicitly:
+
+```powershell
+pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config=true .
+```
 
 You can instead add only the settings you want. PNFmt reports files for which no supported setting enables a formatter as `skipped`.
 

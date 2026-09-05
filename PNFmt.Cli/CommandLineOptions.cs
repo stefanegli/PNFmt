@@ -15,6 +15,8 @@ namespace PNFmt.Cli
             bool check,
             bool lint,
             bool writeDefaultConfig,
+            bool? migrateLegacyConfig,
+            bool? removeLegacyConfig,
             bool showHelp,
             bool showVersion,
             int maxCpuCount,
@@ -28,6 +30,8 @@ namespace PNFmt.Cli
             this.Check = check;
             this.Lint = lint;
             this.WriteDefaultConfig = writeDefaultConfig;
+            this.MigrateLegacyConfig = migrateLegacyConfig;
+            this.RemoveLegacyConfig = removeLegacyConfig;
             this.ShowHelp = showHelp;
             this.ShowVersion = showVersion;
             this.MaxCpuCount = maxCpuCount;
@@ -48,9 +52,13 @@ namespace PNFmt.Cli
 
         public int MaxCpuCount { get; }
 
+        public bool? MigrateLegacyConfig { get; }
+
         public IReadOnlyList<string> Paths { get; }
 
         public bool Recursive { get; }
+
+        public bool? RemoveLegacyConfig { get; }
 
         public bool ShowHelp { get; }
 
@@ -68,6 +76,8 @@ namespace PNFmt.Cli
             var check = false;
             var lint = false;
             var writeDefaultConfig = false;
+            bool? migrateLegacyConfig = null;
+            bool? removeLegacyConfig = null;
             var stopOptions = false;
             var maxCpuCount = 1;
             var filePatterns = new List<string>();
@@ -136,6 +146,8 @@ namespace PNFmt.Cli
                         check,
                         lint,
                         writeDefaultConfig,
+                        migrateLegacyConfig,
+                        removeLegacyConfig,
                         showHelp: true,
                         showVersion: false,
                         maxCpuCount,
@@ -153,6 +165,8 @@ namespace PNFmt.Cli
                         check,
                         lint,
                         writeDefaultConfig,
+                        migrateLegacyConfig,
+                        removeLegacyConfig,
                         showHelp: false,
                         showVersion: true,
                         maxCpuCount,
@@ -204,12 +218,44 @@ namespace PNFmt.Cli
                     continue;
                 }
 
+                if (!stopOptions
+                    && TryReadBooleanOptionValue(
+                        arguments,
+                        ref index,
+                        arg,
+                        out var migrateLegacyConfigValue,
+                        "--migrate-legacy-config"))
+                {
+                    migrateLegacyConfig = migrateLegacyConfigValue;
+                    continue;
+                }
+
+                if (!stopOptions
+                    && TryReadBooleanOptionValue(
+                        arguments,
+                        ref index,
+                        arg,
+                        out var removeLegacyConfigValue,
+                        "--remove-legacy-config"))
+                {
+                    removeLegacyConfig = removeLegacyConfigValue;
+                    continue;
+                }
+
                 if (!stopOptions && arg.StartsWith("-", StringComparison.Ordinal))
                 {
                     throw new CommandLineException($"Unknown option: {arg}");
                 }
 
                 paths.Add(arg);
+            }
+
+            if (!writeDefaultConfig
+                && (migrateLegacyConfig.HasValue || removeLegacyConfig.HasValue))
+            {
+                throw new CommandLineException(
+                    "Options '--migrate-legacy-config' and '--remove-legacy-config' "
+                    + "require '--write-default-config'.");
             }
 
             if (writeDefaultConfig
@@ -239,6 +285,8 @@ namespace PNFmt.Cli
                 check,
                 lint,
                 writeDefaultConfig,
+                migrateLegacyConfig,
+                removeLegacyConfig,
                 showHelp: false,
                 showVersion: false,
                 maxCpuCount,
@@ -273,6 +321,8 @@ namespace PNFmt.Cli
             bool check,
             bool lint,
             bool writeDefaultConfig,
+            bool? migrateLegacyConfig,
+            bool? removeLegacyConfig,
             bool showHelp,
             bool showVersion,
             int maxCpuCount,
@@ -287,6 +337,8 @@ namespace PNFmt.Cli
                 check,
                 lint,
                 writeDefaultConfig,
+                migrateLegacyConfig,
+                removeLegacyConfig,
                 showHelp,
                 showVersion,
                 maxCpuCount,
@@ -345,6 +397,34 @@ namespace PNFmt.Cli
                     CultureInfo.InvariantCulture,
                     out maxCpuCount)
                 && maxCpuCount > 0;
+        }
+
+        private static bool TryReadBooleanOptionValue(
+            IReadOnlyList<string> arguments,
+            ref int index,
+            string arg,
+            out bool value,
+            string optionName)
+        {
+            value = false;
+            if (!TryReadOptionValue(
+                arguments,
+                ref index,
+                arg,
+                "value of true or false",
+                out var text,
+                optionName))
+            {
+                return false;
+            }
+
+            if (!bool.TryParse(text, out value))
+            {
+                throw new CommandLineException(
+                    $"Option '{optionName}' requires a value of true or false.");
+            }
+
+            return true;
         }
 
         private static bool TryReadOptionValue(

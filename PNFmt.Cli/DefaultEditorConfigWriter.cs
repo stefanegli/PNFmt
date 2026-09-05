@@ -7,22 +7,45 @@ using PNFmt;
 
 namespace PNFmt.Cli
 {
-    internal static class DefaultEditorConfigWriter
+    internal sealed class DefaultEditorConfigWriter
     {
-        public static DefaultEditorConfigWriteResult Write(string targetPath)
+        private readonly string original;
+
+        private DefaultEditorConfigWriter(string path, string original)
+        {
+            this.TargetPath = path;
+            this.original = original;
+            this.LegacySettingCount = DefaultEditorConfigDocument.CountLegacySettings(original);
+        }
+
+        public int LegacySettingCount { get; }
+
+        public string TargetPath { get; }
+
+        public static DefaultEditorConfigWriter Open(string targetPath)
         {
             var editorConfigPath = ResolveEditorConfigPath(targetPath);
             var original = File.Exists(editorConfigPath)
                 ? File.ReadAllText(editorConfigPath)
                 : string.Empty;
-            var updated = DefaultEditorConfigDocument.Update(original);
-            if (string.Equals(original, updated, StringComparison.Ordinal))
+            return new DefaultEditorConfigWriter(editorConfigPath, original);
+        }
+
+        public DefaultEditorConfigWriteResult Write(
+            bool migrateLegacySettings,
+            bool removeLegacySettings)
+        {
+            var updated = DefaultEditorConfigDocument.Update(
+                this.original,
+                migrateLegacySettings,
+                removeLegacySettings);
+            if (string.Equals(this.original, updated, StringComparison.Ordinal))
             {
-                return new DefaultEditorConfigWriteResult(editorConfigPath, false);
+                return new DefaultEditorConfigWriteResult(this.TargetPath, false);
             }
 
-            File.WriteAllText(editorConfigPath, updated, new UTF8Encoding(false));
-            return new DefaultEditorConfigWriteResult(editorConfigPath, true);
+            File.WriteAllText(this.TargetPath, updated, new UTF8Encoding(false));
+            return new DefaultEditorConfigWriteResult(this.TargetPath, true);
         }
 
         private static string ResolveEditorConfigPath(string targetPath)

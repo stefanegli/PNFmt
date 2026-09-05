@@ -46,7 +46,10 @@ namespace PNFmt.Cli
 
             if (options.WriteDefaultConfig)
             {
-                return WriteDefaultConfig(options.Paths[0]);
+                return WriteDefaultConfig(
+                    options.Paths[0],
+                    options.MigrateLegacyConfig,
+                    options.RemoveLegacyConfig);
             }
 
             var allFormatters = FormatterCatalog.CreateDefault();
@@ -201,6 +204,10 @@ namespace PNFmt.Cli
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
             writer.WriteLine("      --write-default-config");
             writer.WriteLine("                     Write an all-enabled PNFmt block to .editorconfig.");
+            writer.WriteLine("      --migrate-legacy-config <true|false>");
+            writer.WriteLine("                     Import legacy formatter settings using current names.");
+            writer.WriteLine("      --remove-legacy-config <true|false>");
+            writer.WriteLine("                     Remove legacy settings after optional migration.");
             writer.WriteLine("  -h, --help        Show this help.");
             writer.WriteLine("  -V, --version     Show version info.");
             writer.WriteLine();
@@ -214,11 +221,29 @@ namespace PNFmt.Cli
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
         }
 
-        private static int WriteDefaultConfig(string targetPath)
+        private static int WriteDefaultConfig(
+            string targetPath,
+            bool? migrateLegacyConfig,
+            bool? removeLegacyConfig)
         {
             try
             {
-                var result = DefaultEditorConfigWriter.Write(targetPath);
+                var writer = DefaultEditorConfigWriter.Open(targetPath);
+                if (writer.LegacySettingCount > 0)
+                {
+                    var settingLabel = writer.LegacySettingCount == 1 ? "setting" : "settings";
+                    migrateLegacyConfig ??= PromptYesNo(
+                        $"Migrate {writer.LegacySettingCount} legacy formatter {settingLabel} "
+                        + "to current PNFmt names?",
+                        defaultValue: true);
+                    removeLegacyConfig ??= PromptYesNo(
+                        $"Remove the {writer.LegacySettingCount} legacy formatter {settingLabel}?",
+                        defaultValue: false);
+                }
+
+                var result = writer.Write(
+                    migrateLegacyConfig.GetValueOrDefault(),
+                    removeLegacyConfig.GetValueOrDefault());
                 var displayPath = GetRelativePathFromWorkingDirectory(
                     result.Path,
                     Environment.CurrentDirectory);
@@ -234,6 +259,34 @@ namespace PNFmt.Cli
                 Console.Error.WriteLine(
                     $"Failed to write default PNFmt configuration: {ex.Message}");
                 return 2;
+            }
+        }
+
+        private static bool PromptYesNo(string question, bool defaultValue)
+        {
+            var choices = defaultValue ? "[Y/n]" : "[y/N]";
+            while (true)
+            {
+                Console.Write($"{question} {choices} ");
+                var answer = Console.ReadLine();
+                if (string.IsNullOrWhiteSpace(answer))
+                {
+                    return defaultValue;
+                }
+
+                if (string.Equals(answer, "y", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(answer, "yes", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+
+                if (string.Equals(answer, "n", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(answer, "no", StringComparison.OrdinalIgnoreCase))
+                {
+                    return false;
+                }
+
+                Console.WriteLine("Please answer yes or no.");
             }
         }
 

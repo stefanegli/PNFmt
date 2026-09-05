@@ -12,6 +12,16 @@ namespace PNFmt
         public const string EndMarker = "# </pnfmt-defaults>";
         public const string StartMarker = "# <pnfmt-defaults>";
 
+        public static int CountLegacySettings(string text)
+        {
+            if (text is null)
+            {
+                throw new ArgumentNullException(nameof(text));
+            }
+
+            return LegacyEditorConfigSettingsMigration.Count(SplitLines(text));
+        }
+
         public static string Update(
             string text,
             bool migrateLegacySettings = false,
