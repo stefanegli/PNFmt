@@ -8,14 +8,13 @@ using Xunit;
 
 namespace PNFmt.Tests.Snapshots
 {
-    internal static class CliSnapshotTestRunner
+    internal static class CliTestRunner
     {
         public static async Task<string> RunAndAssertAsync(
             string fixtureRoot,
             string relativePath,
             string inputFile,
-            string caseName,
-            bool allowSkippedWhenUnchanged = false)
+            string caseName)
         {
             var inputRoot = Path.Combine(fixtureRoot, "input");
             using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
@@ -33,22 +32,7 @@ namespace PNFmt.Tests.Snapshots
 
                 Assert.True(result.ExitCode == 0, context);
                 Assert.Contains(Path.GetFileName(relativePath), result.StandardOutput);
-                if (changed)
-                {
-                    Assert.Contains("[updated]", result.StandardOutput);
-                }
-                else if (allowSkippedWhenUnchanged)
-                {
-                    Assert.True(
-                        result.StandardOutput.Contains("[unchanged]", StringComparison.Ordinal)
-                        || result.StandardOutput.Contains("[skipped]", StringComparison.Ordinal),
-                        context);
-                }
-                else
-                {
-                    Assert.Contains("[unchanged]", result.StandardOutput);
-                }
-
+                Assert.Contains(changed ? "[updated]" : "[unchanged]", result.StandardOutput);
                 return actual;
             }
         }

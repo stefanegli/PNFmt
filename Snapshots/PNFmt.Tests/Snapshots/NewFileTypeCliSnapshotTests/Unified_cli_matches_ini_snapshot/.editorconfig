@@ -1,8 +1,0 @@
-root = true
-
-[*.editorconfig]
-pnfmt_sort_entries = true
-
-[*.ini]
-pnfmt_ini_group_by_prefix = true
-pnfmt_sort_entries = true
