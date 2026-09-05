@@ -1,62 +1,39 @@
 ---
 name: pnfmt
-description: Format or check .NET project, solution, resource, response, INI, and EditorConfig files with PNFmt. Use after changing supported files, when preparing formatting checks, when investigating PNFmt diagnostics, or when asked to create PNFmt configuration. Do not use for C# source formatting.
+description: Check, format, lint, or configure supported files with PNFmt.
 ---
 
-# Use PNFmt
+# PNFmt
 
-Run PNFmt only on files and directories within the task's scope. Inspect the resulting diff and preserve unrelated user changes.
+Use PNFmt only within the task's scope. It formats .NET project, solution, resource, response, INI, and EditorConfig files; it does not format C# source.
 
-## Choose the command
+## Invocation
 
-When working in the PNFmt source repository, invoke the current implementation:
+In this source repository, replace `pnfmt` in the commands below with:
 
 ```powershell
 dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release -- <pnfmt-arguments>
 ```
 
-In other repositories, use an installed `pnfmt` command. If it is unavailable, report that clearly instead of installing or updating it without permission.
+Elsewhere, use an installed `pnfmt` command. Do not install or update it unless requested.
 
-## Check or format
+## Operations
 
-Use `--check` for review-only work or before deciding whether a write is needed:
+- Check without writing: `pnfmt --check <paths>`
+- Format when the task permits writes: `pnfmt <paths>`
+- Validate project structure without writing: `pnfmt --lint <paths>`
+- Create or refresh the managed default configuration when explicitly requested: `pnfmt --write-default-config <directory-or-editorconfig>`
 
-```powershell
-pnfmt --check path/to/Project.csproj path/to/Strings.resx
-```
-
-When the task authorizes changes, format the supported files that were changed:
-
-```powershell
-pnfmt path/to/Project.csproj path/to/Strings.resx
-```
-
-Use `--recursive` only when the requested scope is a directory tree. Prefer explicit paths or `--file-pattern` when a repository contains unrelated files.
-
-Use `--lint` when the task includes project-structure validation. It implies a formatting check and does not write files:
-
-```powershell
-pnfmt --lint path/to/Project.csproj
-```
-
-Interpret exit codes as follows:
-
-- `0`: the command succeeded and no check failures remain.
-- `1`: `--check` found formatting changes, or `--lint` found changes or diagnostics.
-- `2`: command usage, path resolution, or formatting failed.
-
-After a write, rerun `--check` on the same scope and review the diff.
+Prefer explicit paths. Use `--recursive` only when the requested scope is a directory tree, and `--file-pattern` when narrowing that tree.
 
 ## Configuration
 
-PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually means no applicable PNFmt setting is enabled. Do not change configuration merely to avoid a skipped result unless configuration is part of the task.
+PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually has no enabled PNFmt setting; do not enable one unless configuration is part of the task.
 
-When asked to enable all current formatters and cleanup options, write the managed default block:
+The default-config command preserves rules outside its marked block. Review configuration changes because INI and response-file sorting can affect order-sensitive files.
 
-```powershell
-pnfmt --write-default-config <repository-or-editorconfig-path>
-```
+## Completion
 
-The command preserves rules outside the marked PNFmt block and can be run again to refresh that block. Review the `.editorconfig` diff because options such as INI section sorting and response-file sorting can change order-sensitive files.
+Inspect the diff and preserve unrelated changes. After formatting, rerun `--check` on the same scope and resolve failures caused by the requested change.
 
 See [the repository documentation](../../../README.md) for supported settings and formatter-specific behavior.
