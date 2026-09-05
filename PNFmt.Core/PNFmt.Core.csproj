@@ -5,6 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="pnfmt" />
         <InternalsVisibleTo Include="PNFmt.Tests" />
     </ItemGroup>
 

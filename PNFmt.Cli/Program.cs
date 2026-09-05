@@ -44,6 +44,11 @@ namespace PNFmt.Cli
                 return 0;
             }
 
+            if (options.WriteDefaultConfig)
+            {
+                return WriteDefaultConfig(options.Paths[0]);
+            }
+
             var allFormatters = FormatterCatalog.CreateDefault();
             if (!TryCreateActiveRegistry(
                     allFormatters,
@@ -194,6 +199,8 @@ namespace PNFmt.Cli
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
+            writer.WriteLine("      --write-default-config");
+            writer.WriteLine("                     Write an all-enabled PNFmt block to .editorconfig.");
             writer.WriteLine("  -h, --help        Show this help.");
             writer.WriteLine("  -V, --version     Show version info.");
             writer.WriteLine();
@@ -205,6 +212,29 @@ namespace PNFmt.Cli
             writer.WriteLine("  RSP and SLNX formatters require pnfmt_sort_entries = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
+        }
+
+        private static int WriteDefaultConfig(string targetPath)
+        {
+            try
+            {
+                var result = DefaultEditorConfigWriter.Write(targetPath);
+                var displayPath = GetRelativePathFromWorkingDirectory(
+                    result.Path,
+                    Environment.CurrentDirectory);
+                Console.WriteLine(result.Changed
+                    ? $"Wrote default PNFmt configuration to {displayPath}."
+                    : $"Default PNFmt configuration is already current in {displayPath}.");
+                return 0;
+            }
+            catch (Exception ex) when (ex is ArgumentException
+                || ex is IOException
+                || ex is UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine(
+                    $"Failed to write default PNFmt configuration: {ex.Message}");
+                return 2;
+            }
         }
 
         private static bool TryCreateActiveRegistry(

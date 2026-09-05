@@ -85,7 +85,8 @@ namespace PNFmt.Tests
                 var result = Run("--recursive", directory.Path);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.Contains("Updated 6", result.Output);
+                Assert.Contains("Processed 6", result.Output);
+                Assert.Contains("Updated 5", result.Output);
                 Assert.True(
                     File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
                     < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
@@ -154,9 +155,45 @@ namespace PNFmt.Tests
             Assert.Contains("-m[:N], -maxCpuCount[:N]", help.Output);
             Assert.Contains("--file-pattern", help.Output);
             Assert.Contains("--formatter", help.Output);
+            Assert.Contains("--write-default-config", help.Output);
             Assert.Contains(".rsp", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
+        }
+
+        [Fact]
+        public void Default_configuration_command_writes_the_requested_directory()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var first = Run("--write-default-config", directory.Path);
+                var editorConfig = Path.Combine(directory.Path, ".editorconfig");
+                var expected = DefaultEditorConfigDocument.Update(string.Empty);
+
+                Assert.Equal(0, first.ExitCode);
+                Assert.Contains("Wrote default PNFmt configuration", first.Output);
+                Assert.Equal(expected, File.ReadAllText(editorConfig));
+
+                var second = Run("--write-default-config", editorConfig);
+
+                Assert.Equal(0, second.ExitCode);
+                Assert.Contains("already current", second.Output);
+                Assert.Equal(expected, File.ReadAllText(editorConfig));
+
+                var formatCheck = Run("--check", editorConfig);
+
+                Assert.Equal(0, formatCheck.ExitCode);
+                Assert.Contains("unchanged 1", formatCheck.Output);
+            }
+        }
+
+        [Fact]
+        public void Default_configuration_command_rejects_formatting_options()
+        {
+            var result = Run("--write-default-config", "--recursive");
+
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains("cannot be combined", result.Error);
         }
 
         [Fact]
@@ -559,21 +596,7 @@ namespace PNFmt.Tests
             {
                 this.Write(
                     ".editorconfig",
-                    "root = true\r\n\r\n"
-                    + "[*.csproj]\r\n"
-                    + "pnfmt_sort_entries=true\r\n\r\n"
-                    + "[*.resx]\r\n"
-                    + "pnfmt_sort_entries=true\r\n"
-                    + "pnfmt_resx_remove_xsd_schema=true\r\n"
-                    + "pnfmt_resx_remove_documentation_comment=true\r\n\r\n"
-                    + "[*.editorconfig]\r\n"
-                    + "pnfmt_sort_entries=true\r\n\r\n"
-                    + "[*.ini]\r\n"
-                    + "pnfmt_sort_entries=true\r\n\r\n"
-                    + "[*.rsp]\r\n"
-                    + "pnfmt_sort_entries=true\r\n\r\n"
-                    + "[*.slnx]\r\n"
-                    + "pnfmt_sort_entries=true\r\n");
+                    DefaultEditorConfigDocument.Update(string.Empty));
             }
 
             public static string[] ReadNames(string path)

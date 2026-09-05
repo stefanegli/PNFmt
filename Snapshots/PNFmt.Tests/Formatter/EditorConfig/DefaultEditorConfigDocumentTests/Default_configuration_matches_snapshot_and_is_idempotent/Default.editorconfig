@@ -1,0 +1,29 @@
+root = true
+
+# <pnfmt-defaults>
+
+[*.csproj]
+pnfmt_csproj_empty_lines_between_groups = 1
+pnfmt_sort_entries = true
+
+[*.editorconfig]
+pnfmt_sort_entries = true
+
+[*.ini]
+pnfmt_ini_group_by_prefix = true
+pnfmt_ini_sort_groups = true
+pnfmt_sort_entries = true
+
+[*.resx]
+pnfmt_resx_remove_documentation_comment = true
+pnfmt_resx_remove_xsd_schema = true
+pnfmt_resx_sort_comparer = OrdinalIgnoreCase
+pnfmt_sort_entries = true
+
+[*.rsp]
+pnfmt_sort_entries = true
+
+[*.slnx]
+pnfmt_sort_entries = true
+
+# </pnfmt-defaults>

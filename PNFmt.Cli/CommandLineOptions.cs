@@ -14,6 +14,7 @@ namespace PNFmt.Cli
             bool dryRun,
             bool check,
             bool lint,
+            bool writeDefaultConfig,
             bool showHelp,
             bool showVersion,
             int maxCpuCount,
@@ -26,6 +27,7 @@ namespace PNFmt.Cli
             this.DryRun = dryRun;
             this.Check = check;
             this.Lint = lint;
+            this.WriteDefaultConfig = writeDefaultConfig;
             this.ShowHelp = showHelp;
             this.ShowVersion = showVersion;
             this.MaxCpuCount = maxCpuCount;
@@ -56,6 +58,8 @@ namespace PNFmt.Cli
 
         public bool Verbose { get; }
 
+        public bool WriteDefaultConfig { get; }
+
         public static CommandLineOptions Parse(string[] args)
         {
             var recursive = false;
@@ -63,6 +67,7 @@ namespace PNFmt.Cli
             var dryRun = false;
             var check = false;
             var lint = false;
+            var writeDefaultConfig = false;
             var stopOptions = false;
             var maxCpuCount = 1;
             var filePatterns = new List<string>();
@@ -130,6 +135,7 @@ namespace PNFmt.Cli
                         dryRun,
                         check,
                         lint,
+                        writeDefaultConfig,
                         showHelp: true,
                         showVersion: false,
                         maxCpuCount,
@@ -146,6 +152,7 @@ namespace PNFmt.Cli
                         dryRun,
                         check,
                         lint,
+                        writeDefaultConfig,
                         showHelp: false,
                         showVersion: true,
                         maxCpuCount,
@@ -190,12 +197,34 @@ namespace PNFmt.Cli
                     continue;
                 }
 
+                if (!stopOptions
+                    && string.Equals(arg, "--write-default-config", StringComparison.Ordinal))
+                {
+                    writeDefaultConfig = true;
+                    continue;
+                }
+
                 if (!stopOptions && arg.StartsWith("-", StringComparison.Ordinal))
                 {
                     throw new CommandLineException($"Unknown option: {arg}");
                 }
 
                 paths.Add(arg);
+            }
+
+            if (writeDefaultConfig
+                && (recursive
+                    || verbose
+                    || dryRun
+                    || check
+                    || lint
+                    || filePatterns.Count > 0
+                    || formatterNames.Count > 0
+                    || paths.Count > 1))
+            {
+                throw new CommandLineException(
+                    "Option '--write-default-config' accepts at most one path and cannot be combined "
+                    + "with formatting options.");
             }
 
             if (paths.Count == 0)
@@ -209,6 +238,7 @@ namespace PNFmt.Cli
                 dryRun,
                 check,
                 lint,
+                writeDefaultConfig,
                 showHelp: false,
                 showVersion: false,
                 maxCpuCount,
@@ -242,6 +272,7 @@ namespace PNFmt.Cli
             bool dryRun,
             bool check,
             bool lint,
+            bool writeDefaultConfig,
             bool showHelp,
             bool showVersion,
             int maxCpuCount,
@@ -255,6 +286,7 @@ namespace PNFmt.Cli
                 dryRun,
                 check,
                 lint,
+                writeDefaultConfig,
                 showHelp,
                 showVersion,
                 maxCpuCount,
