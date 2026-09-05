@@ -98,7 +98,7 @@ namespace PNFmt
                 OmitXmlDeclaration = document.Declaration is null,
             };
 
-            using (var stringWriter = new StringWriter())
+            using (var stringWriter = new Utf8StringWriter())
             using (var xmlWriter = XmlWriter.Create(stringWriter, writerSettings))
             {
                 document.Save(xmlWriter);

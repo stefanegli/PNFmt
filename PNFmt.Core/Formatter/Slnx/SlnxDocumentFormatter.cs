@@ -283,9 +283,5 @@ namespace PNFmt
             public List<XNode> LeadingNodes { get; }
         }
 
-        private sealed class Utf8StringWriter : StringWriter
-        {
-            public override Encoding Encoding => Encoding.UTF8;
-        }
     }
 }
