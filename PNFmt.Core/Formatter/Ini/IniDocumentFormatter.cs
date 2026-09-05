@@ -22,25 +22,37 @@ namespace PNFmt
                 .Split(new[] { '\n' }, StringSplitOptions.None);
             var output = new List<string>();
             var properties = new List<PropertyLine>();
+            var hasBlankLineAfterProperties = false;
 
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
                 if (TryParseProperty(trimmed, out var property))
                 {
+                    hasBlankLineAfterProperties = false;
                     properties.Add(property);
                     continue;
                 }
 
-                FlushProperties(properties, output, sortEntries);
                 if (trimmed.Length == 0)
                 {
-                    if (output.Count > 0 && output[output.Count - 1].Length > 0)
+                    if (properties.Count > 0)
                     {
-                        output.Add(string.Empty);
+                        hasBlankLineAfterProperties = true;
+                    }
+                    else
+                    {
+                        AddBlankLine(output);
                     }
 
                     continue;
+                }
+
+                FlushProperties(properties, output, sortEntries);
+                if (hasBlankLineAfterProperties)
+                {
+                    AddBlankLine(output);
+                    hasBlankLineAfterProperties = false;
                 }
 
                 output.Add(IsSectionHeader(trimmed) ? trimmed : line.TrimEnd());
@@ -56,6 +68,14 @@ namespace PNFmt
             return orderedOutput.Count == 0
                 ? string.Empty
                 : string.Join(newLine, orderedOutput) + newLine;
+        }
+
+        private static void AddBlankLine(List<string> output)
+        {
+            if (output.Count > 0 && output[output.Count - 1].Length > 0)
+            {
+                output.Add(string.Empty);
+            }
         }
 
         private static string DetectNewLine(string text)
