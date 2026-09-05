@@ -61,6 +61,9 @@ pnfmt --recursive --file-pattern "**/*Tests.csproj" .
 
 # Run only the project and resource formatters
 pnfmt --recursive --formatter csproj,resx .
+
+# Write an all-enabled PNFmt configuration to .editorconfig
+pnfmt --write-default-config .
 ```
 
 ### Options
@@ -75,6 +78,7 @@ pnfmt --recursive --formatter csproj,resx .
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check project formatting and report project diagnostics without writing files. |
+| `--write-default-config` | Write an all-enabled PNFmt block to `.editorconfig`. Accepts one directory or `.editorconfig` path. |
 | `-h`, `--help` | Show help. |
 | `-V`, `--version` | Show the CLI version. |
 
@@ -84,7 +88,15 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Add the settings you want to an `.editorconfig` file. Every file type requires explicit configuration. PNFmt reports files for which no supported setting enables a formatter as `skipped`.
+Every file type requires explicit configuration. To enable every formatter and optional cleanup, run:
+
+```powershell
+pnfmt --write-default-config .
+```
+
+When `.editorconfig` already exists, the command preserves its other rules and appends a marked PNFmt block. Later runs replace that block, so the command is safe to repeat. A new file also gets `root = true`.
+
+You can instead add only the settings you want. PNFmt reports files for which no supported setting enables a formatter as `skipped`.
 
 ```ini
 [*.csproj]
