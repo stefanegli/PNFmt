@@ -19,6 +19,9 @@ namespace PNFmt
 
     internal sealed class CsProjDocumentFormatter
     {
+        private static readonly Regex PropertyReferenceRegex =
+            new Regex(@"\$\(([^)]+)\)", RegexOptions.Compiled);
+
         public CsProjDocumentFormatter(ICsProjFormatSettings settings, IFormatterLog log)
         {
             this.Log = log;
@@ -260,7 +263,6 @@ namespace PNFmt
                 edges.Add(new HashSet<int>());
             }
 
-            var referenceRegex = new Regex(@"\$\(([^)]+)\)", RegexOptions.Compiled);
             for (var i = 0; i < groups.Count; i++)
             {
                 var element = groups[i].Element;
@@ -270,7 +272,7 @@ namespace PNFmt
                     text += " " + attribute.Value;
                 }
 
-                foreach (Match match in referenceRegex.Matches(text))
+                foreach (Match match in PropertyReferenceRegex.Matches(text))
                 {
                     if (match.Groups.Count < 2)
                     {
@@ -324,7 +326,13 @@ namespace PNFmt
                 }
             }
 
-            var ready = new List<int>();
+            var ready = new SortedSet<int>(Comparer<int>.Create((left, right) =>
+            {
+                var leftName = groups[left].Element.Name.LocalName;
+                var rightName = groups[right].Element.Name.LocalName;
+                var nameCompare = comparer.Compare(leftName, rightName);
+                return nameCompare != 0 ? nameCompare : left.CompareTo(right);
+            }));
             for (var i = 0; i < indegree.Length; i++)
             {
                 if (indegree[i] == 0)
@@ -334,19 +342,13 @@ namespace PNFmt
             }
 
             var result = new List<ElementGroup>(groups.Count);
+            var emitted = new bool[groups.Count];
             while (ready.Count > 0)
             {
-                ready.Sort((left, right) =>
-                {
-                    var leftName = groups[left].Element.Name.LocalName;
-                    var rightName = groups[right].Element.Name.LocalName;
-                    var nameCompare = comparer.Compare(leftName, rightName);
-                    return nameCompare != 0 ? nameCompare : left.CompareTo(right);
-                });
-
-                var next = ready[0];
-                ready.RemoveAt(0);
+                var next = ready.Min;
+                ready.Remove(next);
                 result.Add(groups[next]);
+                emitted[next] = true;
 
                 foreach (var dependent in edges[next])
                 {
@@ -366,7 +368,7 @@ namespace PNFmt
             var remaining = new List<int>();
             for (var i = 0; i < groups.Count; i++)
             {
-                if (!result.Contains(groups[i]))
+                if (!emitted[i])
                 {
                     remaining.Add(i);
                 }
