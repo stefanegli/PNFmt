@@ -20,151 +20,34 @@ namespace PNFmt.Cli
 
         public static int Main(string[] args)
         {
-            var recursive = false;
-            var verbose = false;
-            var dryRun = false;
-            var check = false;
-            var lint = false;
-            var stopOptions = false;
-            var maxCpuCount = 1;
-            var filePatterns = new List<string>();
-            var formatterNames = new List<string>();
-            var paths = new List<string>();
-            var arguments = args ?? Array.Empty<string>();
-
-            for (var index = 0; index < arguments.Length; index++)
+            CommandLineOptions options;
+            try
             {
-                var arg = arguments[index];
-                if (!stopOptions && string.Equals(arg, "--", StringComparison.Ordinal))
-                {
-                    stopOptions = true;
-                    continue;
-                }
-
-                if (!stopOptions && TryGetMaxCpuCountValue(arg, out var maxCpuCountValue))
-                {
-                    if (maxCpuCountValue is null)
-                    {
-                        maxCpuCount = Math.Max(1, Environment.ProcessorCount);
-                    }
-                    else if (!TryParseMaxCpuCount(maxCpuCountValue, out maxCpuCount))
-                    {
-                        Console.Error.WriteLine(
-                            $"Option '{arg}' requires a positive integer after ':'.");
-                        PrintUsage(Console.Error);
-                        return 2;
-                    }
-
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        "file pattern",
-                        out var filePattern,
-                        "--file-pattern",
-                        "--filepattern"))
-                {
-                    if (filePattern is null)
-                    {
-                        PrintUsage(Console.Error);
-                        return 2;
-                    }
-
-                    filePatterns.Add(filePattern);
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        "formatter",
-                        out var formatterValue,
-                        "--formatter",
-                        "--formatters"))
-                {
-                    if (formatterValue is null
-                        || !TryAddFormatterNames(formatterValue, arg, formatterNames))
-                    {
-                        PrintUsage(Console.Error);
-                        return 2;
-                    }
-
-                    continue;
-                }
-
-                if (!stopOptions && IsHelpArg(arg))
-                {
-                    PrintUsage(Console.Out);
-                    return 0;
-                }
-
-                if (!stopOptions && IsVersionArg(arg))
-                {
-                    PrintVersion();
-                    return 0;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-r", StringComparison.Ordinal)
-                    || string.Equals(arg, "--recursive", StringComparison.Ordinal)))
-                {
-                    recursive = true;
-                    continue;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-v", StringComparison.Ordinal)
-                    || string.Equals(arg, "--verbose", StringComparison.Ordinal)))
-                {
-                    verbose = true;
-                    continue;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-n", StringComparison.Ordinal)
-                    || string.Equals(arg, "--dry-run", StringComparison.Ordinal)))
-                {
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions && string.Equals(arg, "--check", StringComparison.Ordinal))
-                {
-                    check = true;
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions && string.Equals(arg, "--lint", StringComparison.Ordinal))
-                {
-                    lint = true;
-                    check = true;
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions && arg.StartsWith("-", StringComparison.Ordinal))
-                {
-                    Console.Error.WriteLine($"Unknown option: {arg}");
-                    PrintUsage(Console.Error);
-                    return 2;
-                }
-
-                paths.Add(arg);
+                options = CommandLineOptions.Parse(args);
+            }
+            catch (CommandLineException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                PrintUsage(Console.Error);
+                return 2;
             }
 
-            if (paths.Count == 0)
+            if (options.ShowHelp)
             {
-                paths.Add(".");
+                PrintUsage(Console.Out);
+                return 0;
+            }
+
+            if (options.ShowVersion)
+            {
+                PrintVersion();
+                return 0;
             }
 
             var allFormatters = FormatterCatalog.CreateDefault();
             if (!TryCreateActiveRegistry(
                     allFormatters,
-                    formatterNames,
+                    options.FormatterNames,
                     out var registry,
                     out var formatterError))
             {
@@ -173,11 +56,11 @@ namespace PNFmt.Cli
                 return 2;
             }
 
-            var filePatternMatcher = new FilePatternMatcher(filePatterns);
+            var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
             var targets = new TargetFileResolver(
                 registry,
                 allFormatters,
-                filePatternMatcher).Resolve(paths, recursive);
+                filePatternMatcher).Resolve(options.Paths, options.Recursive);
             var files = targets.Files;
 
             foreach (var error in targets.Errors)
@@ -197,22 +80,26 @@ namespace PNFmt.Cli
             var skipped = 0;
             var failed = 0;
             var diagnosticCount = 0;
-            var run = new FormattingRunner(registry).Run(files, !dryRun, lint, maxCpuCount);
+            var run = new FormattingRunner(registry).Run(
+                files,
+                !options.DryRun,
+                options.Lint,
+                options.MaxCpuCount);
 
             foreach (var outcome in run.Outcomes)
             {
-                WriteLog(outcome, verbose);
+                WriteLog(outcome, options.Verbose);
                 if (outcome.Error is not null)
                 {
                     failed++;
-                    if (verbose)
+                    if (options.Verbose)
                     {
                         WriteStatus("failed", outcome.File, workingDirectory);
                     }
 
                     Console.Error.WriteLine(
                         $"Failed to format {outcome.File}: {outcome.Error.Message}");
-                    if (verbose)
+                    if (options.Verbose)
                     {
                         Console.Error.WriteLine(outcome.Error);
                     }
@@ -236,9 +123,9 @@ namespace PNFmt.Cli
                         break;
                 }
 
-                if (verbose)
+                if (options.Verbose)
                 {
-                    var statusLabel = status == FileFormatStatus.Updated && dryRun
+                    var statusLabel = status == FileFormatStatus.Updated && options.DryRun
                         ? "would-update"
                         : status.ToString().ToLowerInvariant();
                     WriteStatus(statusLabel, outcome.File, workingDirectory);
@@ -251,76 +138,25 @@ namespace PNFmt.Cli
                 }
             }
 
-            var changeLabel = dryRun ? "Would update" : "Updated";
+            var changeLabel = options.DryRun ? "Would update" : "Updated";
             var elapsed = run.Elapsed.TotalSeconds.ToString("0.000", CultureInfo.InvariantCulture);
             Console.WriteLine(
                 $"Processed {files.Count} file(s) in {elapsed}s. {changeLabel} {changed}, "
                 + $"unchanged {unchanged}, skipped {skipped}, failed {failed}"
-                + (lint ? $", diagnostics {diagnosticCount}." : "."));
+                + (options.Lint ? $", diagnostics {diagnosticCount}." : "."));
 
             if (failed > 0 || targets.Errors.Count > 0)
             {
                 return 2;
             }
 
-            if (check && (changed > 0 || (lint && diagnosticCount > 0)))
+            if (options.Check
+                && (changed > 0 || (options.Lint && diagnosticCount > 0)))
             {
                 return 1;
             }
 
             return 0;
-        }
-
-        private static bool TryGetMaxCpuCountValue(string arg, out string value)
-        {
-            const string ShortOption = "-m";
-            const string LongOption = "-maxCpuCount";
-            if (string.Equals(arg, ShortOption, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(arg, LongOption, StringComparison.OrdinalIgnoreCase))
-            {
-                value = null;
-                return true;
-            }
-
-            var shortPrefix = ShortOption + ":";
-            if (arg.StartsWith(shortPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                value = arg.Substring(shortPrefix.Length);
-                return true;
-            }
-
-            var longPrefix = LongOption + ":";
-            if (arg.StartsWith(longPrefix, StringComparison.OrdinalIgnoreCase))
-            {
-                value = arg.Substring(longPrefix.Length);
-                return true;
-            }
-
-            value = null;
-            return false;
-        }
-
-        private static bool TryParseMaxCpuCount(string value, out int maxCpuCount)
-        {
-            return int.TryParse(
-                    value,
-                    NumberStyles.None,
-                    CultureInfo.InvariantCulture,
-                    out maxCpuCount)
-                && maxCpuCount > 0;
-        }
-
-        private static bool IsHelpArg(string arg)
-        {
-            return string.Equals(arg, "-h", StringComparison.Ordinal)
-                || string.Equals(arg, "--help", StringComparison.Ordinal)
-                || string.Equals(arg, "/?", StringComparison.Ordinal);
-        }
-
-        private static bool IsVersionArg(string arg)
-        {
-            return string.Equals(arg, "-V", StringComparison.Ordinal)
-                || string.Equals(arg, "--version", StringComparison.Ordinal);
         }
 
         private static void PrintVersion()
@@ -361,81 +197,6 @@ namespace PNFmt.Cli
             writer.WriteLine("  SLNX formatting requires pnfmt_sort_entries = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
-        }
-
-        private static bool TryReadOptionValue(
-            IReadOnlyList<string> arguments,
-            ref int index,
-            string arg,
-            string optionDescription,
-            out string value,
-            params string[] optionNames)
-        {
-            value = null;
-            foreach (var optionName in optionNames)
-            {
-                if (string.Equals(arg, optionName, StringComparison.OrdinalIgnoreCase))
-                {
-                    if (index + 1 >= arguments.Count
-                        || arguments[index + 1].StartsWith("-", StringComparison.Ordinal))
-                    {
-                        Console.Error.WriteLine(
-                            $"Option '{arg}' requires a {optionDescription}.");
-                        return true;
-                    }
-
-                    value = arguments[++index];
-                    if (string.IsNullOrWhiteSpace(value))
-                    {
-                        Console.Error.WriteLine(
-                            $"Option '{arg}' requires a {optionDescription}.");
-                        value = null;
-                    }
-
-                    return true;
-                }
-
-                foreach (var separator in new[] { ":", "=" })
-                {
-                    var prefix = optionName + separator;
-                    if (arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-                    {
-                        value = arg.Substring(prefix.Length);
-                        if (string.IsNullOrWhiteSpace(value))
-                        {
-                            Console.Error.WriteLine(
-                                $"Option '{arg}' requires a {optionDescription}.");
-                            value = null;
-                        }
-
-                        return true;
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        private static bool TryAddFormatterNames(
-            string value,
-            string option,
-            List<string> formatterNames)
-        {
-            var names = value.Split(new[] { ',' }, StringSplitOptions.None);
-            foreach (var name in names)
-            {
-                var trimmedName = name.Trim();
-                if (trimmedName.Length == 0)
-                {
-                    Console.Error.WriteLine(
-                        $"Option '{option}' contains an empty formatter name.");
-                    return false;
-                }
-
-                formatterNames.Add(trimmedName);
-            }
-
-            return true;
         }
 
         private static bool TryCreateActiveRegistry(
