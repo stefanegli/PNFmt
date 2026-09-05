@@ -10,88 +10,78 @@ namespace PNFmt
         public CsProjEditorConfigSettings(string targetFile = "dummy.csproj", IFormatterLog log = null)
         {
             var isActive = false;
-            try
+            var settings = EditorConfigSettings.Load(targetFile, log);
+            var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+            if (resolver.TryGet(
+                EditorConfigSettingNames.SortEntries,
+                "csproj_formatter_sort_entries",
+                out var sortEntries))
             {
-                var parser = new EditorConfig.Core.EditorConfigParser();
-                var settings = parser.Parse(targetFile).Properties;
-                var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
-                if (resolver.TryGet(
-                    EditorConfigSettingNames.SortEntries,
-                    "csproj_formatter_sort_entries",
-                    out var sortEntries))
-                {
-                    isActive = true;
-                    this.SortEntries = IsEnabled(sortEntries);
-                }
+                isActive = true;
+                this.SortEntries = EditorConfigSettings.IsEnabled(sortEntries);
+            }
 
-                if (settings.TryGetValue("indent_style", out var indentStyle))
-                {
-                    isActive = true;
-                    this.IndentStyle = ResolveIndentStyle(indentStyle);
-                }
+            if (settings.TryGetValue("indent_style", out var indentStyle))
+            {
+                isActive = true;
+                this.IndentStyle = ResolveIndentStyle(indentStyle);
+            }
 
-                if (settings.TryGetValue("tab_width", out var tabWidth)
-                    && int.TryParse(tabWidth, out var parsedTabWidth)
-                    && parsedTabWidth > 0)
-                {
-                    isActive = true;
-                    this.TabWidth = parsedTabWidth;
-                }
+            if (settings.TryGetValue("tab_width", out var tabWidth)
+                && int.TryParse(tabWidth, out var parsedTabWidth)
+                && parsedTabWidth > 0)
+            {
+                isActive = true;
+                this.TabWidth = parsedTabWidth;
+            }
 
-                if (settings.TryGetValue("indent_size", out var indentSize)
-                    && int.TryParse(indentSize, out var parsedIndentSize)
-                    && parsedIndentSize > 0)
+            if (settings.TryGetValue("indent_size", out var indentSize)
+                && int.TryParse(indentSize, out var parsedIndentSize)
+                && parsedIndentSize > 0)
+            {
+                isActive = true;
+                if (this.TabWidth == 0)
                 {
-                    isActive = true;
-                    if (this.TabWidth == 0)
-                    {
-                        this.TabWidth = parsedIndentSize;
-                    }
-                }
-
-                if (settings.TryGetValue("end_of_line", out var endOfLine))
-                {
-                    isActive = true;
-                    this.EndOfLine = ResolveEndOfLine(endOfLine);
-                }
-
-                if (resolver.TryGet(
-                        EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups,
-                        "csproj_formatter_empty_lines_between_groups",
-                        out var emptyLinesBetweenGroups)
-                    && int.TryParse(emptyLinesBetweenGroups, out var parsedEmptyLinesBetweenGroups)
-                    && parsedEmptyLinesBetweenGroups >= 0)
-                {
-                    isActive = true;
-                    this.EmptyLinesBetweenGroups = parsedEmptyLinesBetweenGroups;
-                }
-
-                if (resolver.TryGet(
-                    EditorConfigSettingNames.CsProjSortItemTypes,
-                    "csproj_formatter_sort_item_types",
-                    out var sortItemTypes))
-                {
-                    isActive = true;
-                    var parsedItemTypes = sortItemTypes
-                        .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(x => x.Trim())
-                        .Where(x => x.Length > 0)
-                        .Distinct(StringComparer.OrdinalIgnoreCase)
-                        .ToArray();
-                    if (parsedItemTypes.Length > 0)
-                    {
-                        this.SortItemTypes = parsedItemTypes;
-                    }
+                    this.TabWidth = parsedIndentSize;
                 }
             }
-            catch (Exception ex)
+
+            if (settings.TryGetValue("end_of_line", out var endOfLine))
             {
-                log?.WriteLine("Failed to parse EditorConfig file:\n" + ex.ToString());
+                isActive = true;
+                this.EndOfLine = ResolveEndOfLine(endOfLine);
+            }
+
+            if (resolver.TryGet(
+                    EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups,
+                    "csproj_formatter_empty_lines_between_groups",
+                    out var emptyLinesBetweenGroups)
+                && int.TryParse(emptyLinesBetweenGroups, out var parsedEmptyLinesBetweenGroups)
+                && parsedEmptyLinesBetweenGroups >= 0)
+            {
+                isActive = true;
+                this.EmptyLinesBetweenGroups = parsedEmptyLinesBetweenGroups;
+            }
+
+            if (resolver.TryGet(
+                EditorConfigSettingNames.CsProjSortItemTypes,
+                "csproj_formatter_sort_item_types",
+                out var sortItemTypes))
+            {
+                isActive = true;
+                var parsedItemTypes = sortItemTypes
+                    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Trim())
+                    .Where(x => x.Length > 0)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToArray();
+                if (parsedItemTypes.Length > 0)
+                {
+                    this.SortItemTypes = parsedItemTypes;
+                }
             }
 
             this.IsActive = isActive;
-
-            bool IsEnabled(string setting) => string.Equals(setting, "true", StringComparison.OrdinalIgnoreCase);
         }
 
         public bool IsActive { get; }

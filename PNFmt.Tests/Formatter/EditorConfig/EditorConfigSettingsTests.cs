@@ -116,6 +116,26 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
+        public void Resx_boolean_settings_are_case_insensitive()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.resx]\n"
+                + "pnfmt_sort_entries = True\n"
+                + "pnfmt_resx_remove_xsd_schema = TRUE\n"
+                + "pnfmt_resx_remove_documentation_comment = tRuE\n";
+
+            using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
+            {
+                var settings = new ResxEditorConfigSettings(new RecordingLog(), target.Path);
+
+                Assert.True(settings.SortEntries);
+                Assert.True(settings.RemoveXsdSchema);
+                Assert.True(settings.RemoveDocumentationComment);
+            }
+        }
+
+        [Fact]
         public void Resx_uses_every_legacy_setting_as_a_fallback()
         {
             const string Configuration =

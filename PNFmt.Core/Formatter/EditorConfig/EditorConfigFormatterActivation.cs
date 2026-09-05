@@ -18,18 +18,8 @@ namespace PNFmt
                 throw new ArgumentException("A setting name is required.", nameof(settingName));
             }
 
-            try
-            {
-                var parser = new EditorConfig.Core.EditorConfigParser();
-                var properties = parser.Parse(targetFile).Properties;
-                return properties.TryGetValue(settingName, out var value)
-                    && string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
-            }
-            catch (Exception ex)
-            {
-                log?.WriteLine("Failed to parse EditorConfig file:\n" + ex.ToString());
-                return false;
-            }
+            var settings = EditorConfigSettings.Load(targetFile, log);
+            return EditorConfigSettings.IsEnabled(settings, settingName);
         }
     }
 }

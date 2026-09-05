@@ -7,55 +7,45 @@ namespace PNFmt
         public ResxEditorConfigSettings(IFormatterLog log, string targetFile = "dummy.resx")
         {
             var isActive = false;
-            try
+            var settings = EditorConfigSettings.Load(targetFile, log);
+            var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+            if (resolver.TryGet(
+                EditorConfigSettingNames.SortEntries,
+                "resx_formatter_sort_entries",
+                out var sortEntries))
             {
-                var parser = new EditorConfig.Core.EditorConfigParser();
-                var settings = parser.Parse(targetFile).Properties;
-                var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
-                if (resolver.TryGet(
-                    EditorConfigSettingNames.SortEntries,
-                    "resx_formatter_sort_entries",
-                    out var sortEntries))
-                {
-                    isActive = true;
-                    this.SortEntries = IsEnabled(sortEntries);
-                }
-
-                if (resolver.TryGet(
-                    EditorConfigSettingNames.ResxRemoveXsdSchema,
-                    "resx_formatter_remove_xsd_schema",
-                    out var removeSchema))
-                {
-                    isActive = true;
-                    this.RemoveXsdSchema = IsEnabled(removeSchema);
-                }
-
-                if (resolver.TryGet(
-                    EditorConfigSettingNames.ResxRemoveDocumentationComment,
-                    "resx_formatter_remove_documentation_comment",
-                    out var removeComment))
-                {
-                    isActive = true;
-                    this.RemoveDocumentationComment = IsEnabled(removeComment);
-                }
-
-                if (resolver.TryGet(
-                        EditorConfigSettingNames.ResxSortComparer,
-                        "resx_formatter_sort_comparer",
-                        out var comparerString)
-                    && this.SortEntries)
-                {
-                    this.Comparer = Comparer(comparerString);
-                }
+                isActive = true;
+                this.SortEntries = EditorConfigSettings.IsEnabled(sortEntries);
             }
-            catch (Exception ex)
+
+            if (resolver.TryGet(
+                EditorConfigSettingNames.ResxRemoveXsdSchema,
+                "resx_formatter_remove_xsd_schema",
+                out var removeSchema))
             {
-                log?.WriteLine("Failed to parse EditorConfig file:\n" + ex.ToString());
+                isActive = true;
+                this.RemoveXsdSchema = EditorConfigSettings.IsEnabled(removeSchema);
+            }
+
+            if (resolver.TryGet(
+                EditorConfigSettingNames.ResxRemoveDocumentationComment,
+                "resx_formatter_remove_documentation_comment",
+                out var removeComment))
+            {
+                isActive = true;
+                this.RemoveDocumentationComment = EditorConfigSettings.IsEnabled(removeComment);
+            }
+
+            if (resolver.TryGet(
+                    EditorConfigSettingNames.ResxSortComparer,
+                    "resx_formatter_sort_comparer",
+                    out var comparerString)
+                && this.SortEntries)
+            {
+                this.Comparer = Comparer(comparerString);
             }
 
             this.IsActive = isActive;
-
-            bool IsEnabled(string setting) => "true" == setting;
 
             StringComparer Comparer(string comparerString)
             {
