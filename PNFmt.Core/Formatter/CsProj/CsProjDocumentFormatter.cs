@@ -106,7 +106,14 @@ namespace PNFmt
             {
                 document.Save(xmlWriter);
                 xmlWriter.Flush();
-                return ApplyTopLevelGroupSpacing(stringWriter.ToString(), settings, newLineChars, indentChars);
+                var formatted = ApplyTopLevelGroupSpacing(
+                    stringWriter.ToString(),
+                    settings,
+                    newLineChars,
+                    indentChars);
+                return formatted.EndsWith(newLineChars, StringComparison.Ordinal)
+                    ? formatted
+                    : formatted + newLineChars;
             }
         }
 
