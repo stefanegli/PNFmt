@@ -174,6 +174,35 @@ namespace PNFmt.Tests.Formatter.Ini
                 IniDocumentFormatter.Format(Input, sortEntries: true, sortGroups: true));
         }
 
+        [Fact]
+        public void Prefix_grouping_activates_formatting_and_sorts_the_property_block()
+        {
+            const string Input =
+                "visual_basic_style = unchanged\n"
+                + "csharp_style_var = true\n"
+                + "indent_style = space\n"
+                + "csharp_indent_braces = false\n";
+            const string Expected =
+                "csharp_indent_braces = false\n"
+                + "csharp_style_var = true\n"
+                + "\n"
+                + "indent_style = space\n"
+                + "visual_basic_style = unchanged\n";
+
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                prefixSettingValue: "true"))
+            {
+                var result = new IniFormatter().Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.Equal(Expected, File.ReadAllText(file.Path));
+            }
+        }
+
         [Theory]
         [InlineData("false")]
         [InlineData("invalid")]
@@ -211,14 +240,17 @@ namespace PNFmt.Tests.Formatter.Ini
                 string name,
                 string contents,
                 string settingValue = "true",
-                string groupSettingValue = null)
+                string groupSettingValue = null,
+                string prefixSettingValue = null)
             {
                 var directory = System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
                     "PNFmtIniTests",
                     Guid.NewGuid().ToString("N"));
                 Directory.CreateDirectory(directory);
-                if (settingValue is not null || groupSettingValue is not null)
+                if (settingValue is not null
+                    || groupSettingValue is not null
+                    || prefixSettingValue is not null)
                 {
                     var settings = "root = true\n\n[*.ini]\n";
                     if (settingValue is not null)
@@ -229,6 +261,11 @@ namespace PNFmt.Tests.Formatter.Ini
                     if (groupSettingValue is not null)
                     {
                         settings += "pnfmt_ini_sort_groups = " + groupSettingValue + "\n";
+                    }
+
+                    if (prefixSettingValue is not null)
+                    {
+                        settings += "pnfmt_ini_group_by_prefix = " + prefixSettingValue + "\n";
                     }
 
                     File.WriteAllText(

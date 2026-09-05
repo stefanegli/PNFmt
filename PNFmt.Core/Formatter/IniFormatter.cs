@@ -33,7 +33,8 @@ namespace PNFmt
             var formatted = IniDocumentFormatter.Format(
                 original,
                 settings.SortEntries,
-                settings.SortGroups);
+                settings.SortGroups,
+                settings.GroupByPrefix);
             if (string.Equals(original, formatted, StringComparison.Ordinal))
             {
                 return new FileFormatResult(FileFormatStatus.Unchanged);

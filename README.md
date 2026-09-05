@@ -103,6 +103,7 @@ pnfmt_resx_sort_comparer = OrdinalIgnoreCase
 pnfmt_sort_entries = true
 
 [*.ini]
+pnfmt_ini_group_by_prefix = true
 pnfmt_sort_entries = true
 pnfmt_ini_sort_groups = true
 
@@ -134,7 +135,8 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list. Sorting 
 
 | Setting | Description |
 | --- | --- |
-| `pnfmt_sort_entries` | Sort keys within uninterrupted property blocks. |
+| `pnfmt_sort_entries` | Sort keys within property blocks. Blank lines do not split a block; comments, section headers, and unknown lines do. |
+| `pnfmt_ini_group_by_prefix` | Group keys by the text before their first underscore. Prefixes shared by at least two keys get blank-line separators; singleton prefixes remain ungrouped. This setting also sorts each property block. |
 | `pnfmt_ini_sort_groups` | Sort named sections by their headers using ordinal, case-insensitive comparison. The preamble stays at the top, and each header moves with everything up to the next header. |
 
 Set at least one of these settings to `true` for each `.editorconfig` or `.ini` pattern that PNFmt should format. The formatter also normalizes assignments to `key = value` and collapses repeated blank lines. It preserves comments and unknown lines.

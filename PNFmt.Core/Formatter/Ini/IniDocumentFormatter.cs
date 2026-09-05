@@ -8,7 +8,11 @@ namespace PNFmt
 {
     internal static class IniDocumentFormatter
     {
-        public static string Format(string text, bool sortEntries = true, bool sortGroups = false)
+        public static string Format(
+            string text,
+            bool sortEntries = true,
+            bool sortGroups = false,
+            bool groupByPrefix = false)
         {
             if (text is null)
             {
@@ -48,7 +52,7 @@ namespace PNFmt
                     continue;
                 }
 
-                FlushProperties(properties, output, sortEntries);
+                FlushProperties(properties, output, sortEntries, groupByPrefix);
                 if (hasBlankLineAfterProperties)
                 {
                     AddBlankLine(output);
@@ -58,7 +62,7 @@ namespace PNFmt
                 output.Add(IsSectionHeader(trimmed) ? trimmed : line.TrimEnd());
             }
 
-            FlushProperties(properties, output, sortEntries);
+            FlushProperties(properties, output, sortEntries, groupByPrefix);
             while (output.Count > 0 && output[output.Count - 1].Length == 0)
             {
                 output.RemoveAt(output.Count - 1);
@@ -96,13 +100,50 @@ namespace PNFmt
         private static void FlushProperties(
             List<PropertyLine> properties,
             List<string> output,
-            bool sortEntries)
+            bool sortEntries,
+            bool groupByPrefix)
         {
-            IEnumerable<PropertyLine> orderedProperties = sortEntries
+            IEnumerable<PropertyLine> orderedProperties = sortEntries || groupByPrefix
                 ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
                 : properties;
-            output.AddRange(orderedProperties.Select(property => property.Formatted));
+
+            if (groupByPrefix)
+            {
+                AddPrefixGroups(orderedProperties.ToArray(), output);
+            }
+            else
+            {
+                output.AddRange(orderedProperties.Select(property => property.Formatted));
+            }
+
             properties.Clear();
+        }
+
+        private static void AddPrefixGroups(
+            IReadOnlyList<PropertyLine> properties,
+            List<string> output)
+        {
+            var prefixCounts = properties
+                .Where(property => property.Prefix is not null)
+                .GroupBy(property => property.Prefix, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            string previousGroup = null;
+            for (var index = 0; index < properties.Count; index++)
+            {
+                var property = properties[index];
+                var group = property.Prefix is not null && prefixCounts[property.Prefix] > 1
+                    ? property.Prefix
+                    : null;
+                if (index > 0
+                    && !string.Equals(previousGroup, group, StringComparison.OrdinalIgnoreCase)
+                    && (previousGroup is not null || group is not null))
+                {
+                    AddBlankLine(output);
+                }
+
+                output.Add(property.Formatted);
+                previousGroup = group;
+            }
         }
 
         private static List<string> SortGroups(IReadOnlyList<string> lines)
@@ -186,21 +227,26 @@ namespace PNFmt
             }
 
             var value = line.Substring(separator + 1).Trim();
-            property = new PropertyLine(key, $"{key} = {value}");
+            var prefixSeparator = key.IndexOf('_');
+            var prefix = prefixSeparator > 0 ? key.Substring(0, prefixSeparator) : null;
+            property = new PropertyLine(key, prefix, $"{key} = {value}");
             return true;
         }
 
         private sealed class PropertyLine
         {
-            public PropertyLine(string key, string formatted)
+            public PropertyLine(string key, string prefix, string formatted)
             {
                 this.Key = key;
+                this.Prefix = prefix;
                 this.Formatted = formatted;
             }
 
             public string Formatted { get; }
 
             public string Key { get; }
+
+            public string Prefix { get; }
         }
 
         private sealed class SectionGroup

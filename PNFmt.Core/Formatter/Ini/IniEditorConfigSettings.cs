@@ -10,12 +10,17 @@ namespace PNFmt
             this.SortEntries = EditorConfigSettings.IsEnabled(
                 settings,
                 EditorConfigSettingNames.SortEntries);
+            this.GroupByPrefix = EditorConfigSettings.IsEnabled(
+                settings,
+                EditorConfigSettingNames.IniGroupByPrefix);
             this.SortGroups = EditorConfigSettings.IsEnabled(
                 settings,
                 EditorConfigSettingNames.IniSortGroups);
 
-            this.IsActive = this.SortEntries || this.SortGroups;
+            this.IsActive = this.SortEntries || this.GroupByPrefix || this.SortGroups;
         }
+
+        public bool GroupByPrefix { get; }
 
         public bool IsActive { get; }
 
