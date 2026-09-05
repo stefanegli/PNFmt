@@ -8,6 +8,7 @@
 - `.csproj` project files
 - `.editorconfig` and `.ini` configuration files
 - `.resx` resource files
+- `.rsp` .NET compiler response files
 - `.slnx` solution files
 
 Every formatter is opt-in. PNFmt skips a file unless the applicable `.editorconfig` explicitly enables formatting for that file type.
@@ -70,7 +71,7 @@ pnfmt --recursive --formatter csproj,resx .
 | `-v`, `--verbose` | Show per-file statuses and detailed errors. |
 | `-m[:N]`, `-maxCpuCount[:N]` | Process up to `N` files at once. Without `N`, use the processor count. |
 | `--file-pattern <glob>` | Include files matching the glob. Repeat the option to add patterns. |
-| `--formatter <name>[,<name>...]` | Run only the named formatters. Available names are `csproj`, `ini`, `resx`, and `slnx`. |
+| `--formatter <name>[,<name>...]` | Run only the named formatters. Available names are `csproj`, `ini`, `resx`, `rsp`, and `slnx`. |
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check project formatting and report project diagnostics without writing files. |
@@ -106,6 +107,9 @@ pnfmt_sort_entries = true
 pnfmt_ini_group_by_prefix = true
 pnfmt_sort_entries = true
 pnfmt_ini_sort_groups = true
+
+[*.rsp]
+pnfmt_sort_entries = true
 
 [*.slnx]
 pnfmt_sort_entries = true
@@ -145,11 +149,17 @@ An `.editorconfig` file with `root = true` must contain its own matching `[*.edi
 
 Section order can affect how tools interpret duplicate INI sections. It also controls precedence between matching sections in `.editorconfig` files. Enable `pnfmt_ini_sort_groups` only when changing that order is safe.
 
+### Response-file settings
+
+Set `pnfmt_sort_entries = true` for each `.rsp` pattern that PNFmt should format. The formatter sorts non-empty physical lines using ordinal, case-insensitive comparison with an ordinal tie-breaker. It does not tokenize or rearrange arguments within a line. Blank lines do not split a sortable block; a line whose first non-whitespace character is `#` does and remains in place as a comment barrier.
+
+.NET compilers process response-file arguments in order, and later options can override earlier ones. Enable sorting only where changing line order is safe. Put a full-line `#` comment between order-sensitive blocks to keep PNFmt from moving entries across that boundary.
+
 ### Solution settings
 
 Set `pnfmt_sort_entries = true` for each `.slnx` pattern that PNFmt should format. The formatter orders known solution elements, uses two-space XML indentation, and preserves unknown extension elements as ordering barriers.
 
-For SLNX files, only `pnfmt_sort_entries = true` enables the formatter. PNFmt skips INI and SLNX files when none of their activation settings are `true`. Missing settings, `false`, and invalid values do not activate a formatter.
+For RSP and SLNX files, only `pnfmt_sort_entries = true` enables the formatter. PNFmt skips INI, RSP, and SLNX files when none of their activation settings are `true`. Missing settings, `false`, and invalid values do not activate a formatter.
 
 PNFmt still accepts the legacy `csproj_formatter_*` and `resx_formatter_*` setting names as fallbacks. It reports warning `PNFMT001` when it uses or ignores a legacy setting. A matching `pnfmt_*` setting takes precedence.
 

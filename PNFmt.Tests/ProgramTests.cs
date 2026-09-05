@@ -154,6 +154,7 @@ namespace PNFmt.Tests
             Assert.Contains("-m[:N], -maxCpuCount[:N]", help.Output);
             Assert.Contains("--file-pattern", help.Output);
             Assert.Contains("--formatter", help.Output);
+            Assert.Contains(".rsp", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
         }

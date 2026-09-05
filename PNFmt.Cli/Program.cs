@@ -171,6 +171,14 @@ namespace PNFmt.Cli
 
         private static void PrintUsage(TextWriter writer)
         {
+            var formatterCatalog = FormatterCatalog.CreateDefault();
+            var formatterNames = string.Join(
+                ", ",
+                formatterCatalog.Formatters.Select(formatter => formatter.Name));
+            var fileExtensions = string.Join(
+                ", ",
+                formatterCatalog.Formatters.SelectMany(formatter => formatter.FileExtensions));
+
             writer.WriteLine($"Usage: {ToolName} [options] [<path> ...]");
             writer.WriteLine();
             writer.WriteLine("Options:");
@@ -182,7 +190,7 @@ namespace PNFmt.Cli
             writer.WriteLine("                     Include only files matching the glob; repeat to include more.");
             writer.WriteLine("      --formatter <name>[,<name>...]");
             writer.WriteLine("                     Enable only the named formatters; repeat or use comma-separated names.");
-            writer.WriteLine("                     Available names: csproj, ini, resx, slnx.");
+            writer.WriteLine($"                     Available names: {formatterNames}.");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
@@ -191,10 +199,10 @@ namespace PNFmt.Cli
             writer.WriteLine();
             writer.WriteLine("Notes:");
             writer.WriteLine("  If no path is provided, the current directory is used.");
-            writer.WriteLine("  Registered formatters support .csproj, .resx, .slnx, .editorconfig, and .ini files.");
+            writer.WriteLine($"  Registered formatters support {fileExtensions} files.");
             writer.WriteLine("  Every formatter requires applicable EditorConfig settings.");
             writer.WriteLine("  INI formatting requires an enabled pnfmt_sort_entries or pnfmt_ini_* setting.");
-            writer.WriteLine("  SLNX formatting requires pnfmt_sort_entries = true.");
+            writer.WriteLine("  RSP and SLNX formatters require pnfmt_sort_entries = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
         }
