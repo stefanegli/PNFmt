@@ -19,7 +19,7 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(text));
             }
 
-            var newLine = DetectNewLine(text);
+            var newLine = TextFileFormatting.DetectNewLine(text);
             var lines = text
                 .Replace("\r\n", "\n")
                 .Replace('\r', '\n')
@@ -80,21 +80,6 @@ namespace PNFmt
             {
                 output.Add(string.Empty);
             }
-        }
-
-        private static string DetectNewLine(string text)
-        {
-            if (text.IndexOf("\r\n", StringComparison.Ordinal) >= 0)
-            {
-                return "\r\n";
-            }
-
-            if (text.IndexOf('\r') >= 0)
-            {
-                return "\r";
-            }
-
-            return "\n";
         }
 
         private static void FlushProperties(

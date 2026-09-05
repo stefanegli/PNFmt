@@ -67,7 +67,7 @@ namespace PNFmt
 
             SortProperties(root);
 
-            var newLine = DetectNewLine(text);
+            var newLine = TextFileFormatting.DetectNewLine(text);
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = new UTF8Encoding(false),
@@ -88,21 +88,6 @@ namespace PNFmt
                     ? formatted
                     : formatted + newLine;
             }
-        }
-
-        private static string DetectNewLine(string text)
-        {
-            if (text.IndexOf("\r\n", StringComparison.Ordinal) >= 0)
-            {
-                return "\r\n";
-            }
-
-            if (text.IndexOf('\r') >= 0)
-            {
-                return "\r";
-            }
-
-            return "\n";
         }
 
         private static int GetConfigurationOrder(XElement element)
