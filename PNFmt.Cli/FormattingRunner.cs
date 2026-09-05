@@ -49,13 +49,12 @@ namespace PNFmt.Cli
             {
                 MaxDegreeOfParallelism = maxDegreeOfParallelism,
             };
-            this.FormatFiles(
-                files,
-                editorConfigIndexes,
-                outcomes,
-                writeChanges,
-                lint,
-                parallelOptions);
+            foreach (var index in editorConfigIndexes.OrderBy(
+                index => GetDirectoryDepth(files[index])))
+            {
+                outcomes[index] = this.FormatFile(files[index], writeChanges, lint);
+            }
+
             this.FormatFiles(
                 files,
                 otherIndexes,
@@ -74,6 +73,19 @@ namespace PNFmt.Cli
                 Path.GetFileName(file),
                 ".editorconfig",
                 StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static int GetDirectoryDepth(string file)
+        {
+            var depth = 0;
+            var directory = Path.GetDirectoryName(Path.GetFullPath(file));
+            while (!string.IsNullOrEmpty(directory))
+            {
+                depth++;
+                directory = Path.GetDirectoryName(directory);
+            }
+
+            return depth;
         }
 
         private void FormatFiles(

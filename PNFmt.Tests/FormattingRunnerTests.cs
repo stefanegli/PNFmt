@@ -56,6 +56,25 @@ namespace PNFmt.Tests
             Assert.All(result.Outcomes, outcome => Assert.Null(outcome.Error));
         }
 
+        [Fact]
+        public void Runner_formats_parent_editorconfig_before_nested_editorconfig()
+        {
+            var state = new ConfigurationState();
+            var registry = new FormatterRegistry(
+                new IFileFormatter[] { new ConfigurationFormatter(state) });
+            var files = new[]
+            {
+                System.IO.Path.Combine("nested", ".editorconfig"),
+                ".editorconfig",
+            };
+
+            var result = new FormattingRunner(registry).Run(files, true, false, 2);
+
+            Assert.Equal(files[0], result.Outcomes[0].File);
+            Assert.Equal(files[1], result.Outcomes[1].File);
+            Assert.All(result.Outcomes, outcome => Assert.Null(outcome.Error));
+        }
+
         private sealed class ConcurrencyFormatter : IFileFormatter, IDisposable
         {
             private readonly Barrier barrier = new Barrier(2);
@@ -143,6 +162,13 @@ namespace PNFmt.Tests
 
             public FileFormatResult Format(FileFormatRequest request)
             {
+                var isNested = !string.IsNullOrEmpty(System.IO.Path.GetDirectoryName(request.FilePath));
+                if (isNested && !this.state.IsReady)
+                {
+                    throw new InvalidOperationException(
+                        "The nested EditorConfig file was formatted before its parent.");
+                }
+
                 this.state.IsReady = true;
                 return new FileFormatResult(FileFormatStatus.Unchanged);
             }
