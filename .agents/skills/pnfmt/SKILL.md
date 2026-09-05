@@ -32,6 +32,14 @@ PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually has 
 
 The default-config command preserves rules outside its marked block. Review configuration changes because INI and response-file sorting can affect order-sensitive files.
 
+When legacy `csproj_formatter_*` or `resx_formatter_*` settings exist, answer both migration questions explicitly in non-interactive runs:
+
+```powershell
+pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config=<true|false> <directory-or-editorconfig>
+```
+
+Migration preserves legacy values under current `pnfmt_*` names and in the same sections. Set removal to `true` only when the task includes cleaning up the old names.
+
 ## Completion
 
 Inspect the diff and preserve unrelated changes. After formatting, rerun `--check` on the same scope and resolve failures caused by the requested change.
