@@ -78,11 +78,14 @@ namespace PNFmt.Tests
                 var ini = directory.Write(
                     Path.Combine("nested", "settings.ini"),
                     "z=2\r\na=1\r\n");
+                var response = directory.Write(
+                    Path.Combine("nested", "compiler.rsp"),
+                    "zeta.cs\r\nalpha.cs\r\n");
 
                 var result = Run("--recursive", directory.Path);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.Contains("Updated 5", result.Output);
+                Assert.Contains("Updated 6", result.Output);
                 Assert.True(
                     File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
                     < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
@@ -91,6 +94,7 @@ namespace PNFmt.Tests
                     File.ReadAllText(solution).IndexOf("A.csproj", StringComparison.Ordinal)
                     < File.ReadAllText(solution).IndexOf("Z.csproj", StringComparison.Ordinal));
                 Assert.Equal("a = 1\r\nz = 2\r\n", File.ReadAllText(ini));
+                Assert.Equal("alpha.cs\r\nzeta.cs\r\n", File.ReadAllText(response));
             }
         }
 
@@ -424,7 +428,7 @@ namespace PNFmt.Tests
         }
 
         [Fact]
-        public void Ini_and_slnx_files_are_skipped_without_explicit_settings()
+        public void Ini_rsp_and_slnx_files_are_skipped_without_explicit_settings()
         {
             using (var directory = new TemporaryDirectory())
             {
@@ -433,14 +437,17 @@ namespace PNFmt.Tests
                     "Solution.slnx",
                     "<Solution><Project Path=\"Z.csproj\" />"
                     + "<Project Path=\"A.csproj\" /></Solution>");
+                var rsp = directory.Write("compiler.rsp", "zeta.cs\nalpha.cs\n");
                 var originalIni = File.ReadAllText(ini);
+                var originalRsp = File.ReadAllText(rsp);
                 var originalSlnx = File.ReadAllText(slnx);
 
-                var result = Run("--verbose", ini, slnx);
+                var result = Run("--verbose", ini, rsp, slnx);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.Contains("skipped 2", result.Output);
+                Assert.Contains("skipped 3", result.Output);
                 Assert.Equal(originalIni, File.ReadAllText(ini));
+                Assert.Equal(originalRsp, File.ReadAllText(rsp));
                 Assert.Equal(originalSlnx, File.ReadAllText(slnx));
             }
         }
@@ -561,6 +568,8 @@ namespace PNFmt.Tests
                     + "[*.editorconfig]\r\n"
                     + "pnfmt_sort_entries=true\r\n\r\n"
                     + "[*.ini]\r\n"
+                    + "pnfmt_sort_entries=true\r\n\r\n"
+                    + "[*.rsp]\r\n"
                     + "pnfmt_sort_entries=true\r\n\r\n"
                     + "[*.slnx]\r\n"
                     + "pnfmt_sort_entries=true\r\n");

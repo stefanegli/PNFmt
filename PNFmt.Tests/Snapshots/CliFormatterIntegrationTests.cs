@@ -16,6 +16,7 @@ namespace PNFmt.Tests.Snapshots
             {
                 yield return new object[] { "CsProj", "SimpleSort.csproj", "csproj" };
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
+                yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };
                 yield return new object[] { "Slnx", "Solution.slnx", "slnx" };
             }
         }
@@ -56,6 +57,7 @@ namespace PNFmt.Tests.Snapshots
             {
                 case "csproj": return new CsProjFormatter();
                 case "ini": return new IniFormatter();
+                case "rsp": return new RspFormatter();
                 case "slnx": return new SlnxFormatter();
                 default: throw new ArgumentOutOfRangeException(nameof(formatterName));
             }

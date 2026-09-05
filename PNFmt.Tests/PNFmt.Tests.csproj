@@ -29,6 +29,7 @@
         <EmbeddedResource Remove="Formatter\Ini\_files\**\*" />
         <EmbeddedResource Remove="Formatter\Resx\_editor\**\*" />
         <EmbeddedResource Remove="Formatter\Resx\_files\**\*" />
+        <EmbeddedResource Remove="Formatter\Rsp\_files\**\*" />
         <EmbeddedResource Remove="Formatter\Slnx\_files\**\*" />
     </ItemGroup>
 
@@ -37,6 +38,7 @@
         <None Remove="Formatter\Ini\_files\**\*" />
         <None Remove="Formatter\Resx\_editor\**\*" />
         <None Remove="Formatter\Resx\_files\**\*" />
+        <None Remove="Formatter\Rsp\_files\**\*" />
         <None Remove="Formatter\Slnx\_files\**\*" />
     </ItemGroup>
 
@@ -51,6 +53,9 @@
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
         <Content Include="Formatter\Resx\_files\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Formatter\Rsp\_files\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Content>
         <Content Include="Formatter\Slnx\_files\**\*">

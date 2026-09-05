@@ -2,8 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Text;
 
 namespace PNFmt
 {
@@ -24,30 +22,14 @@ namespace PNFmt
             }
 
             var settings = new IniEditorConfigSettings(request.FilePath, request.Log);
-            if (!settings.IsActive)
-            {
-                return new FileFormatResult(FileFormatStatus.Skipped);
-            }
-
-            var original = File.ReadAllText(request.FilePath);
-            var formatted = IniDocumentFormatter.Format(
-                original,
-                settings.SortEntries,
-                settings.SortGroups,
-                settings.GroupByPrefix);
-            if (string.Equals(original, formatted, StringComparison.Ordinal))
-            {
-                return new FileFormatResult(FileFormatStatus.Unchanged);
-            }
-
-            if (request.WriteChanges)
-            {
-                File.WriteAllText(request.FilePath, formatted, new UTF8Encoding(false));
-            }
-
-            request.Log.WriteLine(
-                $"{(request.WriteChanges ? "Updating" : "Would update")} {request.FilePath}");
-            return new FileFormatResult(FileFormatStatus.Updated);
+            return TextFileFormatPipeline.Format(
+                request,
+                settings.IsActive,
+                text => IniDocumentFormatter.Format(
+                    text,
+                    settings.SortEntries,
+                    settings.SortGroups,
+                    settings.GroupByPrefix));
         }
     }
 }

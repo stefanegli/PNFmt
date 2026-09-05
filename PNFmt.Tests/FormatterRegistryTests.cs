@@ -39,11 +39,13 @@ namespace PNFmt.Tests
             Assert.True(registry.TryGetFormatter(".EDITORCONFIG", out var editorConfigFormatter));
             Assert.True(registry.TryGetFormatter("settings.INI", out var iniFormatter));
             Assert.True(registry.TryGetFormatter("Strings.RESX", out var resxFormatter));
+            Assert.True(registry.TryGetFormatter("Compiler.RSP", out var rspFormatter));
             Assert.True(registry.TryGetFormatter("Solution.SLNX", out var slnxFormatter));
             Assert.Equal("csproj", csprojFormatter.Name);
             Assert.Equal("ini", editorConfigFormatter.Name);
             Assert.Same(editorConfigFormatter, iniFormatter);
             Assert.Equal("resx", resxFormatter.Name);
+            Assert.Equal("rsp", rspFormatter.Name);
             Assert.Equal("slnx", slnxFormatter.Name);
         }
 

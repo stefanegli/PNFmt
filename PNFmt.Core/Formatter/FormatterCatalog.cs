@@ -12,6 +12,7 @@ namespace PNFmt
                     new CsProjFormatter(),
                     new IniFormatter(),
                     new ResxFormatter(),
+                    new RspFormatter(),
                     new SlnxFormatter(),
                 });
         }

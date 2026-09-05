@@ -1,0 +1,15 @@
+# Output options
+-target:library -out:"bin/My Library.dll"
+-langversion:preview
+
+# References
+-reference:"lib/Zeta.dll"
+
+-reference:"lib/alpha.dll"
+-reference:"lib/Beta.dll" # kept with its argument
+
+# Sources
+src/Zeta.cs
+src/alpha.cs
+@shared.rsp
+src/Beta.cs

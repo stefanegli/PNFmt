@@ -1,0 +1,4 @@
+root = true
+
+[*.rsp]
+pnfmt_sort_entries = true

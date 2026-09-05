@@ -5,14 +5,14 @@ using System.Collections.Generic;
 
 namespace PNFmt
 {
-    public sealed class SlnxFormatter : IFileFormatter
+    public sealed class RspFormatter : IFileFormatter
     {
         private static readonly IReadOnlyCollection<string> Extensions =
-            Array.AsReadOnly(new[] { ".slnx" });
+            Array.AsReadOnly(new[] { ".rsp" });
 
         public IReadOnlyCollection<string> FileExtensions => Extensions;
 
-        public string Name => "slnx";
+        public string Name => "rsp";
 
         public FileFormatResult Format(FileFormatRequest request)
         {
@@ -27,7 +27,7 @@ namespace PNFmt
                     request.FilePath,
                     EditorConfigSettingNames.SortEntries,
                     request.Log),
-                SlnxDocumentFormatter.Format);
+                RspDocumentFormatter.Format);
         }
     }
 }
