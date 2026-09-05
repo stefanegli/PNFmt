@@ -33,7 +33,10 @@ namespace PNFmt
                 ? settings
                 : new DefaultCsProjFormatSettings();
             var formatter = new CsProjDocumentFormatter(effectiveSettings, request.Log);
-            var runResult = formatter.RunWithResult(request.FilePath, request.WriteChanges);
+            var runResult = formatter.RunWithResult(
+                request.FilePath,
+                request.WriteChanges,
+                request.Lint);
             if (runResult == CsProjFormatResult.SkippedNonSdkStyle)
             {
                 return new FileFormatResult(FileFormatStatus.Skipped, formatter.Diagnostics);

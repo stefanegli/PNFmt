@@ -41,10 +41,14 @@ namespace PNFmt
 
         public bool Run(String projectPath, bool writeChanges)
         {
-            return this.RunWithResult(projectPath, writeChanges) == CsProjFormatResult.Updated;
+            return this.RunWithResult(projectPath, writeChanges, lint: false)
+                == CsProjFormatResult.Updated;
         }
 
-        public CsProjFormatResult RunWithResult(String projectPath, bool writeChanges)
+        public CsProjFormatResult RunWithResult(
+            String projectPath,
+            bool writeChanges,
+            bool lint)
         {
             var originalText = File.ReadAllText(projectPath);
             var document = XDocument.Load(projectPath, LoadOptions.SetLineInfo);
@@ -56,7 +60,9 @@ namespace PNFmt
                 return CsProjFormatResult.SkippedNonSdkStyle;
             }
 
-            this.Diagnostics = ProjectLinter.Analyze(document, projectPath);
+            this.Diagnostics = lint
+                ? ProjectLinter.Analyze(document, projectPath)
+                : Array.Empty<FormatterDiagnostic>();
 
             if (this.Settings.SortEntries)
             {

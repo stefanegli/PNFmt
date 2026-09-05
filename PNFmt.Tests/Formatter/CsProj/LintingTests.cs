@@ -69,7 +69,25 @@ namespace PNFmt.Tests.Formatter.CsProj
             Check.That(diagnostics.Select(diagnostic => diagnostic.Code)).Not.Contains("CSPROJ005");
         }
 
-        private static System.Collections.Generic.IReadOnlyList<FormatterDiagnostic> Analyze(string project)
+        [Fact]
+        public void Formatting_does_not_run_project_lints()
+        {
+            const string Project =
+                "<Project Sdk=\"Microsoft.NET.Sdk\">"
+                + "<PropertyGroup>"
+                + "<TargetFramework>net10.0</TargetFramework>"
+                + "<TargetFrameworks>net10.0;net9.0</TargetFrameworks>"
+                + "</PropertyGroup>"
+                + "</Project>";
+
+            var diagnostics = Analyze(Project, lint: false);
+
+            Assert.Empty(diagnostics);
+        }
+
+        private static System.Collections.Generic.IReadOnlyList<FormatterDiagnostic> Analyze(
+            string project,
+            bool lint = true)
         {
             var tempFile = Path.Combine(
                 Path.GetTempPath(),
@@ -84,7 +102,7 @@ namespace PNFmt.Tests.Formatter.CsProj
                 var formatter = new CsProjDocumentFormatter(
                     new DefaultCsProjFormatSettings(),
                     new FakeLog());
-                formatter.RunWithResult(tempFile, writeChanges: false);
+                formatter.RunWithResult(tempFile, writeChanges: false, lint: lint);
                 return formatter.Diagnostics;
             }
             finally
