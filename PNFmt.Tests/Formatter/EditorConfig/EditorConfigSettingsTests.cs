@@ -209,6 +209,36 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             }
         }
 
+        [Fact]
+        public void Cached_editorconfig_files_refresh_after_changes()
+        {
+            const string EnabledConfiguration =
+                "root = true\n\n"
+                + "[*.ini]\n"
+                + "pnfmt_sort_entries = true\n";
+            const string DisabledConfiguration =
+                "root = true\n\n"
+                + "[*.ini]\n"
+                + "pnfmt_sort_entries = false\n";
+
+            using (var target = TemporaryTarget.Create("Settings.ini", EnabledConfiguration))
+            {
+                var enabled = new IniEditorConfigSettings(
+                    target.Path,
+                    new RecordingLog());
+
+                File.WriteAllText(
+                    System.IO.Path.Combine(target.DirectoryPath, ".editorconfig"),
+                    DisabledConfiguration);
+                var disabled = new IniEditorConfigSettings(
+                    target.Path,
+                    new RecordingLog());
+
+                Assert.True(enabled.SortEntries);
+                Assert.False(disabled.SortEntries);
+            }
+        }
+
         private sealed class RecordingLog : IFormatterLog
         {
             public List<string> Messages { get; } = new List<string>();

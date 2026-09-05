@@ -17,7 +17,10 @@ namespace PNFmt
         {
             try
             {
-                var parser = new EditorConfig.Core.EditorConfigParser();
+                var parser = new EditorConfig.Core.EditorConfigParser(
+                    EditorConfig.Core.EditorConfigFileCache.GetOrCreate,
+                    null,
+                    null);
                 return parser.Parse(targetFile).Properties;
             }
             catch (Exception ex)
