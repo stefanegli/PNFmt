@@ -21,14 +21,17 @@ Elsewhere, use an installed `pnfmt` command. Do not install or update it unless 
 
 - Check without writing: `pnfmt --check <paths>`
 - Format when the task permits writes: `pnfmt <paths>`
+- Include unchanged files: `pnfmt --all <paths>`
 - Validate project structure without writing: `pnfmt --lint <paths>`
 - Create or refresh the managed default configuration when explicitly requested: `pnfmt --write-default-config <directory-or-editorconfig>`
 
-Prefer explicit paths. Use `--recursive` only when the requested scope is a directory tree, and `--file-pattern` when narrowing that tree.
+Inside a Git working tree, PNFmt selects only staged, unstaged, and untracked files within the requested scope. The default scope remains the current directory without recursion. Use `--all` only when the task calls for unchanged files, `--recursive` when it covers a directory tree, and `--file-pattern` when narrowing that tree.
 
 ## Configuration
 
 PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually has no enabled PNFmt setting; do not enable one unless configuration is part of the task.
+
+The repository-root `.pnfmt` file contains tool settings such as `maxCpuCount`; `-m` overrides it. Keep file-formatting behavior in `.editorconfig`.
 
 The default-config command preserves rules outside its marked block. Review configuration changes because INI and response-file sorting can affect order-sensitive files.
 
