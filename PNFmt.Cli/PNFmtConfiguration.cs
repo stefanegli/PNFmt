@@ -2,7 +2,6 @@
 
 using System;
 using System.IO;
-using System.Text;
 using System.Text.Json;
 
 namespace PNFmt.Cli
@@ -100,17 +99,11 @@ namespace PNFmt.Cli
 
             try
             {
-                using (var stream = new FileStream(
-                    path,
-                    FileMode.CreateNew,
-                    FileAccess.Write,
-                    FileShare.None))
-                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
-                {
-                    writer.WriteLine("{");
-                    writer.WriteLine($"  \"maxCpuCount\": {SuggestedMaxCpuCount}");
-                    writer.WriteLine("}");
-                }
+                var newLine = Environment.NewLine;
+                var contents = "{" + newLine
+                    + $"  \"maxCpuCount\": {SuggestedMaxCpuCount}" + newLine
+                    + "}" + newLine;
+                ConfigurationFileWriter.Create(path, contents);
 
                 return new ConfigurationWriteResult(path, true);
             }

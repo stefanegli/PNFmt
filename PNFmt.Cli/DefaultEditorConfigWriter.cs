@@ -10,11 +10,13 @@ namespace PNFmt.Cli
     internal sealed class DefaultEditorConfigWriter
     {
         private readonly string original;
+        private readonly bool targetExisted;
 
-        private DefaultEditorConfigWriter(string path, string original)
+        private DefaultEditorConfigWriter(string path, string original, bool targetExisted)
         {
             this.TargetPath = path;
             this.original = original;
+            this.targetExisted = targetExisted;
             this.LegacySettingCount = DefaultEditorConfigDocument.CountLegacySettings(original);
         }
 
@@ -25,10 +27,11 @@ namespace PNFmt.Cli
         public static DefaultEditorConfigWriter Open(string targetPath)
         {
             var editorConfigPath = ResolveEditorConfigPath(targetPath);
-            var original = File.Exists(editorConfigPath)
+            var targetExisted = File.Exists(editorConfigPath);
+            var original = targetExisted
                 ? File.ReadAllText(editorConfigPath)
                 : string.Empty;
-            return new DefaultEditorConfigWriter(editorConfigPath, original);
+            return new DefaultEditorConfigWriter(editorConfigPath, original, targetExisted);
         }
 
         public ConfigurationWriteResult Write(
@@ -44,7 +47,25 @@ namespace PNFmt.Cli
                 return new ConfigurationWriteResult(this.TargetPath, false);
             }
 
-            File.WriteAllText(this.TargetPath, updated, new UTF8Encoding(false));
+            if (this.targetExisted)
+            {
+                File.WriteAllText(this.TargetPath, updated, new UTF8Encoding(false));
+            }
+            else
+            {
+                try
+                {
+                    ConfigurationFileWriter.Create(this.TargetPath, updated);
+                }
+                catch (IOException ex) when (File.Exists(this.TargetPath))
+                {
+                    throw new IOException(
+                        $"The EditorConfig file was created while defaults were being prepared: "
+                        + this.TargetPath,
+                        ex);
+                }
+            }
+
             return new ConfigurationWriteResult(this.TargetPath, true);
         }
 

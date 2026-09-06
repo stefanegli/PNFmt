@@ -276,6 +276,26 @@ namespace PNFmt.Tests
         }
 
         [Fact]
+        public void Default_editorconfig_creation_does_not_overwrite_a_concurrent_file()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var editorConfig = Path.Combine(directory.Path, ".editorconfig");
+                var writer = DefaultEditorConfigWriter.Open(editorConfig);
+                const string ConcurrentContents = "root = false\n";
+                File.WriteAllText(editorConfig, ConcurrentContents);
+
+                var exception = Assert.Throws<IOException>(
+                    () => writer.Write(
+                        migrateLegacySettings: false,
+                        removeLegacySettings: false));
+
+                Assert.Contains("created while defaults were being prepared", exception.Message);
+                Assert.Equal(ConcurrentContents, File.ReadAllText(editorConfig));
+            }
+        }
+
+        [Fact]
         public void Default_configuration_command_rejects_formatting_options()
         {
             var result = Run("--write-default-config", "--recursive");
