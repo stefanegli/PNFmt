@@ -66,11 +66,16 @@ namespace PNFmt.Cli
 
             var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
             GitRepositoryContext repository;
+            PNFmtConfiguration configuration;
             try
             {
-                repository = GitRepositoryContext.Discover(Environment.CurrentDirectory);
+                repository = GitRepositoryContext.Discover(
+                    Environment.CurrentDirectory,
+                    includeChangedFiles: !options.AllFiles);
+                configuration = PNFmtConfiguration.Load(repository?.RootPath);
             }
-            catch (GitRepositoryContextException ex)
+            catch (Exception ex) when (ex is GitRepositoryContextException
+                || ex is PNFmtConfigurationException)
             {
                 Console.Error.WriteLine(ex.Message);
                 return 2;
@@ -108,7 +113,7 @@ namespace PNFmt.Cli
                 files,
                 !options.DryRun,
                 options.Lint,
-                options.MaxCpuCount);
+                options.MaxCpuCount ?? configuration.MaxCpuCount);
 
             foreach (var outcome in run.Outcomes)
             {
@@ -230,6 +235,7 @@ namespace PNFmt.Cli
             writer.WriteLine();
             writer.WriteLine("Notes:");
             writer.WriteLine("  If no path is provided, the current directory is used.");
+            writer.WriteLine("  maxCpuCount defaults to the repository .pnfmt value, or 1.");
             writer.WriteLine($"  Registered formatters support {fileExtensions} files.");
             writer.WriteLine("  Every formatter requires applicable EditorConfig settings.");
             writer.WriteLine("  INI formatting requires an enabled pnfmt_sort_entries or pnfmt_ini_* setting.");

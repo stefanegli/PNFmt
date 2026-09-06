@@ -95,6 +95,18 @@ File patterns support `*` for characters within one path segment, `?` for one ch
 
 The command returns exit code `0` on success, `1` when `--check` finds changes or `--lint` finds changes or diagnostics, and `2` for usage, path, or formatting errors.
 
+### Repository configuration
+
+PNFmt reads optional tool settings from `.pnfmt` at the Git repository root. Command-line options take precedence. The only repository setting currently available is the maximum number of files processed concurrently:
+
+```json
+{
+  "maxCpuCount": 4
+}
+```
+
+`maxCpuCount` must be a positive integer and defaults to `1`. File-formatting settings remain in `.editorconfig`.
+
 ## Configuration
 
 Every file type requires explicit configuration. To enable every formatter and optional cleanup, run:

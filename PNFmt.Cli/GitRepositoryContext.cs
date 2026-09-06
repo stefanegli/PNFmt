@@ -22,7 +22,9 @@ namespace PNFmt.Cli
 
         public string RootPath { get; }
 
-        public static GitRepositoryContext Discover(string startPath)
+        public static GitRepositoryContext Discover(
+            string startPath,
+            bool includeChangedFiles = true)
         {
             try
             {
@@ -35,16 +37,9 @@ namespace PNFmt.Cli
                 using (var repository = new Repository(repositoryPath))
                 {
                     var rootPath = repository.Info.WorkingDirectory;
-                    var status = repository.RetrieveStatus(
-                        new StatusOptions
-                        {
-                            IncludeUntracked = true,
-                            RecurseUntrackedDirs = true,
-                        });
-                    var files = status
-                        .Where(entry => entry.State != FileStatus.Unaltered
-                            && (entry.State & FileStatus.Ignored) == 0)
-                        .Select(entry => Path.Combine(rootPath, NormalizeGitPath(entry.FilePath)));
+                    var files = includeChangedFiles
+                        ? GetChangedFiles(repository, rootPath)
+                        : Array.Empty<string>();
                     return new GitRepositoryContext(rootPath, files);
                 }
             }
@@ -96,6 +91,23 @@ namespace PNFmt.Cli
             }
 
             return recursive || string.IsNullOrEmpty(Path.GetDirectoryName(relativePath));
+        }
+
+        private static IReadOnlyCollection<string> GetChangedFiles(
+            Repository repository,
+            string rootPath)
+        {
+            var status = repository.RetrieveStatus(
+                new StatusOptions
+                {
+                    IncludeUntracked = true,
+                    RecurseUntrackedDirs = true,
+                });
+            return status
+                .Where(entry => entry.State != FileStatus.Unaltered
+                    && (entry.State & FileStatus.Ignored) == 0)
+                .Select(entry => Path.Combine(rootPath, NormalizeGitPath(entry.FilePath)))
+                .ToArray();
         }
 
         private static string NormalizeGitPath(string path)

@@ -20,7 +20,7 @@ namespace PNFmt.Cli
             bool? removeLegacyConfig,
             bool showHelp,
             bool showVersion,
-            int maxCpuCount,
+            int? maxCpuCount,
             IReadOnlyList<string> filePatterns,
             IReadOnlyList<string> formatterNames,
             IReadOnlyList<string> paths)
@@ -54,7 +54,7 @@ namespace PNFmt.Cli
 
         public bool Lint { get; }
 
-        public int MaxCpuCount { get; }
+        public int? MaxCpuCount { get; }
 
         public bool? MigrateLegacyConfig { get; }
 
@@ -84,7 +84,7 @@ namespace PNFmt.Cli
             bool? migrateLegacyConfig = null;
             bool? removeLegacyConfig = null;
             var stopOptions = false;
-            var maxCpuCount = 1;
+            int? maxCpuCount = null;
             var filePatterns = new List<string>();
             var formatterNames = new List<string>();
             var paths = new List<string>();
@@ -105,10 +105,14 @@ namespace PNFmt.Cli
                     {
                         maxCpuCount = Math.Max(1, Environment.ProcessorCount);
                     }
-                    else if (!TryParseMaxCpuCount(maxCpuCountValue, out maxCpuCount))
+                    else if (!TryParseMaxCpuCount(maxCpuCountValue, out var parsedMaxCpuCount))
                     {
                         throw new CommandLineException(
                             $"Option '{arg}' requires a positive integer after ':'.");
+                    }
+                    else
+                    {
+                        maxCpuCount = parsedMaxCpuCount;
                     }
 
                     continue;
@@ -342,7 +346,7 @@ namespace PNFmt.Cli
             bool? removeLegacyConfig,
             bool showHelp,
             bool showVersion,
-            int maxCpuCount,
+            int? maxCpuCount,
             List<string> filePatterns,
             List<string> formatterNames,
             List<string> paths)

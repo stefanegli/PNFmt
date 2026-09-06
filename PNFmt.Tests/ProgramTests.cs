@@ -319,6 +319,57 @@ namespace PNFmt.Tests
         }
 
         [Fact]
+        public void Repository_configuration_loads_max_cpu_count()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".pnfmt", "{\n  \"maxCpuCount\": 4\n}\n");
+
+                var configuration = PNFmtConfiguration.Load(directory.Path);
+                var commandLineOverride = CommandLineOptions.Parse(new[] { "-m:2" });
+
+                Assert.Equal(4, configuration.MaxCpuCount);
+                Assert.Equal(2, commandLineOverride.MaxCpuCount);
+                Assert.Null(CommandLineOptions.Parse(Array.Empty<string>()).MaxCpuCount);
+            }
+        }
+
+        [Theory]
+        [InlineData("[]", "root value")]
+        [InlineData("{\"maxCpuCount\":0}", "positive integer")]
+        [InlineData("{\"threads\":4}", "Unknown setting")]
+        [InlineData("not-json", "Unable to read")]
+        public void Invalid_repository_configuration_is_rejected(
+            string contents,
+            string expectedMessage)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".pnfmt", contents);
+
+                var exception = Assert.Throws<PNFmtConfigurationException>(
+                    () => PNFmtConfiguration.Load(directory.Path));
+
+                Assert.Contains(expectedMessage, exception.Message);
+            }
+        }
+
+        [Fact]
+        public void Invalid_repository_configuration_is_reported_by_the_command()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                Repository.Init(directory.Path);
+                directory.Write(".pnfmt", "{\"maxCpuCount\":0}");
+
+                var result = RunInDirectory(directory.Path);
+
+                Assert.Equal(2, result.ExitCode);
+                Assert.Contains("Invalid PNFmt configuration", result.Error);
+            }
+        }
+
+        [Fact]
         public void Invalid_path_syntax_is_reported_instead_of_crashing()
         {
             var result = Run("invalid\0path");
