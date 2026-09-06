@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+using LibGit2Sharp;
 using PNFmt.Cli;
 using Xunit;
 
@@ -152,6 +153,7 @@ namespace PNFmt.Tests
 
             Assert.Equal(0, help.ExitCode);
             Assert.Contains("Usage: pnfmt", help.Output);
+            Assert.Contains("--all", help.Output);
             Assert.Contains("-m[:N], -maxCpuCount[:N]", help.Output);
             Assert.Contains("--file-pattern", help.Output);
             Assert.Contains("--formatter", help.Output);
@@ -161,6 +163,62 @@ namespace PNFmt.Tests
             Assert.Contains(".rsp", help.Output);
             Assert.Equal(0, version.ExitCode);
             Assert.StartsWith("pnfmt ", version.Output);
+        }
+
+        [Fact]
+        public void Git_status_filters_the_existing_directory_scope_unless_all_is_requested()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var changed = directory.Write("Changed.ini", "z=2\na=1\n");
+                var clean = directory.Write("Clean.ini", "z=2\na=1\n");
+                var nested = directory.Write(
+                    Path.Combine("nested", "Nested.ini"),
+                    "z=2\na=1\n");
+                string staged;
+                string untracked;
+                Repository.Init(directory.Path);
+                using (var repository = new Repository(directory.Path))
+                {
+                    Commands.Stage(repository, ".editorconfig");
+                    Commands.Stage(repository, "Changed.ini");
+                    Commands.Stage(repository, "Clean.ini");
+                    Commands.Stage(repository, "nested/Nested.ini");
+                    var signature = new Signature(
+                        "PNFmt Tests",
+                        "tests@example.invalid",
+                        DateTimeOffset.UtcNow);
+                    repository.Commit("Initial", signature, signature);
+                    staged = directory.Write("Staged.ini", "z=2\na=1\n");
+                    untracked = directory.Write("Untracked.ini", "z=2\na=1\n");
+                    Commands.Stage(repository, "Staged.ini");
+                }
+
+                File.AppendAllText(changed, "\n");
+                File.AppendAllText(nested, "\n");
+
+                var currentDirectoryResult = RunInDirectory(directory.Path);
+
+                Assert.Equal(0, currentDirectoryResult.ExitCode);
+                Assert.Contains("Processed 3 file(s)", currentDirectoryResult.Output);
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(changed));
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(staged));
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(untracked));
+                Assert.Equal("z=2\na=1\n", File.ReadAllText(clean));
+                Assert.Equal("z=2\na=1\n\n", File.ReadAllText(nested));
+
+                var recursiveResult = RunInDirectory(directory.Path, "--recursive");
+
+                Assert.Equal(0, recursiveResult.ExitCode);
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(nested));
+                Assert.Equal("z=2\na=1\n", File.ReadAllText(clean));
+
+                var allResult = RunInDirectory(directory.Path, "--all");
+
+                Assert.Equal(0, allResult.ExitCode);
+                Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(clean));
+            }
         }
 
         [Fact]
@@ -626,6 +684,22 @@ namespace PNFmt.Tests
             return RunWithInput(null, args);
         }
 
+        private static (int ExitCode, string Output, string Error) RunInDirectory(
+            string directory,
+            params string[] args)
+        {
+            var originalDirectory = Environment.CurrentDirectory;
+            try
+            {
+                Environment.CurrentDirectory = directory;
+                return Run(args);
+            }
+            finally
+            {
+                Environment.CurrentDirectory = originalDirectory;
+            }
+        }
+
         private static (int ExitCode, string Output, string Error) RunWithInput(
             string input,
             params string[] args)
@@ -717,6 +791,14 @@ namespace PNFmt.Tests
             {
                 if (Directory.Exists(this.Path))
                 {
+                    foreach (var file in Directory.GetFiles(
+                        this.Path,
+                        "*",
+                        SearchOption.AllDirectories))
+                    {
+                        File.SetAttributes(file, FileAttributes.Normal);
+                    }
+
                     Directory.Delete(this.Path, true);
                 }
             }

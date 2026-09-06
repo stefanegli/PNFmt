@@ -9,6 +9,7 @@ namespace PNFmt.Cli
     internal sealed class CommandLineOptions
     {
         private CommandLineOptions(
+            bool allFiles,
             bool recursive,
             bool verbose,
             bool dryRun,
@@ -24,6 +25,7 @@ namespace PNFmt.Cli
             IReadOnlyList<string> formatterNames,
             IReadOnlyList<string> paths)
         {
+            this.AllFiles = allFiles;
             this.Recursive = recursive;
             this.Verbose = verbose;
             this.DryRun = dryRun;
@@ -39,6 +41,8 @@ namespace PNFmt.Cli
             this.FormatterNames = formatterNames;
             this.Paths = paths;
         }
+
+        public bool AllFiles { get; }
 
         public bool Check { get; }
 
@@ -70,6 +74,7 @@ namespace PNFmt.Cli
 
         public static CommandLineOptions Parse(string[] args)
         {
+            var allFiles = false;
             var recursive = false;
             var verbose = false;
             var dryRun = false;
@@ -140,6 +145,7 @@ namespace PNFmt.Cli
                 if (!stopOptions && IsHelpArg(arg))
                 {
                     return Create(
+                        allFiles,
                         recursive,
                         verbose,
                         dryRun,
@@ -159,6 +165,7 @@ namespace PNFmt.Cli
                 if (!stopOptions && IsVersionArg(arg))
                 {
                     return Create(
+                        allFiles,
                         recursive,
                         verbose,
                         dryRun,
@@ -179,6 +186,13 @@ namespace PNFmt.Cli
                     || string.Equals(arg, "--recursive", StringComparison.Ordinal)))
                 {
                     recursive = true;
+                    continue;
+                }
+
+                if (!stopOptions && (string.Equals(arg, "-a", StringComparison.Ordinal)
+                    || string.Equals(arg, "--all", StringComparison.Ordinal)))
+                {
+                    allFiles = true;
                     continue;
                 }
 
@@ -259,7 +273,8 @@ namespace PNFmt.Cli
             }
 
             if (writeDefaultConfig
-                && (recursive
+                && (allFiles
+                    || recursive
                     || verbose
                     || dryRun
                     || check
@@ -279,6 +294,7 @@ namespace PNFmt.Cli
             }
 
             return Create(
+                allFiles,
                 recursive,
                 verbose,
                 dryRun,
@@ -315,6 +331,7 @@ namespace PNFmt.Cli
         }
 
         private static CommandLineOptions Create(
+            bool allFiles,
             bool recursive,
             bool verbose,
             bool dryRun,
@@ -331,6 +348,7 @@ namespace PNFmt.Cli
             List<string> paths)
         {
             return new CommandLineOptions(
+                allFiles,
                 recursive,
                 verbose,
                 dryRun,

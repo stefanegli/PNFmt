@@ -38,7 +38,10 @@ namespace PNFmt.Cli
                 ?? throw new ArgumentNullException(nameof(filePatternMatcher));
         }
 
-        public TargetFileResolution Resolve(IEnumerable<string> paths, bool recursive)
+        public TargetFileResolution Resolve(
+            IEnumerable<string> paths,
+            bool recursive,
+            GitRepositoryContext repository = null)
         {
             if (paths is null)
             {
@@ -47,6 +50,7 @@ namespace PNFmt.Cli
 
             var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var errors = new List<string>();
+            var gitFiltered = false;
             foreach (var rawPath in paths)
             {
                 if (string.IsNullOrWhiteSpace(rawPath))
@@ -67,18 +71,44 @@ namespace PNFmt.Cli
 
                 if (File.Exists(fullPath))
                 {
-                    this.AddFile(fullPath, Path.GetDirectoryName(fullPath), files, errors);
+                    var isInRepository = repository is not null && repository.Contains(fullPath);
+                    gitFiltered |= isInRepository;
+                    if (!isInRepository || repository.IsChanged(fullPath))
+                    {
+                        this.AddFile(fullPath, Path.GetDirectoryName(fullPath), files, errors);
+                    }
+
                     continue;
                 }
 
                 if (Directory.Exists(fullPath))
                 {
-                    this.CollectDirectoryFiles(
-                        fullPath,
-                        fullPath,
-                        recursive,
-                        files,
-                        errors);
+                    if (repository is not null && repository.Contains(fullPath))
+                    {
+                        gitFiltered = true;
+                        foreach (var file in repository.GetChangedFiles(fullPath, recursive))
+                        {
+                            if (File.Exists(file) && !IsInIgnoredDirectory(file, fullPath))
+                            {
+                                this.AddFile(
+                                    file,
+                                    fullPath,
+                                    files,
+                                    errors,
+                                    reportUnsupported: false);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        this.CollectDirectoryFiles(
+                            fullPath,
+                            fullPath,
+                            recursive,
+                            files,
+                            errors);
+                    }
+
                     continue;
                 }
 
@@ -87,7 +117,8 @@ namespace PNFmt.Cli
 
             return new TargetFileResolution(
                 files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
-                errors);
+                errors,
+                gitFiltered);
         }
 
         private static bool IsPathException(Exception exception)
@@ -96,6 +127,20 @@ namespace PNFmt.Cli
                 || exception is IOException
                 || exception is NotSupportedException
                 || exception is UnauthorizedAccessException;
+        }
+
+        private static bool IsInIgnoredDirectory(string file, string rootDirectory)
+        {
+            var relativeDirectory = Path.GetDirectoryName(
+                Path.GetRelativePath(rootDirectory, file));
+            if (string.IsNullOrEmpty(relativeDirectory))
+            {
+                return false;
+            }
+
+            return relativeDirectory
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(IgnoredRecursiveDirectories.Contains);
         }
 
         private void AddFile(
@@ -176,13 +221,17 @@ namespace PNFmt.Cli
     {
         public TargetFileResolution(
             IReadOnlyList<string> files,
-            IReadOnlyList<string> errors)
+            IReadOnlyList<string> errors,
+            bool gitFiltered)
         {
             this.Files = files ?? throw new ArgumentNullException(nameof(files));
             this.Errors = errors ?? throw new ArgumentNullException(nameof(errors));
+            this.GitFiltered = gitFiltered;
         }
 
         public IReadOnlyList<string> Files { get; }
+
+        public bool GitFiltered { get; }
 
         public IReadOnlyList<string> Errors { get; }
     }

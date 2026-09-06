@@ -65,10 +65,24 @@ namespace PNFmt.Cli
             }
 
             var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
+            GitRepositoryContext repository;
+            try
+            {
+                repository = GitRepositoryContext.Discover(Environment.CurrentDirectory);
+            }
+            catch (GitRepositoryContextException ex)
+            {
+                Console.Error.WriteLine(ex.Message);
+                return 2;
+            }
+
             var targets = new TargetFileResolver(
                 registry,
                 allFormatters,
-                filePatternMatcher).Resolve(options.Paths, options.Recursive);
+                filePatternMatcher).Resolve(
+                    options.Paths,
+                    options.Recursive,
+                    options.AllFiles ? null : repository);
             var files = targets.Files;
 
             foreach (var error in targets.Errors)
@@ -78,7 +92,9 @@ namespace PNFmt.Cli
 
             if (files.Count == 0)
             {
-                Console.WriteLine("No supported files found.");
+                Console.WriteLine(targets.GitFiltered
+                    ? "No changed supported files found."
+                    : "No supported files found.");
                 return targets.Errors.Count > 0 ? 2 : 0;
             }
 
@@ -190,6 +206,7 @@ namespace PNFmt.Cli
             writer.WriteLine($"Usage: {ToolName} [options] [<path> ...]");
             writer.WriteLine();
             writer.WriteLine("Options:");
+            writer.WriteLine("  -a, --all         Process all files in scope instead of only Git changes.");
             writer.WriteLine("  -r, --recursive   Recurse into subdirectories when a path is a directory.");
             writer.WriteLine("  -v, --verbose     Show detailed per-file logging and errors.");
             writer.WriteLine("  -m[:N], -maxCpuCount[:N]");

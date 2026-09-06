@@ -28,6 +28,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <PackageReference Include="LibGit2Sharp" Version="0.32.0" />
         <ProjectReference Include="..\PNFmt.Core\PNFmt.Core.csproj" />
     </ItemGroup>
 </Project>

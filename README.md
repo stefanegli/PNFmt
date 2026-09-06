@@ -41,11 +41,14 @@ Run `pnfmt` from the directory containing the files you want to format:
 pnfmt [options] [<path> ...]
 ```
 
-Without a path, PNFmt processes the current directory. Directory processing is non-recursive unless you pass `--recursive`.
+Without a path, PNFmt processes the current directory. Directory processing is non-recursive unless you pass `--recursive`. Inside a Git working tree, PNFmt processes only staged, unstaged, and untracked files in that scope by default; pass `--all` to include unchanged files. Outside Git repositories, all files in scope are processed.
 
 ```powershell
 # Format supported files in the current directory and its subdirectories
 pnfmt --recursive .
+
+# Format every supported file in the current directory, including unchanged files
+pnfmt --all .
 
 # Check formatting without changing files
 pnfmt --check --recursive .
@@ -73,6 +76,7 @@ pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config
 
 | Option | Description |
 | --- | --- |
+| `-a`, `--all` | Process all files in scope instead of only Git changes. |
 | `-r`, `--recursive` | Process directory targets recursively. |
 | `-v`, `--verbose` | Show per-file statuses and detailed errors. |
 | `-m[:N]`, `-maxCpuCount[:N]` | Process up to `N` files at once. Without `N`, use the processor count. |
