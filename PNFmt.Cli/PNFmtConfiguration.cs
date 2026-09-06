@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 
 namespace PNFmt.Cli
@@ -9,6 +10,8 @@ namespace PNFmt.Cli
     internal sealed class PNFmtConfiguration
     {
         private const int DefaultMaxCpuCount = 1;
+        private const int SuggestedMaxCpuCount = 4;
+        private const string FileName = ".pnfmt";
 
         private PNFmtConfiguration(int maxCpuCount)
         {
@@ -24,7 +27,7 @@ namespace PNFmt.Cli
                 return new PNFmtConfiguration(DefaultMaxCpuCount);
             }
 
-            var path = Path.Combine(repositoryRoot, ".pnfmt");
+            var path = Path.Combine(repositoryRoot, FileName);
             if (!File.Exists(path))
             {
                 return new PNFmtConfiguration(DefaultMaxCpuCount);
@@ -77,6 +80,43 @@ namespace PNFmt.Cli
                 throw new PNFmtConfigurationException(
                     $"Unable to read PNFmt configuration '{path}': {ex.Message}",
                     ex);
+            }
+        }
+
+        public static ConfigurationWriteResult WriteDefault(string repositoryRoot)
+        {
+            if (string.IsNullOrWhiteSpace(repositoryRoot))
+            {
+                throw new ArgumentException(
+                    "A repository root is required.",
+                    nameof(repositoryRoot));
+            }
+
+            var path = Path.Combine(Path.GetFullPath(repositoryRoot), FileName);
+            if (File.Exists(path))
+            {
+                return new ConfigurationWriteResult(path, false);
+            }
+
+            try
+            {
+                using (var stream = new FileStream(
+                    path,
+                    FileMode.CreateNew,
+                    FileAccess.Write,
+                    FileShare.None))
+                using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
+                {
+                    writer.WriteLine("{");
+                    writer.WriteLine($"  \"maxCpuCount\": {SuggestedMaxCpuCount}");
+                    writer.WriteLine("}");
+                }
+
+                return new ConfigurationWriteResult(path, true);
+            }
+            catch (IOException) when (File.Exists(path))
+            {
+                return new ConfigurationWriteResult(path, false);
             }
         }
 

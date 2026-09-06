@@ -65,7 +65,7 @@ pnfmt --recursive --file-pattern "**/*Tests.csproj" .
 # Run only the project and resource formatters
 pnfmt --recursive --formatter csproj,resx .
 
-# Write an all-enabled PNFmt configuration to .editorconfig
+# Write all-enabled EditorConfig settings and create .pnfmt when missing
 pnfmt --write-default-config .
 
 # Migrate legacy formatter settings and remove their old names without prompting
@@ -85,7 +85,7 @@ pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check project formatting and report project diagnostics without writing files. |
-| `--write-default-config` | Write an all-enabled PNFmt block to `.editorconfig`. Accepts one directory or `.editorconfig` path. |
+| `--write-default-config` | Write an all-enabled PNFmt block to `.editorconfig` and create `.pnfmt` when missing. Accepts one directory or `.editorconfig` path. |
 | `--migrate-legacy-config <true\|false>` | Import legacy formatter settings using current PNFmt names. Used only with `--write-default-config`. |
 | `--remove-legacy-config <true\|false>` | Remove legacy formatter settings after optional migration. Used only with `--write-default-config`. |
 | `-h`, `--help` | Show help. |
@@ -106,6 +106,8 @@ PNFmt reads optional tool settings from `.pnfmt` at the Git repository root. Com
 ```
 
 `maxCpuCount` must be a positive integer and defaults to `1`. File-formatting settings remain in `.editorconfig`.
+
+`--write-default-config` creates this file with the suggested value `4` when it does not exist. An existing `.pnfmt` is never modified. When the EditorConfig target is inside a Git working tree, the file is created at that repository's root; otherwise it is created beside `.editorconfig`.
 
 ## Configuration
 

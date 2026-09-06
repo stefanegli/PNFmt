@@ -31,7 +31,7 @@ namespace PNFmt.Cli
             return new DefaultEditorConfigWriter(editorConfigPath, original);
         }
 
-        public DefaultEditorConfigWriteResult Write(
+        public ConfigurationWriteResult Write(
             bool migrateLegacySettings,
             bool removeLegacySettings)
         {
@@ -41,11 +41,11 @@ namespace PNFmt.Cli
                 removeLegacySettings);
             if (string.Equals(this.original, updated, StringComparison.Ordinal))
             {
-                return new DefaultEditorConfigWriteResult(this.TargetPath, false);
+                return new ConfigurationWriteResult(this.TargetPath, false);
             }
 
             File.WriteAllText(this.TargetPath, updated, new UTF8Encoding(false));
-            return new DefaultEditorConfigWriteResult(this.TargetPath, true);
+            return new ConfigurationWriteResult(this.TargetPath, true);
         }
 
         private static string ResolveEditorConfigPath(string targetPath)
@@ -82,16 +82,4 @@ namespace PNFmt.Cli
         }
     }
 
-    internal sealed class DefaultEditorConfigWriteResult
-    {
-        public DefaultEditorConfigWriteResult(string path, bool changed)
-        {
-            this.Path = path;
-            this.Changed = changed;
-        }
-
-        public bool Changed { get; }
-
-        public string Path { get; }
-    }
 }

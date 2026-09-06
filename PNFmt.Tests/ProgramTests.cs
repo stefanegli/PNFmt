@@ -228,22 +228,50 @@ namespace PNFmt.Tests
             {
                 var first = Run("--write-default-config", directory.Path);
                 var editorConfig = Path.Combine(directory.Path, ".editorconfig");
+                var pnfmtConfig = Path.Combine(directory.Path, ".pnfmt");
                 var expected = DefaultEditorConfigDocument.Update(string.Empty);
 
                 Assert.Equal(0, first.ExitCode);
                 Assert.Contains("Wrote default PNFmt configuration", first.Output);
+                Assert.Contains("Wrote default PNFmt tool settings", first.Output);
                 Assert.Equal(expected, File.ReadAllText(editorConfig));
+                Assert.Equal(
+                    "{\n  \"maxCpuCount\": 4\n}\n".Replace("\n", Environment.NewLine),
+                    File.ReadAllText(pnfmtConfig));
+
+                const string ExistingToolSettings = "{\n  \"maxCpuCount\": 7\n}\n";
+                File.WriteAllText(pnfmtConfig, ExistingToolSettings);
 
                 var second = Run("--write-default-config", editorConfig);
 
                 Assert.Equal(0, second.ExitCode);
                 Assert.Contains("already current", second.Output);
+                Assert.Contains("left unchanged", second.Output);
                 Assert.Equal(expected, File.ReadAllText(editorConfig));
+                Assert.Equal(ExistingToolSettings, File.ReadAllText(pnfmtConfig));
 
                 var formatCheck = Run("--check", editorConfig);
 
                 Assert.Equal(0, formatCheck.ExitCode);
                 Assert.Contains("unchanged 1", formatCheck.Output);
+            }
+        }
+
+        [Fact]
+        public void Default_tool_settings_are_written_at_the_git_repository_root()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                Repository.Init(directory.Path);
+                var nested = Path.Combine(directory.Path, "nested");
+                Directory.CreateDirectory(nested);
+
+                var result = Run("--write-default-config", nested);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.True(File.Exists(Path.Combine(nested, ".editorconfig")));
+                Assert.True(File.Exists(Path.Combine(directory.Path, ".pnfmt")));
+                Assert.False(File.Exists(Path.Combine(nested, ".pnfmt")));
             }
         }
 
