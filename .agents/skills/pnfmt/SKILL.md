@@ -31,7 +31,7 @@ Inside a Git working tree, PNFmt selects only staged, unstaged, and untracked fi
 
 PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually has no enabled PNFmt setting; do not enable one unless configuration is part of the task.
 
-The repository-root `.pnfmt` file contains tool settings such as `maxCpuCount`; `-m` overrides it. Keep file-formatting behavior in `.editorconfig`.
+The repository-root `.pnfmt` file contains tool settings such as `maxCpuCount`; `-m` overrides it. Keep file-formatting behavior in `.editorconfig`. The default-config command creates a missing `.pnfmt` with `maxCpuCount` set to `4` and never modifies an existing one.
 
 The default-config command preserves rules outside its marked block. Review configuration changes because INI and response-file sorting can affect order-sensitive files.
 
