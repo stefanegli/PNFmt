@@ -32,12 +32,47 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             var updated = DefaultEditorConfigDocument.Update(Existing);
 
-            Assert.StartsWith("root = false\n\n" + DefaultEditorConfigDocument.StartMarker, updated);
+            Assert.StartsWith("root = false\n\n[*]\ncharset = utf-8", updated);
             Assert.DoesNotContain("old = value", updated);
-            Assert.EndsWith("[*.md]\ntrim_trailing_whitespace = true\n", updated);
-            Assert.True(
-                updated.IndexOf(DefaultEditorConfigDocument.EndMarker, System.StringComparison.Ordinal)
-                < updated.IndexOf("[*]", System.StringComparison.Ordinal));
+            Assert.DoesNotContain(DefaultEditorConfigDocument.StartMarker, updated);
+            Assert.DoesNotContain(DefaultEditorConfigDocument.EndMarker, updated);
+            Assert.Contains("[*.md]\ntrim_trailing_whitespace = true", updated);
+        }
+
+        [Fact]
+        public void Missing_defaults_use_existing_sections_and_sorted_insertion_points()
+        {
+            const string Existing =
+                "root = false\n\n"
+                + "[*.ini]\n"
+                + "alpha = unchanged\n"
+                + "pnfmt_ini_sort_groups = false\n"
+                + "pnfmt_sort_entries = false\n"
+                + "zulu = unchanged\n\n"
+                + "[*.resx]\n"
+                + "pnfmt_resx_sort_comparer = CurrentCulture\n";
+
+            var updated = DefaultEditorConfigDocument.Update(Existing);
+
+            Assert.Contains(
+                "[*.ini]\n"
+                + "alpha = unchanged\n"
+                + "pnfmt_ini_group_by_prefix = true\n"
+                + "pnfmt_ini_merge_groups = true\n"
+                + "pnfmt_ini_sort_groups = false\n"
+                + "pnfmt_sort_entries = false\n"
+                + "zulu = unchanged",
+                updated);
+            Assert.Contains(
+                "[*.resx]\n"
+                + "pnfmt_resx_remove_documentation_comment = true\n"
+                + "pnfmt_resx_remove_xsd_schema = true\n"
+                + "pnfmt_resx_sort_comparer = CurrentCulture\n"
+                + "pnfmt_sort_entries = true",
+                updated);
+            Assert.Equal(1, CountOccurrences(updated, "[*.ini]"));
+            Assert.Equal(1, CountOccurrences(updated, "[*.resx]"));
+            Assert.DoesNotContain("#", updated);
         }
 
         [Fact]
@@ -56,18 +91,12 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 migrateLegacySettings: true,
                 removeLegacySettings: false);
 
-            Assert.Contains(
-                "[*.csproj]\n"
-                + "csproj_formatter_sort_entries = false\n"
-                + "pnfmt_sort_entries = false\n"
-                + "csproj_formatter_empty_lines_between_groups: 2\n"
-                + "pnfmt_csproj_empty_lines_between_groups = 2",
-                updated);
-            Assert.Contains(
-                "[*.resx]\n"
-                + "resx_formatter_sort_comparer = InvariantCulture\n"
-                + "pnfmt_resx_sort_comparer = InvariantCulture",
-                updated);
+            Assert.Contains("csproj_formatter_sort_entries = false", updated);
+            Assert.Contains("pnfmt_sort_entries = false", updated);
+            Assert.Contains("csproj_formatter_empty_lines_between_groups: 2", updated);
+            Assert.Contains("pnfmt_csproj_empty_lines_between_groups = 2", updated);
+            Assert.Contains("resx_formatter_sort_comparer = InvariantCulture", updated);
+            Assert.Contains("pnfmt_resx_sort_comparer = InvariantCulture", updated);
         }
 
         [Fact]
@@ -85,11 +114,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 removeLegacySettings: true);
 
             Assert.DoesNotContain("resx_formatter_", updated);
-            Assert.Contains(
-                "[*.resx]\n"
-                + "pnfmt_sort_entries = false\n"
-                + "pnfmt_resx_remove_xsd_schema = false",
-                updated);
+            Assert.Contains("pnfmt_sort_entries = false", updated);
+            Assert.Contains("pnfmt_resx_remove_xsd_schema = false", updated);
         }
 
         [Fact]
@@ -114,6 +140,22 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         {
             Assert.Throws<InvalidDataException>(
                 () => DefaultEditorConfigDocument.Update(contents));
+        }
+
+        private static int CountOccurrences(string text, string value)
+        {
+            var count = 0;
+            var startIndex = 0;
+            while ((startIndex = text.IndexOf(
+                value,
+                startIndex,
+                System.StringComparison.Ordinal)) >= 0)
+            {
+                count++;
+                startIndex += value.Length;
+            }
+
+            return count;
         }
     }
 }

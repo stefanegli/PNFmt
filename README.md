@@ -85,7 +85,7 @@ pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check project formatting and report project diagnostics without writing files. |
-| `--write-default-config` | Write an all-enabled PNFmt block to `.editorconfig` and create `.pnfmt` when missing. Accepts one directory or `.editorconfig` path. |
+| `--write-default-config` | Add missing all-enabled PNFmt settings to `.editorconfig` and create `.pnfmt` when missing. Accepts one directory or `.editorconfig` path. |
 | `--migrate-legacy-config <true\|false>` | Import legacy formatter settings using current PNFmt names. Used only with `--write-default-config`. |
 | `--remove-legacy-config <true\|false>` | Remove legacy formatter settings after optional migration. Used only with `--write-default-config`. |
 | `-h`, `--help` | Show help. |
@@ -117,7 +117,9 @@ Every file type requires explicit configuration. To enable every formatter and o
 pnfmt --write-default-config .
 ```
 
-When `.editorconfig` already exists, the command preserves its other rules and writes a marked PNFmt block before its sections, allowing the user's existing settings to override the defaults. Later runs replace that block, so the command is safe to repeat. A new file also gets `root = true`.
+When `.editorconfig` already exists, the command reuses matching sections and preserves all existing values and line order. It inserts only missing PNFmt settings at the positions they would occupy in a sorted section and appends sections that do not exist. It does not add comments. The command is safe to repeat, and a new file also gets `root = true`.
+
+Files created by earlier PNFmt releases may contain a marked defaults block. The next run removes that block and merges the current defaults into the document.
 
 If legacy `csproj_formatter_*` or `resx_formatter_*` settings are present, the command asks separately whether to migrate them and whether to remove their old names. Migration adds the equivalent `pnfmt_*` setting in the same section, preserving its scope. For non-interactive use, pass both answers explicitly:
 
@@ -142,12 +144,14 @@ pnfmt_resx_remove_documentation_comment = true
 pnfmt_resx_sort_comparer = OrdinalIgnoreCase
 
 [*.editorconfig]
+pnfmt_ini_merge_groups = true
 pnfmt_sort_entries = true
 
 [*.ini]
 pnfmt_ini_group_by_prefix = true
-pnfmt_sort_entries = true
+pnfmt_ini_merge_groups = true
 pnfmt_ini_sort_groups = true
+pnfmt_sort_entries = true
 
 [*.rsp]
 pnfmt_sort_entries = true

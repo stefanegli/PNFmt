@@ -12,6 +12,37 @@ namespace PNFmt
         public const string EndMarker = "# </pnfmt-defaults>";
         public const string StartMarker = "# <pnfmt-defaults>";
 
+        private static readonly IReadOnlyList<DefaultSection> Sections =
+            new[]
+            {
+                new DefaultSection(
+                    "[*.csproj]",
+                    new DefaultSetting(EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups, "1"),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.editorconfig]",
+                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.ini]",
+                    new DefaultSetting(EditorConfigSettingNames.IniGroupByPrefix, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.resx]",
+                    new DefaultSetting(EditorConfigSettingNames.ResxRemoveDocumentationComment, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.ResxRemoveXsdSchema, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.ResxSortComparer, "OrdinalIgnoreCase"),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.rsp]",
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.slnx]",
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+            };
+
         public static int CountLegacySettings(string text)
         {
             if (text is null)
@@ -35,131 +66,38 @@ namespace PNFmt
             var newLine = text.Length == 0
                 ? Environment.NewLine
                 : TextFileFormatting.DetectNewLine(text);
-            var lines = SplitLines(text);
-            var startIndexes = FindMarkerIndexes(lines, StartMarker);
-            var endIndexes = FindMarkerIndexes(lines, EndMarker);
-            if (startIndexes.Count != endIndexes.Count || startIndexes.Count > 1)
+            var lines = RemoveLegacyManagedBlock(SplitLines(text));
+            lines = LegacyEditorConfigSettingsMigration.Apply(
+                    lines,
+                    migrateLegacySettings,
+                    removeLegacySettings)
+                .ToList();
+
+            RemoveTrailingBlankLines(lines);
+            if (lines.Count == 0)
             {
-                throw new InvalidDataException(
-                    "The EditorConfig file contains incomplete or duplicate PNFmt default markers.");
+                lines.Add("root = true");
             }
 
-            IReadOnlyList<string> existingLines;
-            if (startIndexes.Count == 0)
+            foreach (var section in Sections)
             {
-                existingLines = lines;
-            }
-            else
-            {
-                var startIndex = startIndexes[0];
-                var endIndex = endIndexes[0];
-                if (endIndex < startIndex)
-                {
-                    throw new InvalidDataException(
-                        "The PNFmt default configuration end marker appears before its start marker.");
-                }
-
-                existingLines = lines.Take(startIndex)
-                    .Concat(lines.Skip(endIndex + 1))
-                    .ToArray();
+                MergeSection(lines, section);
             }
 
-            existingLines = LegacyEditorConfigSettingsMigration.Apply(
-                existingLines,
-                migrateLegacySettings,
-                removeLegacySettings);
-            var firstSectionIndex = Enumerable.Range(0, existingLines.Count)
-                .FirstOrDefault(index => IsSectionHeader(existingLines[index]));
-            if (firstSectionIndex == 0 && !IsSectionHeader(existingLines[0]))
-            {
-                firstSectionIndex = existingLines.Count;
-            }
-
-            var output = new List<string>();
-            AddWithoutTrailingBlankLines(output, existingLines.Take(firstSectionIndex));
-            if (output.Count == 0)
-            {
-                output.Add("root = true");
-            }
-
-            AddBlankLine(output);
-            output.AddRange(CreateDefaultBlock());
-
-            var suffix = existingLines
-                .Skip(firstSectionIndex)
-                .SkipWhile(string.IsNullOrWhiteSpace)
-                .ToArray();
-            if (suffix.Length > 0)
-            {
-                AddBlankLine(output);
-                AddWithoutTrailingBlankLines(output, suffix);
-            }
-
-            return string.Join(newLine, output) + newLine;
+            RemoveTrailingBlankLines(lines);
+            return string.Join(newLine, lines) + newLine;
         }
 
-        private static void AddBlankLine(List<string> output)
+        private static void AppendSection(List<string> lines, DefaultSection section)
         {
-            if (output.Count > 0 && output[output.Count - 1].Length > 0)
+            RemoveTrailingBlankLines(lines);
+            if (lines.Count > 0)
             {
-                output.Add(string.Empty);
-            }
-        }
-
-        private static void AddWithoutTrailingBlankLines(
-            List<string> output,
-            IEnumerable<string> lines)
-        {
-            var materializedLines = lines.ToList();
-            while (materializedLines.Count > 0
-                && string.IsNullOrWhiteSpace(materializedLines[materializedLines.Count - 1]))
-            {
-                materializedLines.RemoveAt(materializedLines.Count - 1);
+                lines.Add(string.Empty);
             }
 
-            output.AddRange(materializedLines);
-        }
-
-        private static IReadOnlyCollection<string> CreateDefaultBlock()
-        {
-            return new[]
-            {
-                StartMarker,
-                string.Empty,
-                "[*.csproj]",
-                $"{EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups} = 1",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                "[*.editorconfig]",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                "[*.ini]",
-                $"{EditorConfigSettingNames.IniGroupByPrefix} = true",
-                $"{EditorConfigSettingNames.IniSortGroups} = true",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                "[*.resx]",
-                $"{EditorConfigSettingNames.ResxRemoveDocumentationComment} = true",
-                $"{EditorConfigSettingNames.ResxRemoveXsdSchema} = true",
-                $"{EditorConfigSettingNames.ResxSortComparer} = OrdinalIgnoreCase",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                "[*.rsp]",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                "[*.slnx]",
-                $"{EditorConfigSettingNames.SortEntries} = true",
-                string.Empty,
-                EndMarker,
-            };
-        }
-
-        private static bool IsSectionHeader(string line)
-        {
-            var trimmed = line.Trim();
-            return trimmed.Length >= 2
-                && trimmed[0] == '['
-                && trimmed[trimmed.Length - 1] == ']';
+            lines.Add(section.Header);
+            lines.AddRange(section.Settings.Select(setting => setting.Formatted));
         }
 
         private static IReadOnlyList<int> FindMarkerIndexes(
@@ -171,12 +109,179 @@ namespace PNFmt
                 .ToArray();
         }
 
+        private static IReadOnlyList<int> FindSectionIndexes(
+            IReadOnlyList<string> lines,
+            string header)
+        {
+            return Enumerable.Range(0, lines.Count)
+                .Where(index => string.Equals(
+                    lines[index].Trim(),
+                    header,
+                    StringComparison.OrdinalIgnoreCase))
+                .ToArray();
+        }
+
+        private static int FindSectionEnd(IReadOnlyList<string> lines, int sectionIndex)
+        {
+            for (var index = sectionIndex + 1; index < lines.Count; index++)
+            {
+                if (IniSyntax.IsSectionHeader(lines[index]))
+                {
+                    return index;
+                }
+            }
+
+            return lines.Count;
+        }
+
+        private static int FindSortedInsertionIndex(
+            IReadOnlyList<string> lines,
+            int sectionIndex,
+            string key)
+        {
+            var sectionEnd = FindSectionEnd(lines, sectionIndex);
+            var lastPropertyIndex = -1;
+            for (var index = sectionIndex + 1; index < sectionEnd; index++)
+            {
+                if (!IniSyntax.TryParseProperty(
+                    lines[index],
+                    out var property,
+                    allowColon: true))
+                {
+                    continue;
+                }
+
+                if (StringComparer.OrdinalIgnoreCase.Compare(property.Key, key) > 0)
+                {
+                    return index;
+                }
+
+                lastPropertyIndex = index;
+            }
+
+            return lastPropertyIndex >= 0 ? lastPropertyIndex + 1 : sectionIndex + 1;
+        }
+
+        private static HashSet<string> GetPropertyNames(
+            IReadOnlyList<string> lines,
+            IReadOnlyList<int> sectionIndexes)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var sectionIndex in sectionIndexes)
+            {
+                var sectionEnd = FindSectionEnd(lines, sectionIndex);
+                for (var index = sectionIndex + 1; index < sectionEnd; index++)
+                {
+                    if (IniSyntax.TryParseProperty(
+                        lines[index],
+                        out var property,
+                        allowColon: true))
+                    {
+                        names.Add(property.Key);
+                    }
+                }
+            }
+
+            return names;
+        }
+
+        private static void MergeSection(List<string> lines, DefaultSection section)
+        {
+            var sectionIndexes = FindSectionIndexes(lines, section.Header);
+            if (sectionIndexes.Count == 0)
+            {
+                AppendSection(lines, section);
+                return;
+            }
+
+            var existingNames = GetPropertyNames(lines, sectionIndexes);
+            var targetSectionIndex = sectionIndexes[0];
+            foreach (var setting in section.Settings)
+            {
+                if (existingNames.Contains(setting.Key))
+                {
+                    continue;
+                }
+
+                var insertionIndex = FindSortedInsertionIndex(
+                    lines,
+                    targetSectionIndex,
+                    setting.Key);
+                lines.Insert(insertionIndex, setting.Formatted);
+                existingNames.Add(setting.Key);
+            }
+        }
+
+        private static List<string> RemoveLegacyManagedBlock(IReadOnlyList<string> lines)
+        {
+            var startIndexes = FindMarkerIndexes(lines, StartMarker);
+            var endIndexes = FindMarkerIndexes(lines, EndMarker);
+            if (startIndexes.Count != endIndexes.Count || startIndexes.Count > 1)
+            {
+                throw new InvalidDataException(
+                    "The EditorConfig file contains incomplete or duplicate PNFmt default markers.");
+            }
+
+            if (startIndexes.Count == 0)
+            {
+                return lines.ToList();
+            }
+
+            var startIndex = startIndexes[0];
+            var endIndex = endIndexes[0];
+            if (endIndex < startIndex)
+            {
+                throw new InvalidDataException(
+                    "The PNFmt default configuration end marker appears before its start marker.");
+            }
+
+            return lines.Take(startIndex)
+                .Concat(lines.Skip(endIndex + 1))
+                .ToList();
+        }
+
+        private static void RemoveTrailingBlankLines(List<string> lines)
+        {
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[lines.Count - 1]))
+            {
+                lines.RemoveAt(lines.Count - 1);
+            }
+        }
+
         private static IReadOnlyList<string> SplitLines(string text)
         {
             return text
                 .Replace("\r\n", "\n")
                 .Replace('\r', '\n')
                 .Split(new[] { '\n' }, StringSplitOptions.None);
+        }
+
+        private sealed class DefaultSection
+        {
+            public DefaultSection(string header, params DefaultSetting[] settings)
+            {
+                this.Header = header;
+                this.Settings = settings;
+            }
+
+            public string Header { get; }
+
+            public IReadOnlyList<DefaultSetting> Settings { get; }
+        }
+
+        private sealed class DefaultSetting
+        {
+            public DefaultSetting(string key, string value)
+            {
+                this.Key = key;
+                this.Value = value;
+            }
+
+            public string Formatted => $"{this.Key} = {this.Value}";
+
+            public string Key { get; }
+
+            public string Value { get; }
         }
     }
 }

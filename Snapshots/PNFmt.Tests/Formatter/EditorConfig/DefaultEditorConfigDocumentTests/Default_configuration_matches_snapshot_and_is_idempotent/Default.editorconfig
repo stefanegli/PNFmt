@@ -1,16 +1,16 @@
 root = true
 
-# <pnfmt-defaults>
-
 [*.csproj]
 pnfmt_csproj_empty_lines_between_groups = 1
 pnfmt_sort_entries = true
 
 [*.editorconfig]
+pnfmt_ini_merge_groups = true
 pnfmt_sort_entries = true
 
 [*.ini]
 pnfmt_ini_group_by_prefix = true
+pnfmt_ini_merge_groups = true
 pnfmt_ini_sort_groups = true
 pnfmt_sort_entries = true
 
@@ -25,5 +25,3 @@ pnfmt_sort_entries = true
 
 [*.slnx]
 pnfmt_sort_entries = true
-
-# </pnfmt-defaults>

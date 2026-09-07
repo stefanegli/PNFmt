@@ -189,38 +189,25 @@ namespace PNFmt
 
         private static bool IsSectionHeader(string line)
         {
-            return line.Length >= 2
-                && line[0] == '['
-                && line[line.Length - 1] == ']';
+            return IniSyntax.IsSectionHeader(line);
         }
 
         private static bool TryParseProperty(string line, out PropertyLine property)
         {
-            property = null;
-            if (line.Length == 0
-                || line[0] == '#'
-                || line[0] == ';'
-                || IsSectionHeader(line))
+            if (!IniSyntax.TryParseProperty(line, out var parsedProperty))
             {
+                property = null;
                 return false;
             }
 
-            var separator = line.IndexOf('=');
-            if (separator <= 0)
-            {
-                return false;
-            }
-
-            var key = line.Substring(0, separator).Trim();
-            if (key.Length == 0)
-            {
-                return false;
-            }
-
-            var value = line.Substring(separator + 1).Trim();
-            var prefixSeparator = key.IndexOf('_');
-            var prefix = prefixSeparator > 0 ? key.Substring(0, prefixSeparator) : null;
-            property = new PropertyLine(key, prefix, $"{key} = {value}");
+            var prefixSeparator = parsedProperty.Key.IndexOf('_');
+            var prefix = prefixSeparator > 0
+                ? parsedProperty.Key.Substring(0, prefixSeparator)
+                : null;
+            property = new PropertyLine(
+                parsedProperty.Key,
+                prefix,
+                parsedProperty.Formatted);
             return true;
         }
 

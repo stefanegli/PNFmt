@@ -103,15 +103,14 @@ namespace PNFmt
 
         private static string GetPropertyName(string line)
         {
-            return TryParseProperty(line, out var name, out _) ? name : null;
+            return IniSyntax.TryParseProperty(line, out var property, allowColon: true)
+                ? property.Key
+                : null;
         }
 
         private static bool IsSectionHeader(string line)
         {
-            var trimmed = line.Trim();
-            return trimmed.Length >= 2
-                && trimmed[0] == '['
-                && trimmed[trimmed.Length - 1] == ']';
+            return IniSyntax.IsSectionHeader(line);
         }
 
         private static bool TryGetAlias(
@@ -120,35 +119,15 @@ namespace PNFmt
             out int separatorIndex)
         {
             alias = null;
-            return TryParseProperty(line, out var name, out separatorIndex)
-                && Aliases.TryGetValue(name, out alias);
-        }
-
-        private static bool TryParseProperty(
-            string line,
-            out string name,
-            out int separatorIndex)
-        {
-            name = null;
             separatorIndex = -1;
-            var trimmed = line.TrimStart();
-            if (trimmed.Length == 0 || trimmed[0] == '#' || trimmed[0] == ';')
+            if (!IniSyntax.TryParseProperty(line, out var property, allowColon: true)
+                || !Aliases.TryGetValue(property.Key, out alias))
             {
                 return false;
             }
 
-            var equalsIndex = line.IndexOf('=');
-            var colonIndex = line.IndexOf(':');
-            separatorIndex = equalsIndex < 0
-                ? colonIndex
-                : colonIndex < 0 ? equalsIndex : Math.Min(equalsIndex, colonIndex);
-            if (separatorIndex <= 0)
-            {
-                return false;
-            }
-
-            name = line.Substring(0, separatorIndex).Trim();
-            return name.Length > 0;
+            separatorIndex = property.SeparatorIndex;
+            return true;
         }
     }
 }
