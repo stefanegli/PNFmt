@@ -12,7 +12,8 @@ namespace PNFmt
             string text,
             bool sortEntries = true,
             bool sortGroups = false,
-            bool groupByPrefix = false)
+            bool groupByPrefix = false,
+            bool mergeGroups = false)
         {
             if (text is null)
             {
@@ -20,10 +21,15 @@ namespace PNFmt
             }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
-            var lines = text
+            IReadOnlyList<string> lines = text
                 .Replace("\r\n", "\n")
                 .Replace('\r', '\n')
                 .Split(new[] { '\n' }, StringSplitOptions.None);
+            if (mergeGroups)
+            {
+                lines = MergeGroups(lines);
+            }
+
             var output = new List<string>();
             var properties = new List<PropertyLine>();
             var hasBlankLineAfterProperties = false;
@@ -218,6 +224,69 @@ namespace PNFmt
             return true;
         }
 
+        private static IReadOnlyList<string> MergeGroups(IReadOnlyList<string> lines)
+        {
+            var sectionStarts = Enumerable.Range(0, lines.Count)
+                .Where(index => IsSectionHeader(lines[index].Trim()))
+                .ToArray();
+            if (sectionStarts.Length < 2)
+            {
+                return lines;
+            }
+
+            var groups = new List<SectionGroup>();
+            var groupsByName = new Dictionary<string, SectionGroup>(
+                StringComparer.OrdinalIgnoreCase);
+            for (var index = 0; index < sectionStarts.Length; index++)
+            {
+                var start = sectionStarts[index];
+                var end = index + 1 < sectionStarts.Length
+                    ? sectionStarts[index + 1]
+                    : lines.Count;
+                var name = lines[start].Trim();
+                var body = lines.Skip(start + 1).Take(end - start - 1).ToList();
+                TrimBoundaryBlankLines(body);
+
+                if (groupsByName.TryGetValue(name, out var existingGroup))
+                {
+                    existingGroup.Append(body);
+                }
+                else
+                {
+                    var group = new SectionGroup(name, new[] { name }.Concat(body));
+                    groups.Add(group);
+                    groupsByName.Add(name, group);
+                }
+            }
+
+            var output = lines.Take(sectionStarts[0]).ToList();
+            while (output.Count > 0 && string.IsNullOrWhiteSpace(output[output.Count - 1]))
+            {
+                output.RemoveAt(output.Count - 1);
+            }
+
+            foreach (var group in groups)
+            {
+                AddBlankLine(output);
+                output.AddRange(group.Lines);
+            }
+
+            return output;
+        }
+
+        private static void TrimBoundaryBlankLines(List<string> lines)
+        {
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
+            {
+                lines.RemoveAt(0);
+            }
+
+            while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[lines.Count - 1]))
+            {
+                lines.RemoveAt(lines.Count - 1);
+            }
+        }
+
         private sealed class PropertyLine
         {
             public PropertyLine(string key, string prefix, string formatted)
@@ -236,15 +305,22 @@ namespace PNFmt
 
         private sealed class SectionGroup
         {
-            public SectionGroup(string name, IReadOnlyCollection<string> lines)
+            private readonly List<string> lines;
+
+            public SectionGroup(string name, IEnumerable<string> lines)
             {
                 this.Name = name;
-                this.Lines = lines;
+                this.lines = lines.ToList();
             }
 
-            public IReadOnlyCollection<string> Lines { get; }
+            public IReadOnlyCollection<string> Lines => this.lines;
 
             public string Name { get; }
+
+            public void Append(IEnumerable<string> appendedLines)
+            {
+                this.lines.AddRange(appendedLines);
+            }
         }
     }
 }

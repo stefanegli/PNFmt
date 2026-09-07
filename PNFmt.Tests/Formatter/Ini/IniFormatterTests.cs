@@ -175,6 +175,35 @@ namespace PNFmt.Tests.Formatter.Ini
         }
 
         [Fact]
+        public void Merges_same_named_groups_before_sorting_their_entries()
+        {
+            const string Input =
+                "root = true\n\n"
+                + "[shared]\n"
+                + "zulu = 3\n"
+                + "[other]\n"
+                + "value = other\n"
+                + "[SHARED]\n"
+                + "alpha = 1\n"
+                + "middle = 2\n";
+            const string Expected =
+                "root = true\n\n"
+                + "[shared]\n"
+                + "alpha = 1\n"
+                + "middle = 2\n"
+                + "zulu = 3\n\n"
+                + "[other]\n"
+                + "value = other\n";
+
+            Assert.Equal(
+                Expected,
+                IniDocumentFormatter.Format(
+                    Input,
+                    sortEntries: true,
+                    mergeGroups: true));
+        }
+
+        [Fact]
         public void Prefix_grouping_activates_formatting_and_sorts_the_property_block()
         {
             const string Input =
@@ -224,6 +253,44 @@ namespace PNFmt.Tests.Formatter.Ini
             }
         }
 
+        [Theory]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Group_merging_requires_true(string settingValue)
+        {
+            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                mergeSettingValue: settingValue))
+            {
+                var result = new IniFormatter().Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Input, File.ReadAllText(file.Path));
+            }
+        }
+
+        [Fact]
+        public void Group_merging_activates_formatting()
+        {
+            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                mergeSettingValue: "true"))
+            {
+                var result = new IniFormatter().Format(
+                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.Equal("[shared]\nz = 2\na = 1\n", File.ReadAllText(file.Path));
+            }
+        }
+
         private sealed class TemporaryFile : IDisposable
         {
             private TemporaryFile(string directoryPath, string path)
@@ -241,7 +308,8 @@ namespace PNFmt.Tests.Formatter.Ini
                 string contents,
                 string settingValue = "true",
                 string groupSettingValue = null,
-                string prefixSettingValue = null)
+                string prefixSettingValue = null,
+                string mergeSettingValue = null)
             {
                 var directory = System.IO.Path.Combine(
                     System.IO.Path.GetTempPath(),
@@ -250,7 +318,8 @@ namespace PNFmt.Tests.Formatter.Ini
                 Directory.CreateDirectory(directory);
                 if (settingValue is not null
                     || groupSettingValue is not null
-                    || prefixSettingValue is not null)
+                    || prefixSettingValue is not null
+                    || mergeSettingValue is not null)
                 {
                     var settings = "root = true\n\n[*.ini]\n";
                     if (settingValue is not null)
@@ -266,6 +335,11 @@ namespace PNFmt.Tests.Formatter.Ini
                     if (prefixSettingValue is not null)
                     {
                         settings += "pnfmt_ini_group_by_prefix = " + prefixSettingValue + "\n";
+                    }
+
+                    if (mergeSettingValue is not null)
+                    {
+                        settings += "pnfmt_ini_merge_groups = " + mergeSettingValue + "\n";
                     }
 
                     File.WriteAllText(

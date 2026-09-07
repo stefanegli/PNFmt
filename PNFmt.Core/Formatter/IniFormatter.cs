@@ -29,7 +29,8 @@ namespace PNFmt
                     text,
                     settings.SortEntries,
                     settings.SortGroups,
-                    settings.GroupByPrefix));
+                    settings.GroupByPrefix,
+                    settings.MergeGroups));
         }
     }
 }

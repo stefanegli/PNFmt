@@ -5,4 +5,5 @@ pnfmt_sort_entries = true
 
 [*.ini]
 pnfmt_ini_group_by_prefix = true
+pnfmt_ini_merge_groups = true
 pnfmt_sort_entries = true

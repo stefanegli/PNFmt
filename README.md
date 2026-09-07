@@ -182,13 +182,14 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list. Sorting 
 | --- | --- |
 | `pnfmt_sort_entries` | Sort keys within property blocks. Blank lines do not split a block; comments, section headers, and unknown lines do. |
 | `pnfmt_ini_group_by_prefix` | Group keys by the text before their first underscore. Prefixes shared by at least two keys get blank-line separators; singleton prefixes remain ungrouped. This setting also sorts each property block. |
+| `pnfmt_ini_merge_groups` | Merge sections with the same header, ignoring case. Their contents retain occurrence order and are formatted as one section. |
 | `pnfmt_ini_sort_groups` | Sort named sections by their headers using ordinal, case-insensitive comparison. The preamble stays at the top, and each header moves with everything up to the next header. |
 
 Set at least one of these settings to `true` for each `.editorconfig` or `.ini` pattern that PNFmt should format. The formatter also normalizes assignments to `key = value` and collapses repeated blank lines. It preserves comments and unknown lines.
 
 An `.editorconfig` file with `root = true` must contain its own matching `[*.editorconfig]` section because it does not inherit settings from a parent file.
 
-Section order can affect how tools interpret duplicate INI sections. It also controls precedence between matching sections in `.editorconfig` files. Enable `pnfmt_ini_sort_groups` only when changing that order is safe.
+Section order can affect how tools interpret duplicate INI sections. It also controls precedence between matching sections in `.editorconfig` files. Enable group merging or sorting only when changing that order is safe.
 
 ### Response-file settings
 
