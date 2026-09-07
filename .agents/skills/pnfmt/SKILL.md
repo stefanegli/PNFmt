@@ -23,7 +23,7 @@ Elsewhere, use an installed `pnfmt` command. Do not install or update it unless 
 - Format when the task permits writes: `pnfmt <paths>`
 - Include unchanged files: `pnfmt --all <paths>`
 - Validate project structure without writing: `pnfmt --lint <paths>`
-- Create or refresh the managed default configuration when explicitly requested: `pnfmt --write-default-config <directory-or-editorconfig>`
+- Add missing default configuration when explicitly requested: `pnfmt --write-default-config <directory-or-editorconfig>`
 
 Inside a Git working tree, PNFmt selects only staged, unstaged, and untracked files within the requested scope. The default scope remains the current directory without recursion. Use `--all` only when the task calls for unchanged files, `--recursive` when it covers a directory tree, and `--file-pattern` when narrowing that tree.
 
@@ -33,7 +33,7 @@ PNFmt formatters are opt-in through `.editorconfig`. A skipped file usually has 
 
 The repository-root `.pnfmt` file contains tool settings such as `maxCpuCount`; `-m` overrides it. Keep file-formatting behavior in `.editorconfig`. The default-config command creates a missing `.pnfmt` with `maxCpuCount` set to `4` and never modifies an existing one.
 
-The default-config command preserves rules outside its marked block. Review configuration changes because INI and response-file sorting can affect order-sensitive files.
+The default-config command reuses matching EditorConfig sections, preserves existing values and line order, inserts only missing keys at sorted positions, and adds no comments. It also enables merging same-named INI groups by default. Review configuration changes because INI group merging and response-file sorting can affect order-sensitive files.
 
 When legacy `csproj_formatter_*` or `resx_formatter_*` settings exist, answer both migration questions explicitly in non-interactive runs:
 
