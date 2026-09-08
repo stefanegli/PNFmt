@@ -39,9 +39,10 @@ namespace PNFmt
 
             diagnostic = null;
             var sourceRoot = tree.GetRoot();
+            var originalExclusions = CSharpFormattingExclusions.Parse(sourceRoot);
             if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries))
             {
-                sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text)).Visit(sourceRoot);
+                sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text), originalExclusions).Visit(sourceRoot);
             }
 
             using (var workspace = new AdhocWorkspace(Host.Value))
@@ -60,6 +61,19 @@ namespace PNFmt
                 var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document)
                     .GetAwaiter().GetResult();
                 var formattedText = formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
+                var exclusions = CSharpFormattingExclusions.Parse(sourceRoot);
+                if (exclusions.Spans.Count > 0)
+                {
+                    // Restore complete marked regions after formatting. A whitespace edit
+                    // may span the closing marker's newline and the following declaration's
+                    // indentation; dropping that whole edit would leave enabled code unformatted.
+                    formattedText = exclusions.Restore(formattedText);
+                    if (formattedText is null)
+                    {
+                        diagnostic = new FormatterDiagnostic("PNFMT003", "C# formatting skipped because exclusion markers would change.", null);
+                        return text;
+                    }
+                }
                 var result = CSharpWhitespaceCleanup.Apply(formattedText, settings);
                 if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
                     && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
@@ -77,7 +91,8 @@ namespace PNFmt
                 if (resultTree.GetDiagnostics().Any(item => item.Severity == DiagnosticSeverity.Error)
                     || !sourceRoot.DescendantTokens().Select(token => token.Text)
                         .SequenceEqual(resultRoot.DescendantTokens().Select(token => token.Text))
-                    || !ProtectedTrivia(tree.GetRoot()).SequenceEqual(ProtectedTrivia(resultRoot)))
+                    || !ProtectedTrivia(tree.GetRoot()).SequenceEqual(ProtectedTrivia(resultRoot))
+                    || !originalExclusions.HasSameText(CSharpFormattingExclusions.Parse(resultRoot)))
                 {
                     diagnostic = new FormatterDiagnostic(
                         "PNFMT003", "C# formatting skipped because protected source text would change.", null);

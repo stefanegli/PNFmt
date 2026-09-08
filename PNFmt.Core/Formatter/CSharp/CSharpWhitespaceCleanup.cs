@@ -14,6 +14,7 @@ namespace PNFmt
         public static string Apply(string text, IReadOnlyDictionary<string, string> settings)
         {
             var root = CSharpSyntaxTree.ParseText(text, new CSharpParseOptions(LanguageVersion.CSharp14)).GetRoot();
+            var exclusions = CSharpFormattingExclusions.Parse(root);
             var protectedSpans = root.DescendantTokens().Select(token => token.Span)
                 .Concat(root.DescendantTrivia().Where(trivia =>
                     !trivia.IsKind(SyntaxKind.WhitespaceTrivia) && !trivia.IsKind(SyntaxKind.EndOfLineTrivia))
@@ -42,7 +43,7 @@ namespace PNFmt
                     protectedIndex++;
                 }
 
-                if (changeSpan.Length == 0
+                if (changeSpan.Length == 0 || exclusions.Intersects(changeSpan)
                     || (protectedIndex < protectedSpans.Length && protectedSpans[protectedIndex].OverlapsWith(changeSpan)))
                 {
                     continue;
@@ -59,6 +60,7 @@ namespace PNFmt
 
             var result = source.WithChanges(changes).ToString();
             if (EditorConfigSettings.IsEnabled(settings, "insert_final_newline")
+                && !exclusions.Intersects(new TextSpan(text.Length, 0))
                 && result.Length > 0 && result[result.Length - 1] != '\n' && result[result.Length - 1] != '\r')
             {
                 result += newLine ?? TextFileFormatting.DetectNewLine(text);

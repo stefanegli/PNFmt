@@ -14,10 +14,12 @@ namespace PNFmt
         private readonly string newLine;
         private readonly bool separateGroups;
         private readonly bool systemFirst;
+        private readonly CSharpFormattingExclusions exclusions;
 
-        public CSharpUsingSorter(IReadOnlyDictionary<string, string> settings, string newLine)
+        public CSharpUsingSorter(IReadOnlyDictionary<string, string> settings, string newLine, CSharpFormattingExclusions exclusions)
         {
             this.newLine = newLine;
+            this.exclusions = exclusions;
             this.systemFirst = !settings.TryGetValue("dotnet_sort_system_directives_first", out var value)
                 || !string.Equals(value, "false", StringComparison.OrdinalIgnoreCase);
             this.separateGroups = EditorConfigSettings.IsEnabled(settings, "dotnet_separate_import_directive_groups");
@@ -25,20 +27,23 @@ namespace PNFmt
 
         public override SyntaxNode VisitCompilationUnit(CompilationUnitSyntax node)
         {
+            var usings = this.Sort(node.Usings);
             var visited = (CompilationUnitSyntax)base.VisitCompilationUnit(node);
-            return visited.WithUsings(this.Sort(visited.Usings));
+            return visited.WithUsings(usings);
         }
 
         public override SyntaxNode VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
         {
+            var usings = this.Sort(node.Usings);
             var visited = (NamespaceDeclarationSyntax)base.VisitNamespaceDeclaration(node);
-            return visited.WithUsings(this.Sort(visited.Usings));
+            return visited.WithUsings(usings);
         }
 
         public override SyntaxNode VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
         {
+            var usings = this.Sort(node.Usings);
             var visited = (FileScopedNamespaceDeclarationSyntax)base.VisitFileScopedNamespaceDeclaration(node);
-            return visited.WithUsings(this.Sort(visited.Usings));
+            return visited.WithUsings(usings);
         }
 
         private SyntaxList<UsingDirectiveSyntax> Sort(SyntaxList<UsingDirectiveSyntax> usings)
@@ -47,14 +52,14 @@ namespace PNFmt
             var start = 0;
             while (start < usings.Count)
             {
-                if (!CanMove(usings[start]))
+                if (!this.CanMove(usings[start]))
                 {
                     result.Add(usings[start++]);
                     continue;
                 }
 
                 var end = start + 1;
-                while (end < usings.Count && CanMove(usings[end])
+                while (end < usings.Count && this.CanMove(usings[end])
                     && usings[end].GlobalKeyword.RawKind == usings[start].GlobalKeyword.RawKind
                     && usings[end].GetLeadingTrivia().All(IsWhitespace))
                 {
@@ -92,9 +97,10 @@ namespace PNFmt
             return SyntaxFactory.List(result);
         }
 
-        private static bool CanMove(UsingDirectiveSyntax node)
+        private bool CanMove(UsingDirectiveSyntax node)
         {
-            return node.DescendantTrivia().Where(trivia => node.Span.Contains(trivia.Span)).All(IsWhitespace)
+            return !this.exclusions.Intersects(node.FullSpan)
+                && node.DescendantTrivia().Where(trivia => node.Span.Contains(trivia.Span)).All(IsWhitespace)
                 && node.GetTrailingTrivia().All(trivia => IsWhitespace(trivia) || trivia.IsKind(SyntaxKind.SingleLineCommentTrivia));
         }
 

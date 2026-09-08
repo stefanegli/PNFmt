@@ -57,6 +57,18 @@ Leading headers and standalone comment sections remain anchored at the start of 
 
 Members, modifiers, enum values, and statements are not reordered. Unused imports are not removed, names are not simplified, and types are not replaced with `var`.
 
+## Exclusion regions
+
+Standalone, case-sensitive `// pnfmt: off` and `// pnfmt: on` comments protect the complete marked lines and everything between them. Their contents retain their exact text, including whitespace and line endings, even when other settings request cleanup. Imports cannot move across or within a protected region.
+
+```csharp
+// pnfmt: off
+int[] columns = [  1,  20, 300 ];
+// pnfmt: on
+```
+
+Markers can be indented and can have trailing whitespace. Nested pairs are supported. An unmatched `off` protects through EOF, including a missing final newline; an unmatched `on` has no effect. Marker-like text in strings, block comments, trailing comments, or inactive preprocessor branches is not interpreted as a marker. The whole file must still parse successfully before formatting proceeds.
+
 ## Parse policy and diagnostics
 
 Files are parsed as regular C# 14 source, with no project-defined preprocessor symbols. File-local `#define` directives still apply. Inactive `#if` branches are preserved verbatim, including branches that would be active in another build configuration. PNFmt does not attempt to format every conditional-compilation configuration.
