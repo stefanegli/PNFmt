@@ -11,7 +11,8 @@ namespace PNFmt
         public static FileFormatResult Format(
             FileFormatRequest request,
             bool isActive,
-            Func<string, string> formatDocument)
+            Func<string, string> formatDocument,
+            bool preserveEncoding = false)
         {
             if (request is null)
             {
@@ -28,7 +29,8 @@ namespace PNFmt
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
-            var original = File.ReadAllText(request.FilePath);
+            var file = preserveEncoding ? EncodedTextFile.Read(request.FilePath) : null;
+            var original = file?.Text ?? File.ReadAllText(request.FilePath);
             var formatted = formatDocument(original);
             if (string.Equals(original, formatted, StringComparison.Ordinal))
             {
@@ -37,7 +39,14 @@ namespace PNFmt
 
             if (request.WriteChanges)
             {
-                File.WriteAllText(request.FilePath, formatted, new UTF8Encoding(false));
+                if (file is not null)
+                {
+                    file.Write(request.FilePath, formatted);
+                }
+                else
+                {
+                    File.WriteAllText(request.FilePath, formatted, new UTF8Encoding(false));
+                }
             }
 
             request.Log.WriteLine(

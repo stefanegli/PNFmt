@@ -23,10 +23,22 @@ namespace PNFmt
 
             var settings = EditorConfigSettings.Load(request.FilePath, request.Log);
             FormatterDiagnostic diagnostic = null;
+            var generated = false;
             var result = TextFileFormatPipeline.Format(
                 request,
                 EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpFormat),
-                text => CSharpDocumentFormatter.Format(text, settings, out diagnostic));
+                text =>
+                {
+                    generated = CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings);
+                    return generated ? text : CSharpDocumentFormatter.Format(text, settings, out diagnostic);
+                },
+                preserveEncoding: true);
+            if (generated)
+            {
+                request.Log.WriteLine($"Skipping generated C# file {request.FilePath}.");
+                return new FileFormatResult(FileFormatStatus.Skipped);
+            }
+
             return diagnostic is null
                 ? result
                 : new FileFormatResult(FileFormatStatus.Skipped, new[] { diagnostic });
