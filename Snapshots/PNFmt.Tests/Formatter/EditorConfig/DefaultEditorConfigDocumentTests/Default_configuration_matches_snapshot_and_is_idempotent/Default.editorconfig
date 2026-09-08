@@ -1,5 +1,9 @@
 root = true
 
+[*.cs]
+pnfmt_csharp_format = true
+pnfmt_sort_entries = true
+
 [*.csproj]
 pnfmt_csproj_empty_lines_between_groups = 1
 pnfmt_sort_entries = true

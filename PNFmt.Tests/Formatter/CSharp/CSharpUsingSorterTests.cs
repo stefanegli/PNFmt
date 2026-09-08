@@ -100,6 +100,12 @@ namespace PNFmt.Tests.Formatter.CSharp
         }
 
         [Fact]
+        public void Sorting_preserves_an_import_only_files_missing_final_newline()
+        {
+            Assert.Equal("using A;\nusing Z;", Format("using Z;\nusing A;"));
+        }
+
+        [Fact]
         public void Sorting_is_separately_opt_in()
         {
             var result = CSharpFormatterTests.Format("using Z;\nusing A;\nclass C { }\n");

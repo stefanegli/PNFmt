@@ -13,6 +13,56 @@ namespace PNFmt.Tests
     public sealed class ProgramTests
     {
         [Fact]
+        public void Csharp_cli_formats_a_folder_without_projects_and_honors_nested_settings()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                directory.Write("nested/.editorconfig", "[*.cs]\nindent_size = 2\n");
+                var first = directory.Write("First.cs", "using Z;\nusing A;\nclass C{\nvoid M(){ }\n}\n");
+                var nested = directory.Write("nested/Second.cs", "class D{\nvoid M(){ }\n}\n");
+                var project = directory.Write("Untouched.csproj", "<Project />");
+                var original = File.ReadAllText(first);
+
+                var check = Run("--all", "--check", "--recursive", "--formatter", "csharp", directory.Path);
+                Assert.Equal(1, check.ExitCode);
+                Assert.Equal(original, File.ReadAllText(first));
+                var preview = Run("--all", "--dry-run", "--recursive", "--formatter", "csharp", directory.Path);
+                Assert.Equal(0, preview.ExitCode);
+                Assert.Equal(original, File.ReadAllText(first));
+
+                // No project is needed, even when an unrelated project file is invalid.
+                File.WriteAllText(project, "not an MSBuild project");
+                var format = Run("--all", "--recursive", "--formatter", "csharp", "-m:4", directory.Path);
+                Assert.Equal(0, format.ExitCode);
+                Assert.Contains("Updated 2", format.Output);
+                Assert.StartsWith("using A;\nusing Z;", File.ReadAllText(first));
+                Assert.Contains("\n    void M()", File.ReadAllText(first));
+                Assert.Contains("\n  void M()", File.ReadAllText(nested));
+                Assert.Equal("not an MSBuild project", File.ReadAllText(project));
+                Assert.Equal(0, Run("--all", "--check", "--recursive", "--formatter", "csharp", directory.Path).ExitCode);
+            }
+        }
+
+        [Fact]
+        public void Csharp_cli_reports_skipped_syntax_errors_and_lint_fails_without_writing()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var source = directory.Write("Invalid.cs", "class C{");
+                var format = Run(source);
+                var lint = Run("--lint", source);
+
+                Assert.Equal(0, format.ExitCode);
+                Assert.Contains("warning PNFMT002", format.Output);
+                Assert.Equal(1, lint.ExitCode);
+                Assert.Contains("skipped 1", lint.Output);
+                Assert.Equal("class C{", File.ReadAllText(source));
+            }
+        }
+
+        [Fact]
         public void One_command_formats_csproj_and_resx_files()
         {
             using (var directory = new TemporaryDirectory())

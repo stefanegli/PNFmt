@@ -3,7 +3,7 @@
 > [!WARNING]
 > PNFmt is currently alpha software and has not yet been tested for production use. Use it with source control and review the changes it makes.
 
-PNFmt is a .NET global tool for consistently formatting project and supporting files that are not handled by a C# formatter. Formatting behavior is configured through `.editorconfig`, while repository-wide tool settings live in an optional `.pnfmt` file.
+PNFmt is a .NET global tool for consistently formatting C# source, project, and supporting files. It processes each file independently without loading a project or solution. Formatting behavior is configured through `.editorconfig`, while repository-wide tool settings live in an optional `.pnfmt` file.
 
 Every formatter is opt-in. PNFmt skips a file unless its applicable EditorConfig settings enable formatting.
 
@@ -11,13 +11,14 @@ Every formatter is opt-in. PNFmt skips a file unless its applicable EditorConfig
 
 | Files | Formatter | What it does |
 | --- | --- | --- |
+| [`.cs`](docs/formatters/csharp.md) | C# | Formats indentation, spacing, and line breaks, and optionally sorts imports within their existing scopes. |
 | [`.csproj`](docs/formatters/csproj.md) | Project | Formats MSBuild project XML, sorts safe properties and items, and reports project-structure diagnostics. |
 | [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
 | [`.resx`](docs/formatters/resx.md) | Resource | Sorts resource entries and optionally removes generated schema and documentation content. |
 | [`.rsp`](docs/formatters/rsp.md) | Response | Sorts lines in .NET compiler response files while respecting comment barriers. |
 | [`.slnx`](docs/formatters/slnx.md) | Solution | Orders known solution elements and normalizes XML layout. |
 
-The linked pages describe each formatter's settings, behavior, and order-sensitivity considerations. PNFmt does not format C# source files.
+The linked pages describe each formatter's settings, behavior, and order-sensitivity considerations.
 
 ## Installation
 
@@ -84,10 +85,10 @@ pnfmt --recursive --formatter csproj,resx .
 | `-v`, `--verbose` | Show per-file statuses and detailed errors. |
 | `-m[:N]`, `-maxCpuCount[:N]` | Process up to `N` files concurrently. Without `N`, use the processor count. |
 | `--file-pattern <glob>` | Include files matching the glob. Repeat the option to add patterns. |
-| `--formatter <name>[,<name>...]` | Run only the named formatters: `csproj`, `ini`, `resx`, `rsp`, or `slnx`. |
+| `--formatter <name>[,<name>...]` | Run only the named formatters: `csharp`, `csproj`, `ini`, `resx`, `rsp`, or `slnx`. |
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
-| `--lint` | Check project formatting and report project diagnostics without writing files. |
+| `--lint` | Check formatting and report formatter diagnostics without writing files. |
 | `--write-default-config` | Add missing all-enabled settings to `.editorconfig` and create `.pnfmt` when missing. |
 | `--migrate-legacy-config <true\|false>` | Import legacy formatter settings using current PNFmt names. |
 | `--remove-legacy-config <true\|false>` | Remove legacy formatter settings after optional migration. |
@@ -144,6 +145,7 @@ Please use the [issue tracker](https://github.com/stefanegli/PNFmt/issues) for b
 | --- | --- |
 | [EditorConfig .NET Core](https://github.com/editorconfig/editorconfig-core-net) | [MIT License](https://github.com/editorconfig/editorconfig-core-net/blob/master/LICENSE) |
 | [LibGit2Sharp](https://github.com/libgit2/libgit2sharp) | [MIT License](https://github.com/libgit2/libgit2sharp/blob/master/LICENSE.md) |
+| [Roslyn](https://github.com/dotnet/roslyn) | [MIT License](https://github.com/dotnet/roslyn/blob/main/License.txt) |
 | [Microsoft.NET.Test.Sdk](https://github.com/microsoft/vstest) | [MIT License](https://github.com/microsoft/vstest/blob/main/LICENSE) |
 | [xUnit](https://github.com/xunit/xunit) | [Apache License 2.0 / MIT License](https://github.com/xunit/xunit/blob/main/LICENSE) |
 | [NFluent](https://github.com/tpierrain/NFluent) | [Apache License 2.0](https://github.com/nfluent/nfluent/blob/master/LICENSE) |

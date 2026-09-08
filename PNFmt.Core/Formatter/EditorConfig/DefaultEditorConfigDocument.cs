@@ -16,6 +16,10 @@ namespace PNFmt
             new[]
             {
                 new DefaultSection(
+                    "[*.cs]",
+                    new DefaultSetting(EditorConfigSettingNames.CSharpFormat, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
                     "[*.csproj]",
                     new DefaultSetting(EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups, "1"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),

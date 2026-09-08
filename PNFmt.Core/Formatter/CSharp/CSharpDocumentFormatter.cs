@@ -61,6 +61,13 @@ namespace PNFmt
                     .GetAwaiter().GetResult();
                 var formattedText = formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
                 var result = CSharpWhitespaceCleanup.Apply(formattedText, settings);
+                if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
+                    && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
+                {
+                    // Sorting can move the final import into the middle of the list,
+                    // where it needs a newline. Preserve the original EOF convention.
+                    result = result.TrimEnd('\r', '\n');
+                }
 
                 // In particular, literals (including raw strings) and inactive #if text
                 // must remain byte-for-byte identical as text. Fail closed if a formatting

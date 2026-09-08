@@ -1,0 +1,11 @@
+root = true
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+end_of_line = lf
+indent_size = 2
+indent_style = space
+insert_final_newline = true
+pnfmt_csharp_format = true
+pnfmt_sort_entries = true
+trim_trailing_whitespace = true

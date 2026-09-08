@@ -25,6 +25,14 @@
     </ItemGroup>
 
     <ItemGroup>
+        <Compile Remove="Formatter\CSharp\_files\**\*" />
+        <None Remove="Formatter\CSharp\_files\**\*" />
+        <Content Include="Formatter\CSharp\_files\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
         <EmbeddedResource Remove="Formatter\CsProj\_files\**\*" />
         <EmbeddedResource Remove="Formatter\Ini\_files\**\*" />
         <EmbeddedResource Remove="Formatter\Resx\_editor\**\*" />

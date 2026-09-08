@@ -14,6 +14,7 @@ namespace PNFmt.Tests.Snapshots
         {
             get
             {
+                yield return new object[] { "CSharp", "Source.cs", "csharp" };
                 yield return new object[] { "CsProj", "SimpleSort.csproj", "csproj" };
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
                 yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };
@@ -55,6 +56,7 @@ namespace PNFmt.Tests.Snapshots
         {
             switch (formatterName)
             {
+                case "csharp": return new CSharpFormatter();
                 case "csproj": return new CsProjFormatter();
                 case "ini": return new IniFormatter();
                 case "rsp": return new RspFormatter();

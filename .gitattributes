@@ -2,4 +2,5 @@
 *.csproj text eol=crlf
 *.props text eol=crlf
 *.slnx text eol=crlf
+PNFmt.Tests/Formatter/CSharp/_files/** text eol=lf -whitespace
 Snapshots/** text eol=lf -whitespace

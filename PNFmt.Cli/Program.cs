@@ -223,7 +223,7 @@ namespace PNFmt.Cli
             writer.WriteLine($"                     Available names: {formatterNames}.");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
-            writer.WriteLine("      --lint        Report project diagnostics and formatting changes; exit 1 if found.");
+            writer.WriteLine("      --lint        Report formatter diagnostics and formatting changes; exit 1 if found.");
             writer.WriteLine("      --write-default-config");
             writer.WriteLine("                     Write all-enabled .editorconfig and missing .pnfmt defaults.");
             writer.WriteLine("      --migrate-legacy-config <true|false>");
@@ -238,6 +238,7 @@ namespace PNFmt.Cli
             writer.WriteLine("  maxCpuCount defaults to the repository .pnfmt value, or 1.");
             writer.WriteLine($"  Registered formatters support {fileExtensions} files.");
             writer.WriteLine("  Every formatter requires applicable EditorConfig settings.");
+            writer.WriteLine("  C# formatting requires pnfmt_csharp_format = true; pnfmt_sort_entries also sorts imports.");
             writer.WriteLine("  INI formatting requires an enabled pnfmt_sort_entries or pnfmt_ini_* setting.");
             writer.WriteLine("  RSP and SLNX formatters require pnfmt_sort_entries = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
