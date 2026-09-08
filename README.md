@@ -9,16 +9,18 @@ Every formatter is opt-in. PNFmt skips a file unless its applicable EditorConfig
 
 ## Supported files
 
-| Files | Formatter | What it does |
-| --- | --- | --- |
-| [`.cs`](docs/formatters/csharp.md) | C# | Formats whitespace, with optional import/modifier sorting and declaration blank-line cleanup. Preserves encoding and supports exclusion regions. |
-| [`.csproj`](docs/formatters/csproj.md) | Project | Formats MSBuild project XML, sorts safe properties and items, and reports project-structure diagnostics. |
-| [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
-| [`.resx`](docs/formatters/resx.md) | Resource | Sorts resource entries and optionally removes generated schema and documentation content. |
-| [`.rsp`](docs/formatters/rsp.md) | Response | Sorts lines in .NET compiler response files while respecting comment barriers. |
-| [`.slnx`](docs/formatters/slnx.md) | Solution | Orders known solution elements and normalizes XML layout. |
-| [`.xml`](docs/formatters/xml-xaml.md) | XML | Indents structural markup while preserving text, mixed content, and original tags. |
-| [`.xaml`](docs/formatters/xml-xaml.md) | XAML | Indents known layout/resource containers while protecting inline text and custom-container whitespace. |
+| Files | Formatter | Status | What it does |
+| --- | --- | --- | --- |
+| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace, with optional import/modifier sorting and declaration blank-line cleanup. Preserves encoding and supports exclusion regions. |
+| [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, sorts safe properties and items, and reports project-structure diagnostics. |
+| [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Experimental | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
+| [`.resx`](docs/formatters/resx.md) | Resource | Stable | Sorts resource entries and optionally removes generated schema and documentation content. |
+| [`.rsp`](docs/formatters/rsp.md) | Response | Experimental | Sorts lines in .NET compiler response files while respecting comment barriers. |
+| [`.slnx`](docs/formatters/slnx.md) | Solution | Experimental | Orders known solution elements and normalizes XML layout. |
+| [`.xml`](docs/formatters/xml-xaml.md) | XML | Experimental | Indents structural markup while preserving text, mixed content, and original tags. |
+| [`.xaml`](docs/formatters/xml-xaml.md) | XAML | Experimental | Indents known layout/resource containers while protecting inline text and custom-container whitespace. |
+
+Status reflects each formatter's maturity; PNFmt as a whole remains alpha software.
 
 The linked pages describe each formatter's settings, behavior, and order-sensitivity considerations.
 
