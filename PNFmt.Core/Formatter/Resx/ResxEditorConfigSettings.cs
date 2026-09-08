@@ -8,6 +8,7 @@ namespace PNFmt
         {
             var isActive = false;
             var settings = EditorConfigSettings.Load(targetFile, log);
+            this.Layout = new ResxLayoutSettings(settings);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
                 LegacyEditorConfigSettingAliases.ResxSortEntries,
@@ -57,6 +58,7 @@ namespace PNFmt
 
         public StringComparer Comparer { get; private set; } = StringComparer.Ordinal;
         public bool IsActive { get; }
+        public ResxLayoutSettings Layout { get; }
         public bool RemoveDocumentationComment { get; }
         public bool RemoveXsdSchema { get; }
         public bool SortEntries { get; }

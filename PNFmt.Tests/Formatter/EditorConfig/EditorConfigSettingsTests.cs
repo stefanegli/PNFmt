@@ -135,6 +135,53 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             }
         }
 
+        [Theory]
+        [InlineData("indent_size = invalid")]
+        [InlineData("indent_size = 0")]
+        [InlineData("indent_size = -1")]
+        [InlineData("tab_width = invalid")]
+        [InlineData("tab_width = 0")]
+        [InlineData("tab_width = -1")]
+        public void Invalid_project_indentation_does_not_activate_formatting(string setting)
+        {
+            using (var target = TemporaryTarget.Create("Project.csproj", "root = true\n\n[*.csproj]\n" + setting + "\n"))
+            {
+                const string Original = "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>";
+                File.WriteAllText(target.Path, Original);
+
+                var result = new CsProjFormatter().Format(new FileFormatRequest(target.Path, true, false, new RecordingLog()));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Original, File.ReadAllText(target.Path));
+            }
+        }
+
+        [Theory]
+        [InlineData("true", true, true)]
+        [InlineData("FALSE", false, true)]
+        [InlineData("invalid", true, false)]
+        [InlineData("unset", true, false)]
+        [InlineData(null, true, false)]
+        public void Csproj_final_newline_setting_activates_formatting_only_for_valid_values(
+            string value,
+            bool expectedInsertFinalNewline,
+            bool expectedActive)
+        {
+            var configuration = "root = true\n\n[*.csproj]\n";
+            if (value is not null)
+            {
+                configuration += "insert_final_newline = " + value + "\n";
+            }
+
+            using (var target = TemporaryTarget.Create("Project.csproj", configuration))
+            {
+                var settings = new CsProjEditorConfigSettings(target.Path);
+
+                Assert.Equal(expectedInsertFinalNewline, settings.InsertFinalNewline);
+                Assert.Equal(expectedActive, settings.IsActive);
+            }
+        }
+
         [Fact]
         public void Resx_boolean_settings_are_case_insensitive()
         {

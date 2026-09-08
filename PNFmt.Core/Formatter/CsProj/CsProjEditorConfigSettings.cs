@@ -29,9 +29,9 @@ namespace PNFmt
             int? parsedTabWidth = null;
             if (settings.TryGetValue("tab_width", out var tabWidth))
             {
-                isActive = true;
                 if (int.TryParse(tabWidth, out var width) && width > 0)
                 {
+                    isActive = true;
                     parsedTabWidth = width;
                 }
             }
@@ -39,16 +39,17 @@ namespace PNFmt
             var hasIndentSize = false;
             if (settings.TryGetValue("indent_size", out var indentSize))
             {
-                isActive = true;
                 if (int.TryParse(indentSize, out var parsedIndentSize)
                     && parsedIndentSize > 0)
                 {
+                    isActive = true;
                     this.IndentSize = parsedIndentSize;
                     hasIndentSize = true;
                 }
                 else if (string.Equals(indentSize, "tab", StringComparison.OrdinalIgnoreCase)
                     && parsedTabWidth.HasValue)
                 {
+                    isActive = true;
                     this.IndentSize = parsedTabWidth.Value;
                     hasIndentSize = true;
                 }
@@ -63,6 +64,13 @@ namespace PNFmt
             {
                 isActive = true;
                 this.EndOfLine = ResolveEndOfLine(endOfLine);
+            }
+
+            if (settings.TryGetValue("insert_final_newline", out var insertFinalNewline)
+                && bool.TryParse(insertFinalNewline, out var parsedInsertFinalNewline))
+            {
+                isActive = true;
+                this.InsertFinalNewline = parsedInsertFinalNewline;
             }
 
             if (resolver.TryGet(
@@ -106,6 +114,8 @@ namespace PNFmt
         public char IndentStyle { get; } = ' ';
 
         public string EndOfLine { get; } = "\r\n";
+
+        public bool InsertFinalNewline { get; } = true;
 
         public int EmptyLinesBetweenGroups { get; } = 1;
 

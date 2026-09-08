@@ -8,6 +8,7 @@ namespace PNFmt
         string EndOfLine { get; }
         int IndentSize { get; }
         char IndentStyle { get; }
+        bool InsertFinalNewline { get; }
         bool SortEntries { get; }
         System.Collections.Generic.IReadOnlyCollection<string> SortItemTypes { get; }
     }
@@ -18,6 +19,7 @@ namespace PNFmt
         public string EndOfLine => "\r\n";
         public int IndentSize => 2;
         public char IndentStyle => ' ';
+        public bool InsertFinalNewline => true;
         public bool SortEntries => true;
         public System.Collections.Generic.IReadOnlyCollection<string> SortItemTypes => CsProjItemSorting.Defaults;
     }

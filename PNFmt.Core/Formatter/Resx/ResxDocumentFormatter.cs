@@ -2,6 +2,7 @@ namespace PNFmt
 {
     using System;
     using System.Collections.Generic;
+    using System.IO;
     using System.Linq;
     using System.Xml;
     using System.Xml.Linq;
@@ -136,15 +137,35 @@ namespace PNFmt
             }
 
             var requiresSorting = this.Settings.SortEntries && !toSort.SequenceEqual(sorted);
-            if (hasSchemaRemoved || hasCommentRemoved || hasCommentAdded || hasSchemaAdded || requiresSorting)
+            var hasContentChanges = hasSchemaRemoved || hasCommentRemoved || hasCommentAdded || hasSchemaAdded || requiresSorting;
+            if (hasContentChanges)
             {
                 toSave.AddRange(sorted);
                 document.Root.ReplaceNodes(toSave);
+            }
+
+            byte[] formattedBytes = null;
+            var hasChanges = hasContentChanges;
+            if (this.Settings.Layout?.HasOverrides == true)
+            {
+                formattedBytes = this.Settings.Layout.Serialize(document);
+                hasChanges = !File.ReadAllBytes(resxPath).SequenceEqual(formattedBytes);
+            }
+
+            if (hasChanges)
+            {
                 var action = writeChanges ? "Updating" : "Would update";
                 this.Log?.WriteLine($"{action} {resxPath}");
                 if (writeChanges)
                 {
-                    document.Save(resxPath);
+                    if (formattedBytes is null)
+                    {
+                        document.Save(resxPath);
+                    }
+                    else
+                    {
+                        File.WriteAllBytes(resxPath, formattedBytes);
+                    }
                 }
 
                 return true;

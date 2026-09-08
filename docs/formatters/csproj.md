@@ -19,6 +19,7 @@ tab_width = 4
 | `pnfmt_csproj_empty_lines_between_groups` | Set the non-negative number of empty lines between top-level groups. |
 | `pnfmt_csproj_sort_item_types` | Replace the built-in list of sortable item types. Separate names with commas or semicolons, or use `*` for any homogeneous item type. |
 | `indent_style`, `indent_size`, `tab_width`, `end_of_line` | Control standard XML layout through EditorConfig. |
+| `insert_final_newline` | End the file with one configured newline when `true` (the default), or omit the final newline when `false`. |
 
 Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 

@@ -7,6 +7,7 @@ namespace PNFmt.Tests.Formatter.Resx.Fake
     internal sealed class FakeSettings : IResxFormatSettings
     {
         public StringComparer Comparer { get; set; } = StringComparer.Ordinal;
+        public ResxLayoutSettings Layout { get; set; }
         public bool RemoveDocumentationComment { get; set; }
         public bool RemoveXsdSchema { get; set; }
         public bool SortEntries { get; set; }

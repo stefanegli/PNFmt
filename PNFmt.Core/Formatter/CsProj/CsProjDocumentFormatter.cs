@@ -116,10 +116,10 @@ namespace PNFmt
                     stringWriter.ToString(),
                     settings,
                     newLineChars,
-                    indentChars);
-                return formatted.EndsWith(newLineChars, StringComparison.Ordinal)
-                    ? formatted
-                    : formatted + newLineChars;
+                    indentChars).TrimEnd('\r', '\n');
+                return settings.InsertFinalNewline
+                    ? formatted + newLineChars
+                    : formatted;
             }
         }
 

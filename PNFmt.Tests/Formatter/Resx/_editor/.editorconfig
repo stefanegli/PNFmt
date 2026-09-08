@@ -1,3 +1,5 @@
-﻿[*]
+﻿root = true
+
+[*]
 resx_formatter_sort_entries=false
 resx_formatter_remove_documentation_comment=false
