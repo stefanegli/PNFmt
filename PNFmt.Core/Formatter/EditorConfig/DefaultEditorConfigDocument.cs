@@ -17,7 +17,9 @@ namespace PNFmt
             {
                 new DefaultSection(
                     "[*.cs]",
+                    new DefaultSetting(EditorConfigSettingNames.CSharpCollapseBlankLines, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpFormat, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpSortModifiers, "true"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.csproj]",

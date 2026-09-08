@@ -15,6 +15,7 @@ namespace PNFmt.Tests.Snapshots
             get
             {
                 yield return new object[] { "CSharp", "Source.cs", "csharp" };
+                yield return new object[] { "CSharp", "Cleanup.cs", "csharp" };
                 yield return new object[] { "CsProj", "SimpleSort.csproj", "csproj" };
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
                 yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };

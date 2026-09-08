@@ -7,6 +7,8 @@ The C# formatter uses Roslyn to format individual files. It does not load MSBuil
 ```ini
 [*.cs]
 pnfmt_csharp_format = true
+pnfmt_csharp_sort_modifiers = true
+pnfmt_csharp_collapse_blank_lines = true
 pnfmt_sort_entries = true
 
 indent_style = space
@@ -22,7 +24,7 @@ dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 ```
 
-Only `pnfmt_csharp_format = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged. `pnfmt_sort_entries = true` additionally enables import sorting; it does not activate C# formatting on its own. `--write-default-config` adds both activation and sorting settings to `[*.cs]`, preserving existing values.
+Only `pnfmt_csharp_format = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged. Import sorting, modifier ordering, and blank-line cleanup each require their own setting to be `true`; none activates C# formatting on its own. `--write-default-config` adds all four enabled settings to `[*.cs]`, preserving existing values.
 
 Run only this formatter with:
 
@@ -35,7 +37,7 @@ The usual Git changed-file selection, `--all`, `--file-pattern`, `--dry-run`, an
 
 ## Whitespace formatting
 
-PNFmt passes the resolved EditorConfig settings to Roslyn 5.0's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied. Formatting does not impose a maximum line length or reflow comments.
+PNFmt passes the resolved EditorConfig settings to Roslyn 5.0's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied, apart from the explicitly enabled modifier ordering described below. Formatting does not impose a maximum line length or reflow comments.
 
 Without explicit settings, formatting uses spaces, four-column indentation and tab width, the file's detected newline convention, and Roslyn's remaining formatting defaults. `insert_final_newline = true` adds a missing final newline to nonempty files; missing or false preserves the existing final-newline state. `trim_trailing_whitespace = true` removes trailing spaces and tabs from ordinary code whitespace. Explicit `end_of_line` values are `lf`, `crlf`, and `cr`.
 
@@ -55,7 +57,23 @@ Within each sortable run:
 
 Leading headers and standalone comment sections remain anchored at the start of their runs. Imports cannot cross those comments or preprocessor directives such as `#if`, `#region`, `#nullable`, and `#pragma`. A trailing `//` comment travels with its import. Imports containing internal comments or other non-whitespace trivia, or trailing block comments, stay in place and divide runs.
 
-Members, modifiers, enum values, and statements are not reordered. Unused imports are not removed, names are not simplified, and types are not replaced with `var`.
+Members, enum values, and statements are not reordered. Unused imports are not removed, names are not simplified, and types are not replaced with `var`.
+
+## Modifier ordering
+
+`pnfmt_csharp_sort_modifiers = true` orders modifiers on member declarations and local functions without adding or removing any modifier. For example, `static public` becomes `public static`. The standard `csharp_preferred_modifier_order` setting selects the order and accepts an optional severity suffix such as `:suggestion`; the PNFmt switch controls activation regardless of that suffix.
+
+The default order is:
+
+```ini
+csharp_preferred_modifier_order = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async
+```
+
+`partial` always stays last so it remains next to the declaration keyword. Comments or directives between modifiers prevent their reordering. Leading headers and attributes stay in place. A list with any unknown or unranked modifier, including `ref`, is left alone. A configured order containing duplicate or unsupported names disables this cleanup. Parameters and accessors are not reordered. Excluded regions are respected.
+
+## Blank-line cleanup
+
+`pnfmt_csharp_collapse_blank_lines = true` reduces two or more empty lines between adjacent member or type declarations to one empty line. It does not insert a blank line where none existed. Only gaps consisting entirely of whitespace are changed; gaps containing comments or directives are preserved. Blank lines inside method bodies, top-level statements, strings, comments, inactive code, and excluded regions are not collapsed.
 
 ## Exclusion regions
 

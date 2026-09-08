@@ -45,6 +45,11 @@ namespace PNFmt
                 sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text), originalExclusions).Visit(sourceRoot);
             }
 
+            if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpSortModifiers))
+            {
+                sourceRoot = new CSharpModifierSorter(settings, CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
+            }
+
             using (var workspace = new AdhocWorkspace(Host.Value))
             {
                 // These paths only identify in-memory documents; no project/config file
@@ -75,6 +80,10 @@ namespace PNFmt
                     }
                 }
                 var result = CSharpWhitespaceCleanup.Apply(formattedText, settings);
+                if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpCollapseBlankLines))
+                {
+                    result = CSharpBlankLineCleanup.Apply(result);
+                }
                 if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
                     && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
                 {

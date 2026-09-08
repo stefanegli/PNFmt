@@ -1,7 +1,9 @@
 root = true
 
 [*.cs]
+pnfmt_csharp_collapse_blank_lines = true
 pnfmt_csharp_format = true
+pnfmt_csharp_sort_modifiers = true
 pnfmt_sort_entries = true
 
 [*.csproj]

@@ -13,6 +13,38 @@ namespace PNFmt.Tests
     public sealed class ProgramTests
     {
         [Fact]
+        public void Csharp_cli_preserves_encoding_skips_generated_files_and_honors_exclusions()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                const string Protected = "// pnfmt: off\nstatic public void Keep( ){ }\n// pnfmt: on\n";
+                var input = "static public class C{\nstatic private int A;\n\n\nstatic private int B;\n"
+                    + Protected + "}\n";
+                var source = directory.Write("Source.cs", input);
+                var encoding = new System.Text.UnicodeEncoding(false, true, true);
+                File.WriteAllText(source, input, encoding);
+                var generated = directory.Write("Source.g.cs", "// Generated\nclass Invalid{");
+                var original = File.ReadAllBytes(source);
+
+                var preview = Run("--all", "--check", "--formatter", "csharp", directory.Path);
+                Assert.Equal(1, preview.ExitCode);
+                Assert.Equal(original, File.ReadAllBytes(source));
+                var result = Run("--all", "--formatter", "csharp", directory.Path);
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Updated 1, unchanged 0, skipped 1", result.Output);
+                var bytes = File.ReadAllBytes(source);
+                Assert.Equal(encoding.GetPreamble(), bytes.Take(2));
+                var text = encoding.GetString(bytes, 2, bytes.Length - 2);
+                Assert.Contains("public static class C", text);
+                Assert.Contains("private static int A;\n\n    private static int B;", text);
+                Assert.Contains(Protected, text);
+                Assert.Equal("// Generated\nclass Invalid{", File.ReadAllText(generated));
+                Assert.Equal(0, Run("--all", "--check", "--formatter", "csharp", directory.Path).ExitCode);
+            }
+        }
+
+        [Fact]
         public void Csharp_cli_formats_a_folder_without_projects_and_honors_nested_settings()
         {
             using (var directory = new TemporaryDirectory())
