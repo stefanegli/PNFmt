@@ -15,6 +15,8 @@ namespace PNFmt
                     new ResxFormatter(),
                     new RspFormatter(),
                     new SlnxFormatter(),
+                    new XamlFormatter(),
+                    new XmlFormatter(),
                 });
         }
     }

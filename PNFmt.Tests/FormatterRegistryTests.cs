@@ -49,6 +49,10 @@ namespace PNFmt.Tests
             Assert.Equal("resx", resxFormatter.Name);
             Assert.Equal("rsp", rspFormatter.Name);
             Assert.Equal("slnx", slnxFormatter.Name);
+            Assert.True(registry.TryGetFormatter("View.XAML", out var xamlFormatter));
+            Assert.True(registry.TryGetFormatter("Data.XML", out var xmlFormatter));
+            Assert.Equal("xaml", xamlFormatter.Name);
+            Assert.Equal("xml", xmlFormatter.Name);
         }
 
         private sealed class TestFormatter : IFileFormatter

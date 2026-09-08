@@ -63,5 +63,7 @@ namespace PNFmt
         public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
         public const string ResxSortComparer = "pnfmt_resx_sort_comparer";
         public const string SortEntries = "pnfmt_sort_entries";
+        public const string XamlFormat = "pnfmt_xaml_format";
+        public const string XmlFormat = "pnfmt_xml_format";
     }
 }
