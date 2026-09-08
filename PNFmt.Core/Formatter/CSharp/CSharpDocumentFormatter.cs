@@ -8,7 +8,6 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Formatting;
-using Microsoft.CodeAnalysis.Formatting;
 using Microsoft.CodeAnalysis.Host.Mef;
 using Microsoft.CodeAnalysis.Text;
 
@@ -39,6 +38,12 @@ namespace PNFmt
             }
 
             diagnostic = null;
+            var sourceRoot = tree.GetRoot();
+            if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries))
+            {
+                sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text)).Visit(sourceRoot);
+            }
+
             using (var workspace = new AdhocWorkspace(Host.Value))
             {
                 // These paths only identify in-memory documents; no project/config file
@@ -51,7 +56,7 @@ namespace PNFmt
                     SourceText.From(CreateConfiguration(text, settings)),
                     filePath: Path.Combine(directory, ".globalconfig")).Project;
                 var document = project.AddDocument(
-                    "Source.cs", tree.GetRoot(), filePath: Path.Combine(directory, "Source.cs"));
+                    "Source.cs", sourceRoot, filePath: Path.Combine(directory, "Source.cs"));
                 var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document)
                     .GetAwaiter().GetResult();
                 var formattedText = formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
@@ -60,13 +65,12 @@ namespace PNFmt
                 // In particular, literals (including raw strings) and inactive #if text
                 // must remain byte-for-byte identical as text. Fail closed if a formatting
                 // service ever proposes a change to either.
-                var originalRoot = tree.GetRoot();
                 var resultTree = CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options);
                 var resultRoot = resultTree.GetRoot();
                 if (resultTree.GetDiagnostics().Any(item => item.Severity == DiagnosticSeverity.Error)
-                    || !originalRoot.DescendantTokens().Select(token => token.Text)
+                    || !sourceRoot.DescendantTokens().Select(token => token.Text)
                         .SequenceEqual(resultRoot.DescendantTokens().Select(token => token.Text))
-                    || !ProtectedTrivia(originalRoot).SequenceEqual(ProtectedTrivia(resultRoot)))
+                    || !ProtectedTrivia(tree.GetRoot()).SequenceEqual(ProtectedTrivia(resultRoot)))
                 {
                     diagnostic = new FormatterDiagnostic(
                         "PNFMT003", "C# formatting skipped because protected source text would change.", null);
