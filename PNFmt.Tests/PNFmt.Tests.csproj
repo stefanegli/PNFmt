@@ -25,6 +25,13 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Remove="Formatter\Xml\_files\**\*" />
+        <Content Include="Formatter\Xml\_files\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
         <Compile Remove="Formatter\CSharp\_files\**\*" />
         <None Remove="Formatter\CSharp\_files\**\*" />
         <Content Include="Formatter\CSharp\_files\**\*">

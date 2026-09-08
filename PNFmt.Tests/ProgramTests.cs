@@ -13,6 +13,51 @@ namespace PNFmt.Tests
     public sealed class ProgramTests
     {
         [Fact]
+        public void Xml_and_xaml_cli_support_defaults_preview_filtering_and_nested_indentation()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                directory.Write("nested/.editorconfig", "[*.xaml]\nindent_size = 2\n");
+                var xml = directory.Write("Data.xml", "<root><z/><a/></root>");
+                var xaml = directory.Write("nested/View.xaml",
+                    "<Grid xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><TextBlock><Run Text='A'/><Run Text='B'/></TextBlock><Button/></Grid>");
+                var unrelated = directory.Write("Other.ini", "z=2\na=1");
+                var originalXml = File.ReadAllText(xml);
+                var originalXaml = File.ReadAllText(xaml);
+                Assert.Equal(1, Run("--all", "--check", "--recursive", "--formatter", "xml,xaml", directory.Path).ExitCode);
+                Assert.Equal(0, Run("--all", "--dry-run", "--recursive", "--formatter", "xml,xaml", directory.Path).ExitCode);
+                Assert.Equal(originalXml, File.ReadAllText(xml));
+                Assert.Equal(originalXaml, File.ReadAllText(xaml));
+                var result = Run("--all", "--recursive", "--formatter", "xml,xaml", "-m:4", directory.Path);
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Updated 2", result.Output);
+                Assert.Equal("<root>\n    <z/>\n    <a/>\n</root>", File.ReadAllText(xml));
+                Assert.Contains("\n  <TextBlock><Run Text='A'/><Run Text='B'/></TextBlock>\n  <Button/>\n", File.ReadAllText(xaml));
+                Assert.Equal("z=2\na=1", File.ReadAllText(unrelated));
+                Assert.Equal(0, Run("--all", "--check", "--recursive", "--formatter", "xml,xaml", directory.Path).ExitCode);
+            }
+        }
+
+        [Theory]
+        [InlineData("Broken.xml", "XML001")]
+        [InlineData("Broken.xaml", "XAML001")]
+        public void Xml_and_xaml_cli_report_invalid_input_without_writing(string name, string code)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var file = directory.Write(name, "<!DOCTYPE root SYSTEM 'file:///missing.dtd'><root/>");
+                var original = File.ReadAllBytes(file);
+                var result = Run("--lint", file);
+                Assert.Equal(1, result.ExitCode);
+                Assert.Contains("warning " + code, result.Output);
+                Assert.Contains("skipped 1", result.Output);
+                Assert.Equal(original, File.ReadAllBytes(file));
+            }
+        }
+
+        [Fact]
         public void Csharp_cli_preserves_encoding_skips_generated_files_and_honors_exclusions()
         {
             using (var directory = new TemporaryDirectory())

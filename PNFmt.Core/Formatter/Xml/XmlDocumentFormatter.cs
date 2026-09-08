@@ -62,13 +62,15 @@ namespace PNFmt
             {
                 while (reader.Read())
                 {
-                    if (reader.Depth > 256)
-                    {
-                        throw new XmlException("Formatting supports XML nesting up to 256 levels.");
-                    }
-
                     if (reader.NodeType == XmlNodeType.Element)
                     {
+                        if (reader.Depth >= 256)
+                        {
+                            var location = (IXmlLineInfo)reader;
+                            throw new XmlException("Formatting supports XML nesting up to 256 levels.", null,
+                                location.LineNumber, location.LinePosition);
+                        }
+
                         elements.Enqueue(new Node
                         {
                             IsElement = true,

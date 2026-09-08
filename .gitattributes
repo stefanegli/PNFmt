@@ -3,4 +3,5 @@
 *.props text eol=crlf
 *.slnx text eol=crlf
 PNFmt.Tests/Formatter/CSharp/_files/** text eol=lf -whitespace
+PNFmt.Tests/Formatter/Xml/_files/** text eol=lf -whitespace
 Snapshots/** text eol=lf -whitespace

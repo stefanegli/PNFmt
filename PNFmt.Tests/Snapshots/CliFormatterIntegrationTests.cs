@@ -20,6 +20,8 @@ namespace PNFmt.Tests.Snapshots
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
                 yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };
                 yield return new object[] { "Slnx", "Solution.slnx", "slnx" };
+                yield return new object[] { "Xml", "Data.xml", "xml" };
+                yield return new object[] { "Xml", "View.xaml", "xaml" };
             }
         }
 
@@ -62,6 +64,8 @@ namespace PNFmt.Tests.Snapshots
                 case "ini": return new IniFormatter();
                 case "rsp": return new RspFormatter();
                 case "slnx": return new SlnxFormatter();
+                case "xml": return new XmlFormatter();
+                case "xaml": return new XamlFormatter();
                 default: throw new ArgumentOutOfRangeException(nameof(formatterName));
             }
         }

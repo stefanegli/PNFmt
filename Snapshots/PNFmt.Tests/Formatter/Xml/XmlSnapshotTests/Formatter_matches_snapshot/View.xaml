@@ -1,0 +1,19 @@
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Example">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Zebra" Color="Blue"/>
+        <Style x:Key="Alpha" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="{StaticResource Zebra}"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        <TextBlock><Run Text="Hello"/><Run Text="world"/> <Bold>!</Bold></TextBlock>
+        <Button Content="{Binding Caption, FallbackValue='A &amp; B'}"/>
+        <local:Inlines><local:Run/><local:Run/> <local:Run/></local:Inlines>
+    </Grid>
+</Window>

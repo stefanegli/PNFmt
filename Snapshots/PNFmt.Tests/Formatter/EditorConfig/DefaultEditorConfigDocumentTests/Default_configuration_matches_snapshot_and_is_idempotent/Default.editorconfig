@@ -31,3 +31,9 @@ pnfmt_sort_entries = true
 
 [*.slnx]
 pnfmt_sort_entries = true
+
+[*.xaml]
+pnfmt_xaml_format = true
+
+[*.xml]
+pnfmt_xml_format = true

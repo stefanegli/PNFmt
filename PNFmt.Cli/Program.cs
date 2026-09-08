@@ -241,6 +241,7 @@ namespace PNFmt.Cli
             writer.WriteLine("  C# formatting requires pnfmt_csharp_format = true; pnfmt_sort_entries also sorts imports.");
             writer.WriteLine("  INI formatting requires an enabled pnfmt_sort_entries or pnfmt_ini_* setting.");
             writer.WriteLine("  RSP and SLNX formatters require pnfmt_sort_entries = true.");
+            writer.WriteLine("  XML and XAML formatting require pnfmt_xml_format or pnfmt_xaml_format = true.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
         }

@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- Formatting preserves the source markup. -->
+<settings xmlns:s='urn:settings' z='last' a='first'>
+  <s:entry key='Zebra' value='A &amp; B'/>
+  <s:entry key='Alpha' value='C > D'/>
+  <message>Hello <b>world</b>!</message>
+  <empty>   </empty>
+  <raw><![CDATA[<tag> & text]]></raw>
+  <protected xml:space='preserve'> <a/><b/> </protected>
+</settings>

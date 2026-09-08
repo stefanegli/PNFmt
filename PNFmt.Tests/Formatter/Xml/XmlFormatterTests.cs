@@ -108,6 +108,30 @@ namespace PNFmt.Tests.Formatter.Xml
         }
 
         [Theory]
+        [InlineData(false, "false")]
+        [InlineData(false, "invalid")]
+        [InlineData(true, "false")]
+        [InlineData(true, "invalid")]
+        public void Shared_sort_setting_and_non_true_activation_do_not_enable_formatting(bool xaml, string setting)
+        {
+            using (var file = new TemporaryMarkup(xaml))
+            {
+                const string Input = "<root><child/></root>";
+                File.WriteAllText(file.Path, Input);
+                file.Enable(setting);
+                Assert.Equal(FileFormatStatus.Skipped, file.Run(true).Status);
+                Assert.Equal(Input, File.ReadAllText(file.Path));
+            }
+        }
+
+        [Fact]
+        public void Excessive_nesting_is_rejected_before_recursive_rendering()
+        {
+            var input = string.Concat(Enumerable.Repeat("<n>", 257)) + string.Concat(Enumerable.Repeat("</n>", 257));
+            Assert.Throws<XmlException>(() => Format(input));
+        }
+
+        [Theory]
         [InlineData(false, "XML001")]
         [InlineData(true, "XAML001")]
         public void Malformed_files_are_skipped_with_a_diagnostic_without_writing(bool xaml, string code)
@@ -142,11 +166,11 @@ namespace PNFmt.Tests.Formatter.Xml
 
             public string Path => System.IO.Path.Combine(this.directory, this.xaml ? "View.xaml" : "Data.xml");
 
-            public void Enable()
+            public void Enable(string value = "true")
             {
-                File.WriteAllText(System.IO.Path.Combine(this.directory, ".editorconfig"), this.xaml
-                    ? "root = true\n[*.xaml]\npnfmt_xaml_format = true\n"
-                    : "root = true\n[*.xml]\npnfmt_xml_format = true\n");
+                File.WriteAllText(System.IO.Path.Combine(this.directory, ".editorconfig"), (this.xaml
+                    ? "root = true\n[*.xaml]\npnfmt_xaml_format = "
+                    : "root = true\n[*.xml]\npnfmt_xml_format = ") + value + "\npnfmt_sort_entries = true\n");
             }
 
             public FileFormatResult Run(bool write)

@@ -1,0 +1,13 @@
+root = true
+
+[*.xml]
+end_of_line = lf
+indent_size = 2
+insert_final_newline = true
+pnfmt_xml_format = true
+
+[*.xaml]
+end_of_line = lf
+indent_size = 4
+insert_final_newline = true
+pnfmt_xaml_format = true

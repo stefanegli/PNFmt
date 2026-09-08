@@ -47,6 +47,12 @@ namespace PNFmt
                 new DefaultSection(
                     "[*.slnx]",
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                new DefaultSection(
+                    "[*.xaml]",
+                    new DefaultSetting(EditorConfigSettingNames.XamlFormat, "true")),
+                new DefaultSection(
+                    "[*.xml]",
+                    new DefaultSetting(EditorConfigSettingNames.XmlFormat, "true")),
             };
 
         public static int CountLegacySettings(string text)

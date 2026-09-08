@@ -17,6 +17,8 @@ Every formatter is opt-in. PNFmt skips a file unless its applicable EditorConfig
 | [`.resx`](docs/formatters/resx.md) | Resource | Sorts resource entries and optionally removes generated schema and documentation content. |
 | [`.rsp`](docs/formatters/rsp.md) | Response | Sorts lines in .NET compiler response files while respecting comment barriers. |
 | [`.slnx`](docs/formatters/slnx.md) | Solution | Orders known solution elements and normalizes XML layout. |
+| [`.xml`](docs/formatters/xml-xaml.md) | XML | Indents structural markup while preserving text, mixed content, and original tags. |
+| [`.xaml`](docs/formatters/xml-xaml.md) | XAML | Indents known layout/resource containers while protecting inline text and custom-container whitespace. |
 
 The linked pages describe each formatter's settings, behavior, and order-sensitivity considerations.
 
@@ -85,7 +87,7 @@ pnfmt --recursive --formatter csproj,resx .
 | `-v`, `--verbose` | Show per-file statuses and detailed errors. |
 | `-m[:N]`, `-maxCpuCount[:N]` | Process up to `N` files concurrently. Without `N`, use the processor count. |
 | `--file-pattern <glob>` | Include files matching the glob. Repeat the option to add patterns. |
-| `--formatter <name>[,<name>...]` | Run only the named formatters: `csharp`, `csproj`, `ini`, `resx`, `rsp`, or `slnx`. |
+| `--formatter <name>[,<name>...]` | Run only the named formatters: `csharp`, `csproj`, `ini`, `resx`, `rsp`, `slnx`, `xml`, or `xaml`. |
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check formatting and report formatter diagnostics without writing files. |
