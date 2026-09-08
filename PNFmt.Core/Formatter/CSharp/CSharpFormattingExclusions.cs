@@ -11,14 +11,12 @@ namespace PNFmt
 {
     internal sealed class CSharpFormattingExclusions
     {
-        private readonly bool protectsEnd;
         private readonly SourceText source;
 
-        private CSharpFormattingExclusions(SourceText source, IReadOnlyList<TextSpan> spans, bool protectsEnd)
+        private CSharpFormattingExclusions(SourceText source, IReadOnlyList<TextSpan> spans)
         {
             this.source = source;
             this.Spans = spans;
-            this.protectsEnd = protectsEnd;
         }
 
         public IReadOnlyList<TextSpan> Spans { get; }
@@ -61,13 +59,13 @@ namespace PNFmt
                 spans.Add(TextSpan.FromBounds(start, source.Length));
             }
 
-            return new CSharpFormattingExclusions(source, spans, depth > 0);
+            return new CSharpFormattingExclusions(source, spans);
         }
 
         public bool Intersects(TextSpan span)
         {
             return this.Spans.Any(excluded => span.Length == 0
-                ? excluded.Contains(span.Start) || (this.protectsEnd && span.Start == this.source.Length)
+                ? excluded.Contains(span.Start) || (span.Start == this.source.Length && excluded.End == this.source.Length)
                 : excluded.OverlapsWith(span));
         }
 

@@ -39,6 +39,13 @@ namespace PNFmt.Tests.Formatter.CSharp
         }
 
         [Fact]
+        public void Closing_marker_at_eof_keeps_its_missing_newline()
+        {
+            const string Protected = "// pnfmt: off\nclass C{ }\n// pnfmt: on";
+            Assert.Equal("using A;\nusing Z;\n" + Protected, Format("using Z;\nusing A;\n" + Protected));
+        }
+
+        [Fact]
         public void Marker_text_inside_literals_or_trailing_comments_does_not_disable_formatting()
         {
             const string Input = "class C{\nstring s=\"// pnfmt: off\"; // pnfmt: off\nvoid M(){ }\n}\n";
