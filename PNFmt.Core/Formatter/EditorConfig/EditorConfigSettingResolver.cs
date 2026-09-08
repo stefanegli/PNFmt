@@ -51,6 +51,7 @@ namespace PNFmt
 
     internal static class EditorConfigSettingNames
     {
+        public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CsProjEmptyLinesBetweenGroups = "pnfmt_csproj_empty_lines_between_groups";
         public const string CsProjSortItemTypes = "pnfmt_csproj_sort_item_types";
         public const string IniGroupByPrefix = "pnfmt_ini_group_by_prefix";

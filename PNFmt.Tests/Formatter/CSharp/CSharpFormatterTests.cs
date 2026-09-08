@@ -1,0 +1,174 @@
+// Copyright (c) 2026 by Stefan Egli. All rights reserved.
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.CodeAnalysis.CSharp;
+using Xunit;
+
+namespace PNFmt.Tests.Formatter.CSharp
+{
+    public sealed class CSharpFormatterTests
+    {
+        [Fact]
+        public void Formats_indentation_spacing_and_braces_without_a_project()
+        {
+            const string Input = "class C{\nvoid M(){\nif(true){\nM();\n}\n}\n}\n";
+            var result = Format(Input, ("indent_size", "2"), ("csharp_new_line_before_open_brace", "all"));
+
+            Assert.Equal("class C\n{\n  void M()\n  {\n    if (true)\n    {\n      M();\n    }\n  }\n}\n", result);
+            Assert.Equal(result, Format(result, ("indent_size", "2"), ("csharp_new_line_before_open_brace", "all")));
+        }
+
+        [Fact]
+        public void Honors_tabs_spacing_and_same_line_braces()
+        {
+            var result = Format("class C\n{\nvoid M()\n{\nif(true)\n{\nM();\n}\n}\n}\n",
+                ("indent_style", "tab"), ("indent_size", "4"), ("tab_width", "4"),
+                ("csharp_new_line_before_open_brace", "none"),
+                ("csharp_space_after_keywords_in_control_flow_statements", "false"));
+
+            Assert.Contains("class C {\n\tvoid M() {\n\t\tif(true) {\n\t\t\tM();", result);
+        }
+
+        [Fact]
+        public void Preserves_literals_while_cleaning_code_whitespace()
+        {
+            const string Input = "class C{\nstring a = @\"first  \r\nsecond  \";  \n"
+                + "string b = \"\"\"\n    first  \n    second\n    \"\"\";  \n}\n";
+            var result = Format(Input, ("trim_trailing_whitespace", "true"), ("end_of_line", "crlf"));
+
+            Assert.Equal(Literals(Input), Literals(result));
+            Assert.Contains(";\r\n", result);
+            Assert.DoesNotContain(";  \n", result);
+            Assert.Equal(result, Format(result, ("trim_trailing_whitespace", "true"), ("end_of_line", "crlf")));
+        }
+
+        [Fact]
+        public void Preserves_inactive_branches_and_directives()
+        {
+            const string Input = "#if FEATURE\nthis is deliberately invalid C#   \n#else\nclass C{\nvoid M(){ }\n}\n#endif\n";
+            var result = Format(Input, ("trim_trailing_whitespace", "true"));
+
+            Assert.Contains("this is deliberately invalid C#   \n", result);
+            Assert.Contains("class C\n{", result);
+            Assert.Contains("#else\n", result);
+            Assert.Equal(result, Format(result, ("trim_trailing_whitespace", "true")));
+        }
+
+        [Theory]
+        [InlineData("class C{", "PNFMT002")]
+        [InlineData("class C { void M( }", "PNFMT002")]
+        public void Invalid_syntax_is_skipped_with_a_diagnostic(string input, string code)
+        {
+            var result = CSharpDocumentFormatter.Format(input, Settings(), out var diagnostic);
+
+            Assert.Equal(input, result);
+            Assert.Equal(code, diagnostic.Code);
+            Assert.Equal(1, diagnostic.LineNumber);
+        }
+
+        [Fact]
+        public void Final_newline_is_optional_and_existing_newlines_are_preserved_by_default()
+        {
+            Assert.Equal("class C { }", Format("class C { }"));
+            Assert.Equal("class C { }\n", Format("class C { }", ("insert_final_newline", "true")));
+            Assert.Equal("class C { }\r\n", Format("class C { }\r\n"));
+            Assert.Equal("", Format("", ("insert_final_newline", "true")));
+        }
+
+        [Fact]
+        public void Concurrent_files_keep_their_own_settings()
+        {
+            Parallel.For(1, 9, width =>
+            {
+                var result = Format("class C\n{\nvoid M() { }\n}\n", ("indent_size", width.ToString()));
+                Assert.Contains("\n" + new string(' ', width) + "void M()", result);
+            });
+        }
+
+        [Fact]
+        public void File_formatter_is_opt_in_and_supports_preview_and_idempotence()
+        {
+            using (var directory = new TemporarySource("class C{\nvoid M(){ }\n}"))
+            {
+                var formatter = new CSharpFormatter();
+                var original = File.ReadAllText(directory.FilePath);
+                Assert.Equal(FileFormatStatus.Skipped, directory.Run(formatter, true).Status);
+                directory.Configure("pnfmt_sort_entries = true\n");
+                Assert.Equal(FileFormatStatus.Skipped, directory.Run(formatter, true).Status);
+                directory.Configure("pnfmt_csharp_format = true\nindent_size = 2\ninsert_final_newline = true\n");
+
+                Assert.Equal(FileFormatStatus.Updated, directory.Run(formatter, false).Status);
+                Assert.Equal(original, File.ReadAllText(directory.FilePath));
+                Assert.Equal(FileFormatStatus.Updated, directory.Run(formatter, true).Status);
+                Assert.Contains("\n  void M()", File.ReadAllText(directory.FilePath));
+                Assert.Equal(FileFormatStatus.Unchanged, directory.Run(formatter, true).Status);
+            }
+        }
+
+        [Fact]
+        public void File_with_syntax_errors_is_not_written()
+        {
+            using (var directory = new TemporarySource("class C{"))
+            {
+                directory.Configure("pnfmt_csharp_format = true\n");
+                var result = directory.Run(new CSharpFormatter(), true);
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal("PNFMT002", Assert.Single(result.Diagnostics).Code);
+                Assert.Equal("class C{", File.ReadAllText(directory.FilePath));
+            }
+        }
+
+        internal static string Format(string text, params (string Key, string Value)[] settings)
+        {
+            var result = CSharpDocumentFormatter.Format(text, Settings(settings), out var diagnostic);
+            Assert.Null(diagnostic);
+            return result;
+        }
+
+        private static Dictionary<string, string> Settings(params (string Key, string Value)[] settings)
+        {
+            return settings.ToDictionary(item => item.Key, item => item.Value);
+        }
+
+        private static string[] Literals(string text)
+        {
+            return CSharpSyntaxTree.ParseText(text).GetRoot().DescendantTokens()
+                .Where(token => token.Kind().ToString().Contains("StringLiteralToken"))
+                .Select(token => token.Text).ToArray();
+        }
+
+        private sealed class TemporarySource : IDisposable, IFormatterLog
+        {
+            private readonly string directory = Path.Combine(Path.GetTempPath(), "PNFmtCSharpTests", Guid.NewGuid().ToString("N"));
+
+            public TemporarySource(string text)
+            {
+                Directory.CreateDirectory(this.directory);
+                File.WriteAllText(this.FilePath, text);
+                this.Configure(string.Empty);
+            }
+
+            public string FilePath => Path.Combine(this.directory, "Source.cs");
+
+            public void Configure(string settings)
+            {
+                File.WriteAllText(Path.Combine(this.directory, ".editorconfig"), "root = true\n\n[*.cs]\n" + settings);
+            }
+
+            public FileFormatResult Run(IFileFormatter formatter, bool write)
+            {
+                return formatter.Format(new FileFormatRequest(this.FilePath, write, false, this));
+            }
+
+            public void Dispose() => Directory.Delete(this.directory, true);
+
+            public void Write(Exception exception) { }
+
+            public void WriteLine(string message) { }
+        }
+    }
+}

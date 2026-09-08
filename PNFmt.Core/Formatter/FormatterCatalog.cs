@@ -9,6 +9,7 @@ namespace PNFmt
             return new FormatterRegistry(
                 new IFileFormatter[]
                 {
+                    new CSharpFormatter(),
                     new CsProjFormatter(),
                     new IniFormatter(),
                     new ResxFormatter(),

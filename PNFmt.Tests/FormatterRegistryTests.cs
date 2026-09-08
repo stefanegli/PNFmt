@@ -35,6 +35,8 @@ namespace PNFmt.Tests
         {
             var registry = FormatterCatalog.CreateDefault();
 
+            Assert.True(registry.TryGetFormatter("Source.CS", out var csharpFormatter));
+            Assert.Equal("csharp", csharpFormatter.Name);
             Assert.True(registry.TryGetFormatter("Project.CSPROJ", out var csprojFormatter));
             Assert.True(registry.TryGetFormatter(".EDITORCONFIG", out var editorConfigFormatter));
             Assert.True(registry.TryGetFormatter("settings.INI", out var iniFormatter));
