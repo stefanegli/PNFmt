@@ -27,7 +27,8 @@ namespace PNFmt
                     request.FilePath,
                     EditorConfigSettingNames.SortEntries,
                     request.Log),
-                SlnxDocumentFormatter.Format);
+                SlnxDocumentFormatter.Format,
+                xml: true);
         }
     }
 }

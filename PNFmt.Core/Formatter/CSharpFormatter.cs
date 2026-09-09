@@ -32,7 +32,8 @@ namespace PNFmt
                     generated = CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings);
                     return generated ? text : CSharpDocumentFormatter.Format(text, settings, out diagnostic);
                 },
-                preserveEncoding: true);
+                preserveEncoding: true,
+                shouldSkip: () => generated || diagnostic is not null);
             if (generated)
             {
                 request.Log.WriteLine($"Skipping generated C# file {request.FilePath}.");

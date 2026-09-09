@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Xml.Linq;
 using LibGit2Sharp;
 using PNFmt.Cli;
@@ -12,6 +13,31 @@ namespace PNFmt.Tests
 {
     public sealed class ProgramTests
     {
+        [Fact]
+        public void Check_and_dry_run_detect_resx_bom_changes_without_writing()
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*.resx]\ncharset = utf-8\n"
+                    + "pnfmt_sort_entries = true\npnfmt_resx_remove_xsd_schema = true\n"
+                    + "pnfmt_resx_remove_documentation_comment = true\n");
+                var path = directory.Write("Resources.resx", "<root>"
+                    + "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>"
+                    + "<data name=\"Text\"><value>hello</value></data></root>");
+                Assert.Equal(0, Run("--all", path).ExitCode);
+                var formatted = File.ReadAllBytes(path);
+                File.WriteAllBytes(path, new UTF8Encoding(true).GetPreamble().Concat(formatted).ToArray());
+                var withBom = File.ReadAllBytes(path);
+
+                Assert.Equal(1, Run("--all", "--check", path).ExitCode);
+                Assert.Equal(0, Run("--all", "--dry-run", path).ExitCode);
+                Assert.Equal(withBom, File.ReadAllBytes(path));
+                Assert.Equal(0, Run("--all", path).ExitCode);
+                Assert.Equal(formatted, File.ReadAllBytes(path));
+                Assert.Equal(0, Run("--all", "--check", path).ExitCode);
+            }
+        }
+
         [Fact]
         public void Xml_and_xaml_cli_support_defaults_preview_filtering_and_nested_indentation()
         {

@@ -121,6 +121,22 @@ pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config
 
 PNFmt continues to accept legacy setting names as fallbacks and reports warning `PNFMT001` when one is used or ignored. A matching `pnfmt_*` setting takes precedence.
 
+### File encoding
+
+All enabled formatters honor EditorConfig's `charset` setting, including changes that affect only encoding or the BOM:
+
+| `charset` | Output encoding |
+| --- | --- |
+| `utf-8` | UTF-8 without a BOM. |
+| `utf-8-bom` | UTF-8 with a BOM. |
+| `utf-16le` | UTF-16 little-endian with a BOM. |
+| `utf-16be` | UTF-16 big-endian with a BOM. |
+| `latin1` | ISO-8859-1 without a BOM. |
+
+Values are case-insensitive and follow normal EditorConfig inheritance. `charset` alone does not enable a formatter. Missing, invalid, or `unset` values retain each formatter's existing encoding behavior. `--check` detects encoding changes and `--dry-run` previews them without writing.
+
+For XML-based files, an explicit charset updates the XML declaration to match the output encoding, adding a declaration when required for non-UTF-8 output. Input BOMs and XML declarations identify the original encoding. BOM-less XML without an encoding declaration is read as UTF-8. Other BOM-less text is read as UTF-8, or as Latin-1 when `charset = latin1`. Encoding failures leave the original file untouched; characters are never silently replaced.
+
 ### Repository settings
 
 PNFmt reads optional tool settings from `.pnfmt` at the Git repository root. Command-line options take precedence. The currently supported setting controls the maximum number of files processed concurrently:

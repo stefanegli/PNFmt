@@ -65,7 +65,7 @@ namespace PNFmt
         private bool InsertFinalNewline { get; }
         private string NewLine { get; } = Environment.NewLine;
 
-        public byte[] Serialize(XDocument document)
+        public byte[] Serialize(XDocument document, Encoding encoding = null)
         {
             // xml:space on resource entries also preserves indentation around <value>.
             // Recreate that layout each time; leave the value's own whitespace untouched.
@@ -84,7 +84,7 @@ namespace PNFmt
 
             var writerSettings = new XmlWriterSettings
             {
-                Encoding = Encoding.GetEncoding(document.Declaration?.Encoding ?? "utf-8"),
+                Encoding = encoding ?? Encoding.GetEncoding(document.Declaration?.Encoding ?? "utf-8"),
                 Indent = true,
                 IndentChars = this.IndentChars,
                 NewLineChars = this.NewLine,

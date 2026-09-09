@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace PNFmt
@@ -12,7 +13,9 @@ namespace PNFmt
             FileFormatRequest request,
             bool isActive,
             Func<string, string> formatDocument,
-            bool preserveEncoding = false)
+            bool preserveEncoding = false,
+            bool xml = false,
+            Func<bool> shouldSkip = null)
         {
             if (request is null)
             {
@@ -29,17 +32,37 @@ namespace PNFmt
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
-            var file = preserveEncoding ? EncodedTextFile.Read(request.FilePath) : null;
+            var encoding = FileEncoding.Load(request.FilePath, request.Log);
+            var file = preserveEncoding || encoding is not null
+                ? EncodedTextFile.Read(request.FilePath, encoding, xml && encoding is not null) : null;
             var original = file?.Text ?? File.ReadAllText(request.FilePath);
             var formatted = formatDocument(original);
-            if (string.Equals(original, formatted, StringComparison.Ordinal))
+            if (shouldSkip?.Invoke() == true)
+            {
+                return new FileFormatResult(FileFormatStatus.Skipped);
+            }
+
+            if (xml && encoding is not null)
+            {
+                formatted = FileEncoding.UpdateXmlDeclaration(formatted, encoding);
+            }
+
+            var bytes = encoding is not null ? FileEncoding.GetBytes(formatted, encoding) : null;
+            var unchanged = bytes is not null
+                ? File.ReadAllBytes(request.FilePath).SequenceEqual(bytes)
+                : string.Equals(original, formatted, StringComparison.Ordinal);
+            if (unchanged)
             {
                 return new FileFormatResult(FileFormatStatus.Unchanged);
             }
 
             if (request.WriteChanges)
             {
-                if (file is not null)
+                if (bytes is not null)
+                {
+                    File.WriteAllBytes(request.FilePath, bytes);
+                }
+                else if (file is not null)
                 {
                     file.Write(request.FilePath, formatted);
                 }

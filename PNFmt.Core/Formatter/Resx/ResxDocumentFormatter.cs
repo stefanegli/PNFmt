@@ -146,9 +146,11 @@ namespace PNFmt
 
             byte[] formattedBytes = null;
             var hasChanges = hasContentChanges;
-            if (this.Settings.Layout?.HasOverrides == true)
+            var encoding = FileEncoding.Load(resxPath, this.Log);
+            if (this.Settings.Layout?.HasOverrides == true || encoding is not null)
             {
-                formattedBytes = this.Settings.Layout.Serialize(document);
+                var layout = this.Settings.Layout ?? new ResxLayoutSettings(new Dictionary<string, string>());
+                formattedBytes = layout.Serialize(document, encoding);
                 hasChanges = !File.ReadAllBytes(resxPath).SequenceEqual(formattedBytes);
             }
 

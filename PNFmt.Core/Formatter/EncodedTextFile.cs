@@ -19,7 +19,7 @@ namespace PNFmt
 
         public string Text { get; }
 
-        public static EncodedTextFile Read(string path)
+        public static EncodedTextFile Read(string path, Encoding configuredEncoding = null, bool xml = false)
         {
             var bytes = File.ReadAllBytes(path);
             // Check UTF-32 before UTF-16: their little-endian BOMs share a prefix.
@@ -41,8 +41,26 @@ namespace PNFmt
                 }
             }
 
-            // BOM-less files must be valid UTF-8. Do not guess legacy code pages or
-            // replace undecodable bytes and then overwrite the user's original data.
+            if (xml)
+            {
+                // The declaration describes the input, independently of the requested output.
+                var declarationEncoding = FileEncoding.ReadXmlDeclaration(
+                    Encoding.ASCII.GetString(bytes));
+                if (declarationEncoding is not null)
+                {
+                    return new EncodedTextFile(declarationEncoding.GetString(bytes), declarationEncoding);
+                }
+            }
+
+            // For non-XML text without a BOM, an explicit Latin-1 setting describes
+            // the input too. XML without a declaration defaults to UTF-8 independently.
+            // Guessing UTF-8 for Latin-1 text can corrupt it on a second run.
+            if (!xml && configuredEncoding?.CodePage == 28591)
+            {
+                return new EncodedTextFile(configuredEncoding.GetString(bytes), configuredEncoding);
+            }
+
+            // Otherwise require valid UTF-8; never replace undecodable input bytes.
             var utf8 = new UTF8Encoding(false, true);
             return new EncodedTextFile(utf8.GetString(bytes), utf8);
         }

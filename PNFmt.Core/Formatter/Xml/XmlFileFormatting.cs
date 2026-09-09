@@ -32,7 +32,9 @@ namespace PNFmt
                         return text;
                     }
                 },
-                preserveEncoding: true);
+                preserveEncoding: true,
+                xml: true,
+                shouldSkip: () => diagnostic is not null);
             return diagnostic is null ? result : new FileFormatResult(FileFormatStatus.Skipped, new[] { diagnostic });
         }
     }

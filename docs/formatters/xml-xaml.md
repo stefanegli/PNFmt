@@ -57,7 +57,7 @@ Resource dictionary order, setter order, bindings, markup extensions, and namesp
 
 ## Encoding and diagnostics
 
-Both formatters preserve UTF-8 with or without a BOM, and BOM-marked UTF-16/UTF-32 in either byte order. The XML declaration is retained exactly. BOM-less files must be valid UTF-8; legacy code pages are not guessed, and undecodable files are reported as errors without rewriting them.
+Both formatters honor the shared [EditorConfig charset settings](../../README.md#file-encoding), updating the XML declaration when choosing an output encoding. Without a supported charset, they preserve UTF-8 with or without a BOM and BOM-marked UTF-16/UTF-32 in either byte order, retaining the XML declaration exactly. With an explicit charset, input BOMs and XML encoding declarations are respected, including Latin-1 declarations. Undecodable files are reported as errors without rewriting them.
 
 Malformed XML, documents containing a DTD, and nesting beyond 256 levels are skipped with `XML001` or `XAML001`. External entities and schemas are never loaded. Skipped files remain unchanged, and diagnostics include a line number when available.
 

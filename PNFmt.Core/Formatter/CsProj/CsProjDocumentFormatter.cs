@@ -77,11 +77,29 @@ namespace PNFmt
             }
 
             var formattedText = FormatDocument(document, this.Settings);
-            if (!string.Equals(originalText, formattedText, StringComparison.Ordinal))
+            var encoding = FileEncoding.Load(projectPath, this.Log);
+            byte[] formattedBytes = null;
+            if (encoding is not null)
+            {
+                formattedText = FileEncoding.UpdateXmlDeclaration(formattedText, encoding);
+                formattedBytes = FileEncoding.GetBytes(formattedText, encoding);
+            }
+
+            var hasChanges = formattedBytes is not null
+                ? !File.ReadAllBytes(projectPath).SequenceEqual(formattedBytes)
+                : !string.Equals(originalText, formattedText, StringComparison.Ordinal);
+            if (hasChanges)
             {
                 if (writeChanges)
                 {
-                    File.WriteAllText(projectPath, formattedText);
+                    if (formattedBytes is not null)
+                    {
+                        File.WriteAllBytes(projectPath, formattedBytes);
+                    }
+                    else
+                    {
+                        File.WriteAllText(projectPath, formattedText);
+                    }
                 }
 
                 var action = writeChanges ? "Updating" : "Would update";
