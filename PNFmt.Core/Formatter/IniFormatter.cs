@@ -30,7 +30,10 @@ namespace PNFmt
                     settings.SortEntries,
                     settings.SortGroups,
                     settings.GroupByPrefix,
-                    settings.MergeGroups));
+                    settings.MergeGroups,
+                    isEditorConfig: request.FilePath.EndsWith(
+                        ".editorconfig",
+                        StringComparison.OrdinalIgnoreCase)));
         }
     }
 }

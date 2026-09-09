@@ -13,7 +13,8 @@ namespace PNFmt
             bool sortEntries = true,
             bool sortGroups = false,
             bool groupByPrefix = false,
-            bool mergeGroups = false)
+            bool mergeGroups = false,
+            bool isEditorConfig = false)
         {
             if (text is null)
             {
@@ -27,7 +28,7 @@ namespace PNFmt
                 .Split(new[] { '\n' }, StringSplitOptions.None);
             if (mergeGroups)
             {
-                lines = MergeGroups(lines);
+                lines = isEditorConfig ? MergeAdjacentGroups(lines) : MergeGroups(lines);
             }
 
             var output = new List<string>();
@@ -74,7 +75,9 @@ namespace PNFmt
                 output.RemoveAt(output.Count - 1);
             }
 
-            var orderedOutput = sortGroups ? SortGroups(output) : output;
+            // Glob overlap cannot be established from lexical header order. Keep
+            // EditorConfig sections in occurrence order even when sorting is requested.
+            var orderedOutput = sortGroups && !isEditorConfig ? SortGroups(output) : output;
             return orderedOutput.Count == 0
                 ? string.Empty
                 : string.Join(newLine, orderedOutput) + newLine;
@@ -94,6 +97,8 @@ namespace PNFmt
             bool sortEntries,
             bool groupByPrefix)
         {
+            // OrderBy is stable: duplicate keys (including casing variants) must
+            // retain their assignment order, also after merging adjacent sections.
             IEnumerable<PropertyLine> orderedProperties = sortEntries || groupByPrefix
                 ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
                 : properties;
@@ -209,6 +214,29 @@ namespace PNFmt
                 prefix,
                 parsedProperty.Formatted);
             return true;
+        }
+
+        private static IReadOnlyList<string> MergeAdjacentGroups(IReadOnlyList<string> lines)
+        {
+            var output = new List<string>();
+            string previousHeader = null;
+            foreach (var line in lines)
+            {
+                if (IsSectionHeader(line))
+                {
+                    var header = line.Trim();
+                    if (string.Equals(previousHeader, header, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    previousHeader = header;
+                }
+
+                output.Add(line);
+            }
+
+            return output;
         }
 
         private static IReadOnlyList<string> MergeGroups(IReadOnlyList<string> lines)

@@ -225,7 +225,7 @@ namespace PNFmt.Cli
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
             writer.WriteLine("      --lint        Report formatter diagnostics and formatting changes; exit 1 if found.");
             writer.WriteLine("      --write-default-config");
-            writer.WriteLine("                     Write all-enabled .editorconfig and missing .pnfmt defaults.");
+            writer.WriteLine("                     Write formatter .editorconfig and missing .pnfmt defaults.");
             writer.WriteLine("      --migrate-legacy-config <true|false>");
             writer.WriteLine("                     Import legacy formatter settings using current names.");
             writer.WriteLine("      --remove-legacy-config <true|false>");

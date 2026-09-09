@@ -58,7 +58,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 "[*.ini]\n"
                 + "alpha = unchanged\n"
                 + "pnfmt_ini_group_by_prefix = true\n"
-                + "pnfmt_ini_merge_groups = true\n"
+                + "pnfmt_ini_merge_groups = false\n"
                 + "pnfmt_ini_sort_groups = false\n"
                 + "pnfmt_sort_entries = false\n"
                 + "zulu = unchanged",
@@ -140,6 +140,22 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         {
             Assert.Throws<InvalidDataException>(
                 () => DefaultEditorConfigDocument.Update(contents));
+        }
+
+        [Fact]
+        public void Defaults_do_not_reuse_differently_cased_glob_headers()
+        {
+            const string Existing = "[*.EDITORCONFIG]\npnfmt_sort_entries = false\n";
+
+            var updated = DefaultEditorConfigDocument.Update(Existing);
+
+            Assert.StartsWith(Existing, updated);
+            Assert.Contains(
+                "[*.editorconfig]\n"
+                + "pnfmt_ini_merge_groups = false\n"
+                + "pnfmt_ini_sort_groups = false\n"
+                + "pnfmt_sort_entries = true\n",
+                updated);
         }
 
         private static int CountOccurrences(string text, string value)

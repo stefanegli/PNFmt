@@ -1,0 +1,8 @@
+root = true
+
+[*.resx]
+pnfmt_sort_entries = true
+[*]
+indent_size = 4
+[*.resx]
+indent_size = 2

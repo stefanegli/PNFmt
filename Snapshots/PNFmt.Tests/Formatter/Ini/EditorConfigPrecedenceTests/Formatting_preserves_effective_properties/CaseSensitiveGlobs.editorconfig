@@ -1,0 +1,6 @@
+root = true
+
+[*.resx]
+indent_size = 2
+[*.RESX]
+indent_size = 4

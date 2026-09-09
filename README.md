@@ -93,7 +93,7 @@ pnfmt --recursive --formatter csproj,resx .
 | `-n`, `--dry-run` | Preview changes without writing files and return exit code `0`. |
 | `--check` | Preview changes without writing files and return exit code `1` when changes are needed. |
 | `--lint` | Check formatting and report formatter diagnostics without writing files. |
-| `--write-default-config` | Add missing all-enabled settings to `.editorconfig` and create `.pnfmt` when missing. |
+| `--write-default-config` | Add missing formatter defaults to `.editorconfig` and create `.pnfmt` when missing. |
 | `--migrate-legacy-config <true\|false>` | Import legacy formatter settings using current PNFmt names. |
 | `--remove-legacy-config <true\|false>` | Remove legacy formatter settings after optional migration. |
 | `-h`, `--help` | Show help. |
@@ -105,7 +105,7 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Run the following command to add defaults that enable every formatter and optional cleanup behavior:
+Run the following command to add defaults that enable every formatter. Section sorting and merging are disabled for `.editorconfig` and `.ini` files; other optional cleanup behaviors are enabled:
 
 ```powershell
 pnfmt --write-default-config .

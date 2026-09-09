@@ -27,13 +27,14 @@ namespace PNFmt
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.editorconfig]",
-                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "false"),
+                    new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.ini]",
                     new DefaultSetting(EditorConfigSettingNames.IniGroupByPrefix, "true"),
-                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "true"),
-                    new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "false"),
+                    new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.resx]",
@@ -129,7 +130,7 @@ namespace PNFmt
                 .Where(index => string.Equals(
                     lines[index].Trim(),
                     header,
-                    StringComparison.OrdinalIgnoreCase))
+                    StringComparison.Ordinal))
                 .ToArray();
         }
 
