@@ -50,6 +50,12 @@ namespace PNFmt
                 sourceRoot = new CSharpModifierSorter(settings, CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
             }
 
+            if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpSortMembers))
+            {
+                sourceRoot = new CSharpMemberSorter(settings, TextFileFormatting.DetectNewLine(text),
+                    CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
+            }
+
             using (var workspace = new AdhocWorkspace(Host.Value))
             {
                 // These paths only identify in-memory documents; no project/config file

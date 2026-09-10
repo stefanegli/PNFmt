@@ -53,6 +53,10 @@ namespace PNFmt
     {
         public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CSharpCollapseBlankLines = "pnfmt_csharp_collapse_blank_lines";
+        public const string CSharpMemberAccessibilityOrder = "pnfmt_csharp_member_accessibility_order";
+        public const string CSharpMemberOrder = "pnfmt_csharp_member_order";
+        public const string CSharpSortMembers = "pnfmt_csharp_sort_members";
+        public const string CSharpSortMembersByName = "pnfmt_csharp_sort_members_by_name";
         public const string CSharpSortModifiers = "pnfmt_csharp_sort_modifiers";
         public const string CsProjEmptyLinesBetweenGroups = "pnfmt_csproj_empty_lines_between_groups";
         public const string CsProjSortItemTypes = "pnfmt_csproj_sort_item_types";

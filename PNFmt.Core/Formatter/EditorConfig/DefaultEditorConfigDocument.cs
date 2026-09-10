@@ -19,6 +19,10 @@ namespace PNFmt
                     "[*.cs]",
                     new DefaultSetting(EditorConfigSettingNames.CSharpCollapseBlankLines, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpFormat, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpMemberAccessibilityOrder, CSharpMemberSorter.DefaultAccessibilityOrder),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpMemberOrder, CSharpMemberSorter.DefaultOrder),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpSortMembers, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpSortMembersByName, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortModifiers, "true"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(

@@ -21,6 +21,21 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
+        public void Csharp_member_sorting_defaults_preserve_existing_preferences()
+        {
+            const string Existing = "[*.cs]\npnfmt_csharp_sort_members = false\n"
+                + "pnfmt_csharp_member_order = method,property\n"
+                + "pnfmt_csharp_member_accessibility_order = none\n"
+                + "pnfmt_csharp_sort_members_by_name = false\n";
+            var updated = DefaultEditorConfigDocument.Update(Existing);
+            Assert.Contains("pnfmt_csharp_sort_members = false", updated);
+            Assert.Contains("pnfmt_csharp_member_order = method,property", updated);
+            Assert.Contains("pnfmt_csharp_member_accessibility_order = none", updated);
+            Assert.Contains("pnfmt_csharp_sort_members_by_name = false", updated);
+            Assert.Equal(updated, DefaultEditorConfigDocument.Update(updated));
+        }
+
+        [Fact]
         public void Existing_rules_around_the_managed_block_are_preserved()
         {
             const string Existing =

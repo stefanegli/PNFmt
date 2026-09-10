@@ -190,6 +190,27 @@ namespace PNFmt.Tests.Formatter.CSharp
         }
 
         [Fact]
+        public void File_formatter_member_sorting_honors_editorconfig_and_preview()
+        {
+            const string Input = "class C { public void Z() { } private void A() { } }";
+            using (var directory = new TemporarySource(Input))
+            {
+                var formatter = new CSharpFormatter();
+                directory.Configure("pnfmt_csharp_sort_members = true\n");
+                Assert.Equal(FileFormatStatus.Skipped, directory.Run(formatter, true).Status);
+                Assert.Equal(Input, File.ReadAllText(directory.FilePath));
+                directory.Configure("pnfmt_csharp_format = true\npnfmt_csharp_sort_members = true\n"
+                    + "pnfmt_csharp_member_accessibility_order = private,public\n");
+                Assert.Equal(FileFormatStatus.Updated, directory.Run(formatter, false).Status);
+                Assert.Equal(Input, File.ReadAllText(directory.FilePath));
+                Assert.Equal(FileFormatStatus.Updated, directory.Run(formatter, true).Status);
+                var result = File.ReadAllText(directory.FilePath);
+                Assert.True(result.IndexOf("void A", StringComparison.Ordinal) < result.IndexOf("void Z", StringComparison.Ordinal));
+                Assert.Equal(FileFormatStatus.Unchanged, directory.Run(formatter, true).Status);
+            }
+        }
+
+        [Fact]
         public void File_with_syntax_errors_is_not_written()
         {
             using (var directory = new TemporarySource("class C{"))

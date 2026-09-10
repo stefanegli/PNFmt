@@ -11,7 +11,7 @@ Every formatter is opt-in. PNFmt skips a file unless its applicable EditorConfig
 
 | Files | Formatter | Status | What it does |
 | --- | --- | --- | --- |
-| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace, with optional import/modifier sorting and declaration blank-line cleanup. Preserves encoding and supports exclusion regions. |
+| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace, with optional import, modifier, and member sorting plus declaration blank-line cleanup. Member ordering is configurable and preserves storage declaration order. Supports exclusion regions. |
 | [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, sorts safe properties and items, and reports project-structure diagnostics. |
 | [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Experimental | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
 | [`.resx`](docs/formatters/resx.md) | Resource | Stable | Sorts resource entries and optionally removes generated schema and documentation content. |
