@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Benchmarks/">
+    <Project Path="benchmarks/PNFmt.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/Source/">
     <Project Path="PNFmt.Cli/PNFmt.Cli.csproj" />
     <Project Path="PNFmt.Core/PNFmt.Core.csproj" />

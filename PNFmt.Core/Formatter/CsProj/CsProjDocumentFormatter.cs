@@ -273,26 +273,7 @@ namespace PNFmt
                 return groups;
             }
 
-            var comparer = StringComparer.OrdinalIgnoreCase;
-            var nameToIndices = new Dictionary<string, List<int>>(comparer);
-            for (var i = 0; i < groups.Count; i++)
-            {
-                var name = groups[i].Element.Name.LocalName;
-                if (!nameToIndices.TryGetValue(name, out var indices))
-                {
-                    indices = new List<int>();
-                    nameToIndices.Add(name, indices);
-                }
-
-                indices.Add(i);
-            }
-
-            var edges = new List<HashSet<int>>(groups.Count);
-            var indegree = new int[groups.Count];
-            for (var i = 0; i < groups.Count; i++)
-            {
-                edges.Add(new HashSet<int>());
-            }
+            var dependencies = new OriginalOrderDependencies(groups.Select(group => group.Element.Name.LocalName).ToArray());
 
             for (var i = 0; i < groups.Count; i++)
             {
@@ -326,109 +307,13 @@ namespace PNFmt
                         continue;
                     }
 
-                    if (!nameToIndices.TryGetValue(referenceName, out var indices))
-                    {
-                        continue;
-                    }
-
-                    foreach (var referencedIndex in indices)
-                    {
-                        if (referencedIndex == i)
-                        {
-                            continue;
-                        }
-
-                        // MSBuild expands properties in document order. Preserve the
-                        // original relative order of a reference and every assignment
-                        // to the referenced property instead of "fixing" a forward
-                        // reference and thereby changing its evaluated value.
-                        var earlierIndex = Math.Min(referencedIndex, i);
-                        var laterIndex = Math.Max(referencedIndex, i);
-                        if (edges[earlierIndex].Add(laterIndex))
-                        {
-                            indegree[laterIndex]++;
-                        }
-                    }
+                    dependencies.AddReference(i, referenceName);
                 }
             }
 
-            // Repeated assignments are also order-sensitive because the last
-            // assignment wins.
-            foreach (var indices in nameToIndices.Values)
-            {
-                for (var i = 1; i < indices.Count; i++)
-                {
-                    var previousIndex = indices[i - 1];
-                    var currentIndex = indices[i];
-                    if (edges[previousIndex].Add(currentIndex))
-                    {
-                        indegree[currentIndex]++;
-                    }
-                }
-            }
-
-            var ready = new SortedSet<int>(Comparer<int>.Create((left, right) =>
-            {
-                var leftName = groups[left].Element.Name.LocalName;
-                var rightName = groups[right].Element.Name.LocalName;
-                var nameCompare = comparer.Compare(leftName, rightName);
-                return nameCompare != 0 ? nameCompare : left.CompareTo(right);
-            }));
-            for (var i = 0; i < indegree.Length; i++)
-            {
-                if (indegree[i] == 0)
-                {
-                    ready.Add(i);
-                }
-            }
-
-            var result = new List<ElementGroup>(groups.Count);
-            var emitted = new bool[groups.Count];
-            while (ready.Count > 0)
-            {
-                var next = ready.Min;
-                ready.Remove(next);
-                result.Add(groups[next]);
-                emitted[next] = true;
-
-                foreach (var dependent in edges[next])
-                {
-                    indegree[dependent]--;
-                    if (indegree[dependent] == 0)
-                    {
-                        ready.Add(dependent);
-                    }
-                }
-            }
-
-            if (result.Count == groups.Count)
-            {
-                return result;
-            }
-
-            var remaining = new List<int>();
-            for (var i = 0; i < groups.Count; i++)
-            {
-                if (!emitted[i])
-                {
-                    remaining.Add(i);
-                }
-            }
-
-            remaining.Sort((left, right) =>
-            {
-                var leftName = groups[left].Element.Name.LocalName;
-                var rightName = groups[right].Element.Name.LocalName;
-                var nameCompare = comparer.Compare(leftName, rightName);
-                return nameCompare != 0 ? nameCompare : left.CompareTo(right);
-            });
-
-            foreach (var index in remaining)
-            {
-                result.Add(groups[index]);
-            }
-
-            return result;
+            return dependencies.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(
+                    groups[left].Element.Name.LocalName, groups[right].Element.Name.LocalName))
+                .Select(index => groups[index]).ToList();
         }
 
         private static void SortPropertyGroups(XDocument document)

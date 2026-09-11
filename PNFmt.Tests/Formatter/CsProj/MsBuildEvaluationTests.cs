@@ -11,6 +11,35 @@ namespace PNFmt.Tests.Formatter.CsProj
 {
     public sealed class MsBuildEvaluationTests
     {
+        [Fact]
+        public async Task Repeated_assignments_preserve_values_observed_before_between_and_after_them()
+        {
+            var properties = "<Before>$(Zebra)</Before><Zebra>first</Zebra><Middle>$(Zebra)</Middle>"
+                + "<Zebra>$(Zebra);second</Zebra><After>$(Zebra)</After>";
+            var metadata = properties.Replace("$(", "%(");
+            using (var project = new EvaluationProject("<PropertyGroup>" + properties + "</PropertyGroup>"
+                + "<ItemGroup><None Include='file'>" + metadata + "</None></ItemGroup>"))
+            {
+                async Task<string[]> ReadValues()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync(
+                        "-getProperty:Before,Middle,After", "-getItem:None")))
+                    {
+                        var root = document.RootElement;
+                        return new[] { root.GetProperty("Properties"), root.GetProperty("Items").GetProperty("None")[0] }
+                            .SelectMany(element => new[] { "Before", "Middle", "After" }.Select(name => element.GetProperty(name).GetString()))
+                            .ToArray();
+                    }
+                }
+
+                var expected = new[] { "", "first", "first;second", "", "first", "first;second" };
+                Assert.Equal(expected, await ReadValues());
+                project.Format();
+                Assert.Equal(expected, await ReadValues());
+                project.AssertIdempotent();
+            }
+        }
+
         [Theory]
         [InlineData("$(File)")]
         [InlineData("*.txt")]

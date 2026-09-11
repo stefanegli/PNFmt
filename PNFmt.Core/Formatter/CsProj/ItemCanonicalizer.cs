@@ -110,25 +110,7 @@ namespace PNFmt
                 return;
             }
 
-            var nameToIndices = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < groups.Count; i++)
-            {
-                var name = groups[i].Element.Name.LocalName;
-                if (!nameToIndices.TryGetValue(name, out var indices))
-                {
-                    indices = new List<int>();
-                    nameToIndices.Add(name, indices);
-                }
-
-                indices.Add(i);
-            }
-
-            var edges = new List<HashSet<int>>();
-            var indegree = new int[groups.Count];
-            for (var i = 0; i < groups.Count; i++)
-            {
-                edges.Add(new HashSet<int>());
-            }
+            var dependencies = new OriginalOrderDependencies(groups.Select(group => group.Element.Name.LocalName).ToArray());
 
             for (var i = 0; i < groups.Count; i++)
             {
@@ -140,50 +122,12 @@ namespace PNFmt
 
                 foreach (Match match in MetadataReferenceRegex.Matches(text))
                 {
-                    if (!nameToIndices.TryGetValue(match.Groups[1].Value, out var referencedIndices))
-                    {
-                        continue;
-                    }
-
-                    foreach (var referencedIndex in referencedIndices)
-                    {
-                        AddOriginalOrderEdge(edges, indegree, referencedIndex, i);
-                    }
+                    dependencies.AddReference(i, match.Groups[1].Value);
                 }
             }
 
-            foreach (var indices in nameToIndices.Values)
-            {
-                for (var i = 1; i < indices.Count; i++)
-                {
-                    AddOriginalOrderEdge(edges, indegree, indices[i - 1], indices[i]);
-                }
-            }
-
-            var ready = new SortedSet<int>(
-                Enumerable.Range(0, groups.Count).Where(index => indegree[index] == 0),
-                Comparer<int>.Create((left, right) => CompareMetadata(groups[left], groups[right])));
-            var sortedGroups = new List<MetadataGroup>();
-            while (ready.Count > 0)
-            {
-                var next = ready.Min;
-                ready.Remove(next);
-                sortedGroups.Add(groups[next]);
-
-                foreach (var dependent in edges[next])
-                {
-                    indegree[dependent]--;
-                    if (indegree[dependent] == 0)
-                    {
-                        ready.Add(dependent);
-                    }
-                }
-            }
-
-            if (sortedGroups.Count != groups.Count)
-            {
-                return;
-            }
+            var sortedGroups = dependencies.Sort((left, right) => CompareMetadata(groups[left], groups[right]))
+                .Select(index => groups[index]);
 
             var replacementNodes = new List<XNode>();
             foreach (var group in sortedGroups)
@@ -214,25 +158,6 @@ namespace PNFmt
         private static int GetOrder(Dictionary<string, int> order, string name)
         {
             return order.TryGetValue(name, out var value) ? value : 500;
-        }
-
-        private static void AddOriginalOrderEdge(
-            List<HashSet<int>> edges,
-            int[] indegree,
-            int left,
-            int right)
-        {
-            if (left == right)
-            {
-                return;
-            }
-
-            var earlier = Math.Min(left, right);
-            var later = Math.Max(left, right);
-            if (edges[earlier].Add(later))
-            {
-                indegree[later]++;
-            }
         }
 
         private sealed class MetadataGroup
