@@ -35,7 +35,8 @@ namespace PNFmt.Tests.Snapshots
             }
         }
 
-        private static async Task<CliRunResult> RunCliAsync(string workingDirectory, string targetFile)
+        public static async Task<(int ExitCode, string StandardOutput, string StandardError)> RunCliAsync(
+            string workingDirectory, params string[] arguments)
         {
             var startInfo = new ProcessStartInfo("dotnet")
             {
@@ -46,7 +47,10 @@ namespace PNFmt.Tests.Snapshots
             };
             startInfo.ArgumentList.Add(typeof(PNFmt.Cli.Program).Assembly.Location);
             startInfo.ArgumentList.Add("--verbose");
-            startInfo.ArgumentList.Add(targetFile);
+            foreach (var argument in arguments)
+            {
+                startInfo.ArgumentList.Add(argument);
+            }
 
             using (var process = Process.Start(startInfo))
             {
@@ -55,30 +59,8 @@ namespace PNFmt.Tests.Snapshots
                     throw new InvalidOperationException("Failed to start the PNFmt CLI process.");
                 }
 
-                var standardOutputTask = process.StandardOutput.ReadToEndAsync();
-                var standardErrorTask = process.StandardError.ReadToEndAsync();
-                await process.WaitForExitAsync();
-                return new CliRunResult(
-                    process.ExitCode,
-                    await standardOutputTask,
-                    await standardErrorTask);
+                return await TestProcess.ReadAsync(process);
             }
-        }
-
-        private sealed class CliRunResult
-        {
-            public CliRunResult(int exitCode, string standardOutput, string standardError)
-            {
-                this.ExitCode = exitCode;
-                this.StandardOutput = standardOutput;
-                this.StandardError = standardError;
-            }
-
-            public int ExitCode { get; }
-
-            public string StandardError { get; }
-
-            public string StandardOutput { get; }
         }
     }
 }

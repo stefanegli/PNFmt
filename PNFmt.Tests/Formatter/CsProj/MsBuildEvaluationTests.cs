@@ -243,22 +243,9 @@ namespace PNFmt.Tests.Formatter.CsProj
 
                 using (var process = Process.Start(start))
                 {
-                    var output = process.StandardOutput.ReadToEndAsync();
-                    var error = process.StandardError.ReadToEndAsync();
-                    try
-                    {
-                        await process.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(30));
-                    }
-                    finally
-                    {
-                        if (!process.HasExited)
-                        {
-                            process.Kill(entireProcessTree: true);
-                        }
-                    }
-
-                    Assert.True(process.ExitCode == 0, await error);
-                    return (await output).Trim();
+                    var result = await TestProcess.ReadAsync(process);
+                    Assert.True(result.ExitCode == 0, result.StandardOutput + result.StandardError);
+                    return result.StandardOutput.Trim();
                 }
             }
 
