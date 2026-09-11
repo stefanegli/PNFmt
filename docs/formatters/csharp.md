@@ -10,6 +10,7 @@ pnfmt_csharp_format = true
 pnfmt_csharp_sort_modifiers = true
 pnfmt_csharp_sort_members = true
 pnfmt_csharp_collapse_blank_lines = true
+pnfmt_csharp_remove_regions = false
 pnfmt_sort_entries = true
 
 indent_style = space
@@ -25,7 +26,7 @@ dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 ```
 
-Only `pnfmt_csharp_format = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged. Import sorting, member sorting, modifier ordering, and blank-line cleanup each require their own setting to be `true`; none activates C# formatting on its own. `--write-default-config` adds these enabled settings and the member-order defaults below to `[*.cs]`, preserving existing values.
+Only `pnfmt_csharp_format = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged. Import sorting, member sorting, modifier ordering, blank-line cleanup, and region removal each require their own setting to be `true`; none activates C# formatting on its own. `--write-default-config` enables sorting and blank-line cleanup, adds the member-order defaults below, and adds `pnfmt_csharp_remove_regions = false` to `[*.cs]`, preserving existing values.
 
 Run only this formatter with:
 
@@ -42,7 +43,23 @@ PNFmt passes the resolved EditorConfig settings to Roslyn 5.0's C# whitespace fo
 
 Without explicit settings, formatting uses spaces, four-column indentation and tab width, the file's detected newline convention, and Roslyn's remaining formatting defaults. `insert_final_newline = true` adds a missing final newline to nonempty files; missing or false preserves the existing final-newline state. `trim_trailing_whitespace = true` removes trailing spaces and tabs from ordinary code whitespace. Explicit `end_of_line` values are `lf`, `crlf`, and `cr`.
 
-Multiline string contents, comments, directives, and disabled preprocessor text are protected from the additional whitespace cleanup. Line-ending normalization therefore does not necessarily make every newline in a file identical. Roslyn may adjust comment indentation, but literal token text, directives, and inactive code must remain unchanged; PNFmt skips a file if this protection check fails.
+Multiline string contents, comments, directives, and disabled preprocessor text are protected from the additional whitespace cleanup. Line-ending normalization therefore does not necessarily make every newline in a file identical. Roslyn may adjust comment indentation, but literal token text, retained directives, and inactive code must remain unchanged; PNFmt skips a file if this protection check fails. Region directives can be explicitly removed by the cleanup described below.
+
+## Region removal
+
+`pnfmt_csharp_remove_regions = true` removes matching `#region` and `#endregion` directive lines, including their labels and any text on those lines. Enclosed code, ordinary comments, and XML documentation remain. Nested regions and regions inside method bodies are supported. Region-like text in strings and comments is never treated as a directive.
+
+```ini
+[*.cs]
+pnfmt_csharp_format = true
+pnfmt_csharp_remove_regions = true
+```
+
+Removal is disabled by default, including in generated default configuration. There is no equivalent built-in .NET code-style option, so this cleanup uses a PNFmt setting.
+
+If either directive in a pair is inactive or intersects a `// pnfmt: off` exclusion, both directives stay. An exclusion containing only enclosed code does not prevent removal of the surrounding pair; the excluded text remains exact. Independent nested pairs can still be removed. All other preprocessor directives and inactive source text are preserved. Files with syntax errors, including unmatched active region directives, are skipped under the normal parse policy.
+
+Region removal runs before import and member sorting. Removed directives no longer form sorting boundaries; remaining directives, comments, storage declarations, and exclusions still do. Only the directive lines are deleted, so existing surrounding blank lines remain subject to the separate blank-line cleanup. The original final-newline convention is retained unless doing so would alter an exclusion exposed at EOF by removal.
 
 ## Import sorting
 

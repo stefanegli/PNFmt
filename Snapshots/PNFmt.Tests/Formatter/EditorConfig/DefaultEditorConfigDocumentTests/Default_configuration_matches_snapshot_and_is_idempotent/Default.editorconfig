@@ -5,6 +5,7 @@ pnfmt_csharp_collapse_blank_lines = true
 pnfmt_csharp_format = true
 pnfmt_csharp_member_accessibility_order = public,internal,protected_internal,protected,private_protected,private
 pnfmt_csharp_member_order = constant,constructor,destructor,property,indexer,event,method,operator,conversion_operator,type
+pnfmt_csharp_remove_regions = false
 pnfmt_csharp_sort_members = true
 pnfmt_csharp_sort_members_by_name = true
 pnfmt_csharp_sort_modifiers = true

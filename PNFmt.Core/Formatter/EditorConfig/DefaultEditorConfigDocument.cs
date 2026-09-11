@@ -21,6 +21,7 @@ namespace PNFmt
                     new DefaultSetting(EditorConfigSettingNames.CSharpFormat, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpMemberAccessibilityOrder, CSharpMemberSorter.DefaultAccessibilityOrder),
                     new DefaultSetting(EditorConfigSettingNames.CSharpMemberOrder, CSharpMemberSorter.DefaultOrder),
+                    new DefaultSetting(EditorConfigSettingNames.CSharpRemoveRegions, "false"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortMembers, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortMembersByName, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortModifiers, "true"),

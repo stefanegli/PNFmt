@@ -40,9 +40,18 @@ namespace PNFmt
             diagnostic = null;
             var sourceRoot = tree.GetRoot();
             var originalExclusions = CSharpFormattingExclusions.Parse(sourceRoot);
+            if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpRemoveRegions))
+            {
+                sourceRoot = CSharpRegionRemover.Apply(sourceRoot, originalExclusions);
+            }
+
+            // Only the region remover may delete directives. Every directive and inactive
+            // text fragment remaining here must survive the rest of the pipeline exactly.
+            var protectedTrivia = ProtectedTrivia(sourceRoot).ToArray();
             if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries))
             {
-                sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text), originalExclusions).Visit(sourceRoot);
+                sourceRoot = new CSharpUsingSorter(settings, TextFileFormatting.DetectNewLine(text),
+                    CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
             }
 
             if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpSortModifiers))
@@ -94,8 +103,16 @@ namespace PNFmt
                     && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
                 {
                     // Sorting can move the final import into the middle of the list,
-                    // where it needs a newline. Preserve the original EOF convention.
-                    result = result.TrimEnd('\r', '\n');
+                    // where it needs a newline. Preserve the original EOF convention,
+                    // unless removing a region exposed a protected newline at EOF.
+                    var trimmed = result.TrimEnd('\r', '\n');
+                    var touchesExclusion = exclusions.Spans.Count > 0 && CSharpFormattingExclusions.Parse(
+                        CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options).GetRoot())
+                        .Intersects(TextSpan.FromBounds(trimmed.Length, result.Length));
+                    if (!touchesExclusion)
+                    {
+                        result = trimmed;
+                    }
                 }
 
                 // In particular, literals (including raw strings) and inactive #if text
@@ -106,7 +123,7 @@ namespace PNFmt
                 if (resultTree.GetDiagnostics().Any(item => item.Severity == DiagnosticSeverity.Error)
                     || !sourceRoot.DescendantTokens().Select(token => token.Text)
                         .SequenceEqual(resultRoot.DescendantTokens().Select(token => token.Text))
-                    || !ProtectedTrivia(tree.GetRoot()).SequenceEqual(ProtectedTrivia(resultRoot))
+                    || !protectedTrivia.SequenceEqual(ProtectedTrivia(resultRoot))
                     || !originalExclusions.HasSameText(CSharpFormattingExclusions.Parse(resultRoot)))
                 {
                     diagnostic = new FormatterDiagnostic(

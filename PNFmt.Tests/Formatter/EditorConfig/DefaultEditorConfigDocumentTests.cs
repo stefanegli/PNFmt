@@ -36,6 +36,15 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
+        public void Region_removal_defaults_to_false_and_preserves_existing_values()
+        {
+            Assert.Contains("pnfmt_csharp_remove_regions = false", DefaultEditorConfigDocument.Update(string.Empty));
+            var configured = DefaultEditorConfigDocument.Update("[*.cs]\npnfmt_csharp_remove_regions = true\n");
+            Assert.Contains("pnfmt_csharp_remove_regions = true", configured);
+            Assert.DoesNotContain("pnfmt_csharp_remove_regions = false", configured);
+        }
+
+        [Fact]
         public void Existing_rules_around_the_managed_block_are_preserved()
         {
             const string Existing =
