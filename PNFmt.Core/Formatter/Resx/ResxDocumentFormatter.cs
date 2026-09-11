@@ -66,7 +66,8 @@ namespace PNFmt
             var hasSchemaRemoved = false;
             var hasCommentRemoved = false;
             var toSave = new List<XNode>();
-            var toSort = new List<XElement>();
+            var toSort = new List<ResourceEntry>();
+            var pendingComments = new List<XNode>();
             XDocument document;
             var readerSettings = new XmlReaderSettings
             {
@@ -101,6 +102,8 @@ namespace PNFmt
                 {
                     if (!hasSchemaRemoved && node is XElement e && IsXsdSchema(e))
                     {
+                        toSave.AddRange(pendingComments);
+                        pendingComments.Clear();
                         toSave.Add(XElement.Parse(ResxSchemaDefaults.FakeSchema));
                         hasSchemaRemoved = true;
                         continue;
@@ -118,17 +121,24 @@ namespace PNFmt
 
                 if (node is XElement element && IsResourceEntry(element))
                 {
-                    toSort.Add(element);
+                    toSort.Add(new ResourceEntry(element, pendingComments.ToArray()));
+                    pendingComments.Clear();
+                }
+                else if (node is XComment resourceComment && !IsDocumentationComment(resourceComment))
+                {
+                    pendingComments.Add(node);
                 }
                 else
                 {
+                    toSave.AddRange(pendingComments);
+                    pendingComments.Clear();
                     toSave.Add(node);
                 }
             }
 
             var sorted = this.Settings.SortEntries
-                ? toSort.OrderBy(e => e.Name.ToString(), this.Settings.Comparer)
-                    .ThenBy(e => e.Attribute("name").Value, this.Settings.Comparer)
+                ? toSort.OrderBy(entry => entry.Element.Name.ToString(), this.Settings.Comparer)
+                    .ThenBy(entry => entry.Element.Attribute("name").Value, this.Settings.Comparer)
                     .ToList()
                 : toSort;
 
@@ -150,7 +160,14 @@ namespace PNFmt
             var hasContentChanges = hasSchemaRemoved || hasCommentRemoved || hasCommentAdded || hasSchemaAdded || requiresSorting;
             if (hasContentChanges)
             {
-                toSave.AddRange(sorted);
+                foreach (var entry in sorted)
+                {
+                    toSave.AddRange(entry.LeadingComments);
+                    toSave.Add(entry.Element);
+                }
+
+                // Comments without a following resource entry are file footers.
+                toSave.AddRange(pendingComments);
                 document.Root.ReplaceNodes(toSave);
             }
 
@@ -198,6 +215,18 @@ namespace PNFmt
             {
                 text.Remove();
             }
+        }
+
+        private sealed class ResourceEntry
+        {
+            public ResourceEntry(XElement element, IReadOnlyList<XNode> leadingComments)
+            {
+                this.Element = element;
+                this.LeadingComments = leadingComments;
+            }
+
+            public XElement Element { get; }
+            public IReadOnlyList<XNode> LeadingComments { get; }
         }
 
         private static bool HasUnnamedResourceEntry(XElement root)

@@ -59,13 +59,13 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <!-- maybe not really supported by visual studio but should not be removed anyway -->
-  <!-- maybe not really supported by visual studio but should not be removed anyway -->
   <data name="abc" xml:space="preserve">
     <value>1</value>
   </data>
   <data name="efg" xml:space="preserve">
     <value>2</value>
   </data>
+  <!-- maybe not really supported by visual studio but should not be removed anyway -->
   <data name="xyz" xml:space="preserve">
     <value>3</value>
   </data>

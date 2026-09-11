@@ -26,6 +26,8 @@ pnfmt_sort_entries = true
 
 Sorting applies to resource data and metadata entries while retaining comments and other meaningful XML content. Schema and documentation removal are independent options; they do not need entry sorting to be enabled.
 
+XML comments immediately preceding a resource entry travel with that entry when sorting. Comments preceding headers or schema stay with that content, and trailing comments remain after the last resource. The standard generated documentation comment is handled by its own setting.
+
 Layout and charset settings apply whenever resource formatting is enabled, including when entries are already sorted. These standard settings alone do not activate the resource formatter. Without layout or charset settings, existing legacy behavior is retained: files are only rewritten for sorting or schema/documentation changes. When rewriting, the defaults are two-space indentation, the platform line ending, and no final newline. An explicit `indent_size` takes precedence over `tab_width`; tab indentation uses one tab per level.
 
 An explicit `charset` takes precedence over the XML declaration's encoding, and the declaration is updated to match. Without a supported charset, serialization uses the declared encoding or defaults to UTF-8 with a BOM. See [file encoding](../../README.md#file-encoding) for the shared rules.

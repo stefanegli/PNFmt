@@ -19,6 +19,42 @@ namespace PNFmt.Tests.Formatter.Resx
     {
         private const string Header = "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>";
 
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void Entry_comments_and_file_footers_keep_their_association_during_rewrites(bool sort)
+        {
+            var input = "<root><!--" + ResxSchemaDefaults.OriginalCommentContent + "-->"
+                + "<!--file header-->" + Header
+                + "<!--B first--><!--B second--><data name='b'><value>2</value></data>"
+                + "<!--A--><data name='a'><value>1</value></data><!--footer--></root>";
+            using (var file = TemporaryFile.Create(input))
+            {
+                var settings = SortAndRemoveDefaults();
+                settings.SortEntries = sort;
+                var formatter = new ResxDocumentFormatter(settings, new FakeLog());
+                formatter.Run(file.Path, false);
+                Assert.Equal(input, File.ReadAllText(file.Path));
+                formatter.Run(file.Path);
+                var root = XDocument.Load(file.Path).Root;
+                Assert.Equal("file header", Assert.IsType<XComment>(root.FirstNode).Value);
+                Assert.Equal("footer", Assert.IsType<XComment>(root.LastNode).Value);
+                foreach (var entry in root.Elements("data"))
+                {
+                    var expected = (string)entry.Attribute("name") == "a" ? "A" : "B second";
+                    Assert.Equal(expected, Assert.IsType<XComment>(entry.PreviousNode).Value);
+                }
+
+                var b = root.Elements("data").Single(entry => (string)entry.Attribute("name") == "b");
+                Assert.Equal("B first", Assert.IsType<XComment>(b.PreviousNode.PreviousNode).Value);
+                Assert.Equal(sort ? new[] { "a", "b" } : new[] { "b", "a" }, EntryNames(new XDocument(root)));
+                var formatted = File.ReadAllBytes(file.Path);
+                formatter.Run(file.Path);
+                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
         [Fact]
         public void Constructor_rejects_missing_settings_at_the_boundary()
         {

@@ -110,7 +110,6 @@ namespace PNFmt.Tests.Formatter.Resx
                 this.Add("Data and metadata nodes are grouped and sorted.", "Mixed.resx", null, sortAndRemoveDocumentation);
                 this.Add("Entries are sorted alphabetically.", "Sort.resx", null, sortAndRemoveDocumentation);
                 this.Add("File remains untouched if no modification is necessary.", "NoModificationNeeded.resx", null, sortAndRemoveDocumentation);
-                // TODO xml comments should retain their original position
                 this.Add("Invalid resx files are not touched.", "InvalidResx.resx", null, sortAndRemoveDocumentation);
                 this.Add("Meta data is sorted too.", "MetaData.resx", null, sortAndRemoveDocumentation);
                 this.Add("Plain xml files are not touched.", "Plain.xml", null, sortAndRemoveDocumentation);
