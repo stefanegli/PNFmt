@@ -23,6 +23,8 @@ tab_width = 4
 
 Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 
+Project-specific settings and standard layout settings can activate this formatter. Positive `indent_size` or `tab_width`, `indent_style`, `end_of_line`, and valid `insert_final_newline` values enable layout formatting even without sorting. `pnfmt_sort_entries = false` also enables layout formatting while keeping sorting disabled. `charset` alone does not activate it. These rules preserve the legacy project formatter's behavior; see the [cross-formatter comparison](../configuration-contracts.md).
+
 ## Behavior
 
 Property and item sorting is deliberately limited to content that can be reordered without changing normal MSBuild evaluation. Forward property references, item operations, imports, conditions, and other evaluation-sensitive constructs retain their meaningful order.
