@@ -32,7 +32,7 @@ namespace PNFmt.Cli
                 compiledPatterns.Add(
                     new Regex(
                         CreateRegexPattern(pattern),
-                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant));
+                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking));
             }
 
             this.patterns = compiledPatterns.AsReadOnly();
