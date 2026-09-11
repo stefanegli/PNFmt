@@ -66,7 +66,10 @@ namespace PNFmt
         private static void SortAttributes(XElement item)
         {
             var attributes = item.Attributes().ToList();
-            if (attributes.Count <= 1)
+            // MSBuild evaluates metadata attributes in source order, just like
+            // metadata elements. Preserve both backward and forward references.
+            if (attributes.Count <= 1
+                || attributes.Any(attribute => attribute.Value.IndexOf("%(", StringComparison.Ordinal) >= 0))
             {
                 return;
             }

@@ -11,6 +11,32 @@ namespace PNFmt.Tests.Formatter.CsProj
     public sealed class MsBuildEvaluationTests
     {
         [Theory]
+        [InlineData("<None Include=\"file\" Zebra=\"hello\" Alpha=\"%(Zebra)\" />", "Alpha", "hello")]
+        [InlineData("<None Include=\"file\" Alpha=\"%(Zebra)\" Zebra=\"hello\" />", "Alpha", "")]
+        [InlineData("<None Include=\"file\"><Zebra>hello</Zebra><Alpha>%(Zebra)</Alpha></None>", "Alpha", "hello")]
+        [InlineData("<None Include=\"file\"><Alpha>%(Zebra)</Alpha><Zebra>hello</Zebra></None>", "Alpha", "")]
+        [InlineData("<None Include=\"file\"><Zebra>first</Zebra><Alpha>%(Zebra)</Alpha><Zebra>second</Zebra></None>", "Alpha", "first")]
+        [InlineData("<None Include=\"file\" LinkBase=\"assets\" Link=\"%(LinkBase)/%(Filename)%(Extension)\" />", "Link", "assets/file")]
+        public async Task Sorting_preserves_metadata_evaluation(string item, string name, string expected)
+        {
+            using (var project = new EvaluationProject("<ItemGroup>" + item + "</ItemGroup>"))
+            {
+                async Task<string> ReadMetadata()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync("-getItem:None")))
+                    {
+                        return document.RootElement.GetProperty("Items").GetProperty("None")[0].GetProperty(name).GetString();
+                    }
+                }
+
+                Assert.Equal(expected, await ReadMetadata());
+                project.Format();
+                Assert.Equal(expected, await ReadMetadata());
+                project.AssertIdempotent();
+            }
+        }
+
+        [Theory]
         [InlineData("$(Zebra.ToUpper())", "HELLO")]
         [InlineData("$(Zebra.Length)", "5")]
         [InlineData("$([System.String]::Copy('$(Zebra)'))", "hello")]
