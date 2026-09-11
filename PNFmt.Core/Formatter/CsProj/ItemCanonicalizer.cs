@@ -157,15 +157,14 @@ namespace PNFmt
                 }
             }
 
-            var ready = Enumerable.Range(0, groups.Count)
-                .Where(index => indegree[index] == 0)
-                .ToList();
+            var ready = new SortedSet<int>(
+                Enumerable.Range(0, groups.Count).Where(index => indegree[index] == 0),
+                Comparer<int>.Create((left, right) => CompareMetadata(groups[left], groups[right])));
             var sortedGroups = new List<MetadataGroup>();
             while (ready.Count > 0)
             {
-                ready.Sort((left, right) => CompareMetadata(groups[left], groups[right]));
-                var next = ready[0];
-                ready.RemoveAt(0);
+                var next = ready.Min;
+                ready.Remove(next);
                 sortedGroups.Add(groups[next]);
 
                 foreach (var dependent in edges[next])
