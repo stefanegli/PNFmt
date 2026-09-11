@@ -10,6 +10,41 @@ namespace PNFmt.Tests.Formatter.Slnx
 {
     public sealed class SlnxFormatterTests
     {
+        [Theory]
+        [InlineData("<Extension>", "</Extension>")]
+        [InlineData("<e:Project xmlns:e='urn:extension'>", "</e:Project>")]
+        public void Extension_subtrees_preserve_all_character_data(string start, string end)
+        {
+            var input = "<?xml version='1.0'?><Solution><Project Path='Z.csproj'/>" + start
+                + "<Value> </Value><Text xml:space='preserve'>first&#xD;second&#xD;&#xA;third</Text>"
+                + "<Compact><A/><B/></Compact><Mixed>left <A/> right</Mixed>"
+                + "<!-- extension comment --><![CDATA[keep\nthis]]>" + end
+                + "<Project Path='B.csproj'/><Project Path='A.csproj'/></Solution>";
+            using (var file = TemporaryFile.Create(input))
+            {
+                var formatter = new SlnxFormatter();
+                var original = XDocument.Parse(input, LoadOptions.PreserveWhitespace).Root.Elements().ElementAt(1);
+                Assert.Equal(FileFormatStatus.Updated,
+                    formatter.Format(new FileFormatRequest(file.Path, false, false, new TestLog())).Status);
+                Assert.Equal(input, File.ReadAllText(file.Path));
+                formatter.Format(new FileFormatRequest(file.Path, true, false, new TestLog()));
+                var formatted = File.ReadAllText(file.Path);
+                var extension = XDocument.Parse(formatted, LoadOptions.PreserveWhitespace).Root.Elements().ElementAt(1);
+                Assert.True(XNode.DeepEquals(original, extension), formatted);
+                Assert.Equal(FileFormatStatus.Unchanged,
+                    formatter.Format(new FileFormatRequest(file.Path, true, false, new TestLog())).Status);
+            }
+        }
+
+        [Fact]
+        public void Preserved_known_containers_keep_their_complete_subtree()
+        {
+            const string Input = "<Solution xml:space='preserve'> <Project Path='Z'/> <Project Path='A'/> </Solution>";
+            var formatted = SlnxDocumentFormatter.Format(Input);
+            Assert.True(XNode.DeepEquals(XDocument.Parse(Input, LoadOptions.PreserveWhitespace).Root,
+                XDocument.Parse(formatted, LoadOptions.PreserveWhitespace).Root));
+        }
+
         [Fact]
         public void Sorts_solution_folders_projects_configurations_and_properties()
         {

@@ -22,7 +22,7 @@ namespace PNFmt
             var readerSettings = new XmlReaderSettings
             {
                 DtdProcessing = DtdProcessing.Prohibit,
-                IgnoreWhitespace = true,
+                IgnoreWhitespace = false,
                 XmlResolver = null,
             };
 
@@ -30,7 +30,7 @@ namespace PNFmt
             using (var stringReader = new StringReader(text))
             using (var xmlReader = XmlReader.Create(stringReader, readerSettings))
             {
-                document = XDocument.Load(xmlReader);
+                document = XDocument.Load(xmlReader, LoadOptions.PreserveWhitespace);
             }
 
             var root = document.Root;
@@ -68,13 +68,31 @@ namespace PNFmt
             SortProperties(root);
 
             var newLine = TextFileFormatting.DetectNewLine(text);
+            // Only containers visited by the SLNX sorter own layout whitespace.
+            // Serialize without implicit indentation so extension subtrees retain
+            // even whitespace-only values and compact element-only content.
+            foreach (var container in document.Descendants().Where(element => element.Annotation<LayoutContainer>() is not null).ToArray())
+            {
+                var nodes = container.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
+                if (nodes.Length == 0)
+                {
+                    continue;
+                }
+
+                var indent = new string(' ', container.Ancestors().Count() * 2);
+                container.ReplaceNodes(nodes.SelectMany(node => new XNode[] { new XText(newLine + indent + "  "), node })
+                    .Concat(new[] { new XText(newLine + indent) }).ToArray());
+            }
+
+            var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
+            document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
+                index > 0 || document.Declaration is not null ? new XNode[] { new XText(newLine), node } : new[] { node }).ToArray());
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = new UTF8Encoding(false),
-                Indent = true,
-                IndentChars = "  ",
+                Indent = false,
                 NewLineChars = newLine,
-                NewLineHandling = NewLineHandling.Replace,
+                NewLineHandling = NewLineHandling.Entitize,
                 OmitXmlDeclaration = document.Declaration is null,
             };
 
@@ -191,6 +209,14 @@ namespace PNFmt
             Func<XElement, int> order,
             Func<XElement, string> key)
         {
+            if (parent is XElement parentElement && parentElement.AncestorsAndSelf().Any(element =>
+                (string)element.Attribute(XNamespace.Xml + "space") == "preserve"
+                || element.Nodes().OfType<XText>().Any(text => !IsLayoutWhitespace(text))))
+            {
+                return;
+            }
+
+            parent.AddAnnotation(new LayoutContainer());
             var groups = new List<ElementGroup>();
             var leadingNodes = new List<XNode>();
 
@@ -201,7 +227,7 @@ namespace PNFmt
                     groups.Add(new ElementGroup(element, new List<XNode>(leadingNodes)));
                     leadingNodes.Clear();
                 }
-                else
+                else if (!IsLayoutWhitespace(node))
                 {
                     leadingNodes.Add(node);
                 }
@@ -256,6 +282,16 @@ namespace PNFmt
         private static string Attribute(XElement element, string name)
         {
             return (string)element.Attribute(name);
+        }
+
+        private static bool IsLayoutWhitespace(XNode node)
+        {
+            return node is XText text && node.NodeType == XmlNodeType.Text
+                && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n');
+        }
+
+        private sealed class LayoutContainer
+        {
         }
 
         private sealed class ElementGroup
