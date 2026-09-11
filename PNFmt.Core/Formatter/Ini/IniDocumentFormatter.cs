@@ -38,7 +38,7 @@ namespace PNFmt
             foreach (var line in lines)
             {
                 var trimmed = line.Trim();
-                if (TryParseProperty(trimmed, out var property))
+                if (TryParseProperty(trimmed, isEditorConfig, out var property))
                 {
                     hasBlankLineAfterProperties = false;
                     properties.Add(property);
@@ -197,9 +197,9 @@ namespace PNFmt
             return IniSyntax.IsSectionHeader(line);
         }
 
-        private static bool TryParseProperty(string line, out PropertyLine property)
+        private static bool TryParseProperty(string line, bool isEditorConfig, out PropertyLine property)
         {
-            if (!IniSyntax.TryParseProperty(line, out var parsedProperty))
+            if (!IniSyntax.TryParseProperty(line, out var parsedProperty, allowColon: isEditorConfig))
             {
                 property = null;
                 return false;

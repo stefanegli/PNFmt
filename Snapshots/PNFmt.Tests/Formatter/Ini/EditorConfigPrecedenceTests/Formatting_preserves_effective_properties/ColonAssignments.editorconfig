@@ -1,0 +1,8 @@
+root = true
+
+[*.resx]
+custom_value = a=b:c
+indent_size = 2
+
+pnfmt_sort_entries = false=extra
+pnfmt_sort_entries = true

@@ -16,6 +16,16 @@ namespace PNFmt.Tests.Formatter.Ini
         {
             new object[]
             {
+                "ColonAssignments", "[*.resx]\nindent_size: 2\ncustom_value: a=b:c\n"
+                    + "pnfmt_sort_entries: false=extra\npnfmt_sort_entries = true\n", "2",
+            },
+            new object[]
+            {
+                "MixedSeparatorDuplicates", "[*.resx]\nindent_size = 4\nINDENT_SIZE: 2\n"
+                    + "custom_value = first\nCUSTOM_VALUE: last=value\n", "2",
+            },
+            new object[]
+            {
                 "OverlappingGlobs", "[*.resx]\nindent_size=2\n[*]\nindent_size=4\n", "4",
             },
             new object[]

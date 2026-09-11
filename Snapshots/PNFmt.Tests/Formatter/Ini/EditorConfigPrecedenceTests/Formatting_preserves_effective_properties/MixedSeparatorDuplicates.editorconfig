@@ -1,0 +1,8 @@
+root = true
+
+[*.resx]
+custom_value = first
+CUSTOM_VALUE = last=value
+
+indent_size = 4
+INDENT_SIZE = 2
