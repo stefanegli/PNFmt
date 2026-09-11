@@ -1,6 +1,6 @@
 # Project formatter (`.csproj`)
 
-The project formatter normalizes MSBuild project XML, sorts eligible properties and items, and keeps evaluation-sensitive content in its original order. It is also the only formatter that supports `--lint` diagnostics.
+The project formatter normalizes MSBuild project XML, sorts eligible properties and items, and keeps evaluation-sensitive content in its original order. Its `--lint` diagnostics identify project-structure issues; the C#, XML, and XAML formatters also report diagnostics.
 
 ## Configuration
 
