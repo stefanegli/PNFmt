@@ -45,6 +45,14 @@ namespace PNFmt
 
             if (xml)
             {
+                // XML's opening byte signature identifies Unicode byte order even
+                // without a BOM; ASCII cannot read a UTF-16/32 declaration.
+                var signatureEncoding = DetectXmlUnicodeEncoding(bytes);
+                if (signatureEncoding is not null)
+                {
+                    return new EncodedTextFile(signatureEncoding.GetString(bytes), signatureEncoding);
+                }
+
                 // The declaration describes the input, independently of the requested output.
                 var declarationEncoding = FileEncoding.ReadXmlDeclaration(
                     Encoding.ASCII.GetString(bytes));
@@ -73,6 +81,36 @@ namespace PNFmt
             // cannot truncate it. Keep precisely the original BOM convention.
             var bytes = this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
             File.WriteAllBytes(path, bytes);
+        }
+
+        private static Encoding DetectXmlUnicodeEncoding(byte[] bytes)
+        {
+            if (bytes.Length < 4)
+            {
+                return null;
+            }
+
+            if (bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x00 && bytes[3] == 0x3C)
+            {
+                return new UTF32Encoding(true, false, true);
+            }
+
+            if (bytes[0] == 0x3C && bytes[1] == 0x00 && bytes[2] == 0x00 && bytes[3] == 0x00)
+            {
+                return new UTF32Encoding(false, false, true);
+            }
+
+            if (bytes[0] == 0x00 && bytes[1] == 0x3C && bytes[2] == 0x00 && bytes[3] == 0x3F)
+            {
+                return new UnicodeEncoding(true, false, true);
+            }
+
+            if (bytes[0] == 0x3C && bytes[1] == 0x00 && bytes[2] == 0x3F && bytes[3] == 0x00)
+            {
+                return new UnicodeEncoding(false, false, true);
+            }
+
+            return null;
         }
     }
 }

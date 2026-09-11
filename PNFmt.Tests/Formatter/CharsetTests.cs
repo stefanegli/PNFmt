@@ -28,6 +28,45 @@ namespace PNFmt.Tests.Formatter
 
         public static IEnumerable<object[]> XmlFallbackCases => FallbackCases.Where(test => IsXml((string)test[0]));
 
+        public static IEnumerable<object[]> BomlessXmlCases =>
+            from extension in new[] { "xml", "xaml", "slnx" }
+            from inputEncoding in new[] { "utf-16", "utf-16BE", "utf-32", "utf-32BE" }
+            from outputCharset in new[] { null, "utf-8" }
+            select new object[] { extension, inputEncoding, outputCharset };
+
+        [Theory]
+        [MemberData(nameof(BomlessXmlCases))]
+        public void Bomless_unicode_xml_is_decoded_before_output_charset_is_applied(string extension, string inputEncoding, string outputCharset)
+        {
+            using (var file = new TemporaryFile(extension, outputCharset))
+            {
+                var encoding = Encoding.GetEncoding(inputEncoding, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+                var original = encoding.GetBytes(FileEncoding.UpdateXmlDeclaration(File.ReadAllText(file.Path), encoding));
+                File.WriteAllBytes(file.Path, original);
+                Assert.Contains("caf\u00e9 \u00c3\u00a9", XDocument.Load(file.Path).ToString());
+
+                Assert.Equal(FileFormatStatus.Updated, file.Run(false).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
+                Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
+                Assert.Contains("caf\u00e9 \u00c3\u00a9", XDocument.Load(file.Path).ToString());
+
+                var formatted = File.ReadAllBytes(file.Path);
+                if (outputCharset is null && extension != "slnx")
+                {
+                    Assert.Equal(original.Take(4), formatted.Take(4));
+                    Assert.Equal(encoding.WebName, XDocument.Load(file.Path).Declaration.Encoding);
+                }
+                else
+                {
+                    Assert.Equal(new byte[] { 0x3C, 0x3F, 0x78 }, formatted.Take(3));
+                    Assert.Equal("utf-8", XDocument.Load(file.Path).Declaration.Encoding);
+                }
+
+                Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
+                Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
         [Theory]
         [MemberData(nameof(Cases))]
         public void Every_formatter_honors_charset_in_preview_write_and_encoding_only_changes(string extension, string charset)
