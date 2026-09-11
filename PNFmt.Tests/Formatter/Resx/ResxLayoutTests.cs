@@ -100,6 +100,33 @@ namespace PNFmt.Tests.Formatter.Resx
             }
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData("indent_size = 4\nend_of_line = lf\n")]
+        [InlineData("charset = utf-16le\n")]
+        public void Whitespace_only_values_without_xml_space_survive_sorting(string settings)
+        {
+            var original = "<root>\n" + Header
+                + "\n<data name=\"z\"><value>   </value><comment>\t </comment></data>"
+                + "\n<data name=\"a\"><value>\t\n </value></data>\n</root>";
+            using (var file = TemporaryFile.Create(original))
+            {
+                Configure(file, EnableFormatting + settings);
+                var bytes = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Updated, Format(file, false).Status);
+                Assert.Equal(bytes, File.ReadAllBytes(file.Path));
+                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
+
+                var entries = XDocument.Load(file.Path, LoadOptions.PreserveWhitespace).Root.Elements("data").ToArray();
+                Assert.Equal(new[] { "a", "z" }, entries.Select(entry => (string)entry.Attribute("name")));
+                Assert.Equal(new[] { "\t\n ", "   " }, entries.Select(entry => entry.Element("value").Value));
+                Assert.Equal("\t ", entries[1].Element("comment").Value);
+                var formatted = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
+                Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
         [Fact]
         public void Final_newline_can_be_configured_without_other_layout_options()
         {

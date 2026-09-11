@@ -69,13 +69,13 @@ namespace PNFmt
             var readerSettings = new XmlReaderSettings
             {
                 DtdProcessing = DtdProcessing.Prohibit,
-                IgnoreWhitespace = true,
+                IgnoreWhitespace = false,
                 XmlResolver = null
             };
 
             using (var reader = XmlReader.Create(resxPath, readerSettings))
             {
-                document = XDocument.Load(reader);
+                document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
             }
 
             var root = document.Root;
@@ -84,6 +84,8 @@ namespace PNFmt
                 this.Log?.WriteLine("Update was not required: Not a valid .resx file.");
                 return false;
             }
+
+            RemoveLayoutWhitespace(document);
 
             foreach (var node in root.Nodes())
             {
@@ -176,6 +178,24 @@ namespace PNFmt
             {
                 this.Log?.WriteLine($"Skipping {resxPath}");
                 return false;
+            }
+        }
+
+        private static void RemoveLayoutWhitespace(XDocument document)
+        {
+            // Whitespace in resource values and comments is application data even
+            // without xml:space. Remove only surrounding XML layout, retaining the
+            // reader's existing xml:space behavior elsewhere in the document.
+            var layout = document.DescendantNodes().OfType<XText>()
+                .Where(text => text.NodeType == XmlNodeType.Text
+                    && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n')
+                    && !text.Ancestors().Any(element => element.Parent is not null
+                        && IsResourceEntry(element.Parent))
+                    && (string)text.Ancestors().Attributes(XNamespace.Xml + "space").FirstOrDefault() != "preserve")
+                .ToList();
+            foreach (var text in layout)
+            {
+                text.Remove();
             }
         }
 
