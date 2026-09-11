@@ -15,7 +15,9 @@ namespace PNFmt
             this.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        public bool IsFileChanged { get; private set; }
+        public FileFormatResult Result { get; private set; } = new FileFormatResult(FileFormatStatus.Unchanged);
+
+        public bool IsFileChanged => this.Result.Status == FileFormatStatus.Updated;
 
         private IFormatterLog Log { get; }
         private IResxFormatSettings Settings { get; }
@@ -46,7 +48,7 @@ namespace PNFmt
         }
 
         /// <summary>
-        /// Returns true if the given file was modified.
+        /// Processes the file and exposes its status and diagnostics through Result.
         /// </summary>
         public void Run(string resxPath)
         {
@@ -55,11 +57,11 @@ namespace PNFmt
 
         public void Run(string resxPath, bool writeChanges)
         {
-            this.IsFileChanged = false;
-            this.IsFileChanged = this.FormatResx(resxPath, writeChanges);
+            this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
+            this.Result = this.FormatResx(resxPath, writeChanges);
         }
 
-        private bool FormatResx(string resxPath, bool writeChanges)
+        private FileFormatResult FormatResx(string resxPath, bool writeChanges)
         {
             var hasSchemaRemoved = false;
             var hasCommentRemoved = false;
@@ -75,14 +77,20 @@ namespace PNFmt
 
             using (var reader = XmlReader.Create(resxPath, readerSettings))
             {
-                document = XDocument.Load(reader, LoadOptions.PreserveWhitespace);
+                document = XDocument.Load(reader, LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
             }
 
             var root = document.Root;
             if (!IsResx(root) || HasUnnamedResourceEntry(root))
             {
-                this.Log?.WriteLine("Update was not required: Not a valid .resx file.");
-                return false;
+                var reason = !IsResx(root) ? "The document is not a RESX resource file."
+                    : "Resource data and metadata entries must have a name attribute.";
+                var lineInfo = (IXmlLineInfo)root;
+                return new FileFormatResult(FileFormatStatus.Skipped, new[]
+                {
+                    new FormatterDiagnostic("RESX001", "Formatting skipped: " + reason,
+                        lineInfo?.HasLineInfo() == true ? (int?)lineInfo.LineNumber : null),
+                });
             }
 
             RemoveLayoutWhitespace(document);
@@ -165,12 +173,12 @@ namespace PNFmt
                     File.WriteAllBytes(resxPath, formattedBytes);
                 }
 
-                return true;
+                return new FileFormatResult(FileFormatStatus.Updated);
             }
             else
             {
                 this.Log?.WriteLine($"Skipping {resxPath}");
-                return false;
+                return new FileFormatResult(FileFormatStatus.Unchanged);
             }
         }
 

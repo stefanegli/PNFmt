@@ -32,4 +32,6 @@ An explicit `charset` takes precedence over the XML declaration's encoding, and 
 
 Line-ending settings control XML layout. Line breaks and significant whitespace inside resource values retain their parsed XML values.
 
+Well-formed XML that is not a RESX resource document, or contains an unnamed data or metadata entry, is skipped without rewriting and reports `RESX001`. The diagnostic appears in all modes; `--lint` returns exit code 1. Malformed XML remains an execution error with exit code 2.
+
 [Back to the overview](../../README.md)

@@ -30,10 +30,7 @@ namespace PNFmt
 
             var formatter = new ResxDocumentFormatter(settings, request.Log);
             formatter.Run(request.FilePath, request.WriteChanges);
-            var status = formatter.IsFileChanged
-                ? FileFormatStatus.Updated
-                : FileFormatStatus.Unchanged;
-            return new FileFormatResult(status);
+            return formatter.Result;
         }
     }
 }

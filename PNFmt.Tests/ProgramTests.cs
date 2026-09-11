@@ -15,6 +15,38 @@ namespace PNFmt.Tests
     public sealed class ProgramTests
     {
         [Theory]
+        [InlineData("<root/>")]
+        [InlineData("<root><resheader name='resmimetype'><value>text/microsoft-resx</value></resheader><data><value>unnamed</value></data></root>")]
+        public void Invalid_resource_structure_is_skipped_with_a_diagnostic(string input)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.EnableFormatting();
+                var path = directory.Write("Invalid.resx", input);
+                var original = File.ReadAllBytes(path);
+                var formatter = new ResxFormatter();
+                foreach (var write in new[] { false, true })
+                {
+                    var result = formatter.Format(new FileFormatRequest(path, write, false,
+                        new Formatter.Resx.Fake.FakeLog()));
+                    Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                    Assert.Equal("RESX001", Assert.Single(result.Diagnostics).Code);
+                    Assert.Equal(original, File.ReadAllBytes(path));
+                }
+
+                foreach (var mode in new[] { "--check", "--dry-run", "--lint", "--all" })
+                {
+                    var result = Run("--all", "--verbose", mode, path);
+                    Assert.Equal(mode == "--lint" ? 1 : 0, result.ExitCode);
+                    Assert.Contains("[skipped]", result.Output);
+                    Assert.Contains("warning RESX001", result.Output);
+                    Assert.Contains("unchanged 0, skipped 1", result.Output);
+                    Assert.Equal(original, File.ReadAllBytes(path));
+                }
+            }
+        }
+
+        [Theory]
         [InlineData("--check")]
         [InlineData("--dry-run")]
         [InlineData("--lint")]
