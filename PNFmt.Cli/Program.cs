@@ -64,10 +64,10 @@ namespace PNFmt.Cli
                 return 2;
             }
 
-            var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
             TargetFileResolution targets;
             try
             {
+                var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
                 targets = new TargetFileResolver(
                     registry,
                     allFormatters,
@@ -77,7 +77,8 @@ namespace PNFmt.Cli
                         options.AllFiles);
             }
             catch (Exception ex) when (ex is GitRepositoryContextException
-                || ex is PNFmtConfigurationException)
+                || ex is PNFmtConfigurationException
+                || ex is CommandLineException)
             {
                 Console.Error.WriteLine(ex.Message);
                 return 2;

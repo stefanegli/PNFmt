@@ -10,6 +10,18 @@ namespace PNFmt.Tests
 {
     public sealed class FilePatternMatcherTests
     {
+        [Fact]
+        public async Task Oversized_globs_are_usage_errors_instead_of_process_crashes()
+        {
+            var pattern = string.Concat(Enumerable.Repeat("a?", 1000)) + ".cs";
+            var result = await CliTestRunner.RunCliAsync(Path.GetTempPath(),
+                "--all", "--check", "--file-pattern", pattern, Path.GetTempPath());
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains("File pattern is too complex", result.StandardError);
+            Assert.DoesNotContain("Unhandled exception", result.StandardError);
+            Assert.DoesNotContain("Processed", result.StandardOutput);
+        }
+
         [Theory]
         [InlineData("src/*.cs", "src/File.cs", true)]
         [InlineData("src/*.cs", "src/nested/File.cs", false)]

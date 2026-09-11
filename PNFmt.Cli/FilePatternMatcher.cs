@@ -29,10 +29,17 @@ namespace PNFmt.Cli
                         nameof(patterns));
                 }
 
-                compiledPatterns.Add(
-                    new Regex(
-                        CreateRegexPattern(pattern),
-                        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking));
+                try
+                {
+                    compiledPatterns.Add(
+                        new Regex(
+                            CreateRegexPattern(pattern),
+                            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.NonBacktracking));
+                }
+                catch (NotSupportedException)
+                {
+                    throw new CommandLineException("File pattern is too complex. Use a shorter --file-pattern value.");
+                }
             }
 
             this.patterns = compiledPatterns.AsReadOnly();
