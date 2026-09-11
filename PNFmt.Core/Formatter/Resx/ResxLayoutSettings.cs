@@ -67,17 +67,20 @@ namespace PNFmt
 
         public byte[] Serialize(XDocument document, Encoding encoding = null)
         {
-            // xml:space on resource entries also preserves indentation around <value>.
-            // Recreate that layout each time; leave the value's own whitespace untouched.
-            foreach (var entry in document.Root.Elements()
-                .Where(element => element.Name == "data" || element.Name == "metadata"))
+            // Explicit layout/encoding settings recreate indentation around <value>.
+            // Legacy content-only updates retain the entry's existing xml:space layout.
+            if (this.HasOverrides || encoding is not null)
             {
-                var textNodes = entry.Nodes().Where(node => node.NodeType == XmlNodeType.Text).Cast<XText>().ToList();
-                if (textNodes.All(node => string.IsNullOrWhiteSpace(node.Value)))
+                foreach (var entry in document.Root.Elements()
+                    .Where(element => element.Name == "data" || element.Name == "metadata"))
                 {
-                    foreach (var node in textNodes)
+                    var textNodes = entry.Nodes().Where(node => node.NodeType == XmlNodeType.Text).Cast<XText>().ToList();
+                    if (textNodes.All(node => string.IsNullOrWhiteSpace(node.Value)))
                     {
-                        node.Remove();
+                        foreach (var node in textNodes)
+                        {
+                            node.Remove();
+                        }
                     }
                 }
             }

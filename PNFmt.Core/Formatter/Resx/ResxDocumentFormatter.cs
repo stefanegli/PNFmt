@@ -149,7 +149,7 @@ namespace PNFmt
             byte[] formattedBytes = null;
             var hasChanges = hasContentChanges;
             var encoding = FileEncoding.Load(resxPath, this.Log);
-            if (this.Settings.Layout?.HasOverrides == true || encoding is not null)
+            if (hasContentChanges || this.Settings.Layout?.HasOverrides == true || encoding is not null)
             {
                 var layout = this.Settings.Layout ?? new ResxLayoutSettings(new Dictionary<string, string>());
                 formattedBytes = layout.Serialize(document, encoding);
@@ -162,14 +162,7 @@ namespace PNFmt
                 this.Log?.WriteLine($"{action} {resxPath}");
                 if (writeChanges)
                 {
-                    if (formattedBytes is null)
-                    {
-                        document.Save(resxPath);
-                    }
-                    else
-                    {
-                        File.WriteAllBytes(resxPath, formattedBytes);
-                    }
+                    File.WriteAllBytes(resxPath, formattedBytes);
                 }
 
                 return true;

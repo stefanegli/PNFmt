@@ -76,26 +76,31 @@ namespace PNFmt.Tests.Formatter.Resx
         }
 
         [Theory]
-        [InlineData("lf")]
-        [InlineData("crlf")]
-        [InlineData("cr")]
-        public void Layout_preserves_multiline_values_significant_whitespace_and_attributes(string endOfLine)
+        [InlineData("")]
+        [InlineData("end_of_line = lf\nindent_size = 4\n")]
+        [InlineData("end_of_line = crlf\nindent_size = 4\n")]
+        [InlineData("end_of_line = cr\nindent_size = 4\n")]
+        [InlineData("charset = utf-16le\n")]
+        public void Sorting_preserves_multiline_values_significant_whitespace_and_attributes(string settings)
         {
             var original = "<root>" + Header
-                + "<data name=\"a\" xml:space=\"preserve\" marker=\"a&#xD;&#xA;&#x9;b\">"
+                + "<data name=\"z\" xml:space=\"preserve\" marker=\"a&#xD;&#xA;&#x9;b\">"
                 + "<value>  first\nsecond&#xD;third&#xD;&#xA;fourth\t  </value></data>"
                 + "<data name=\"b\" xml:space=\"preserve\"><value>  \t\n </value></data></root>";
             using (var file = TemporaryFile.Create(original))
             {
-                Configure(file, EnableFormatting + "end_of_line = " + endOfLine + "\nindent_size = 4\n");
+                Configure(file, EnableFormatting + settings);
                 var before = XDocument.Load(file.Path);
+                var originalBytes = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Updated, Format(file, false).Status);
+                Assert.Equal(originalBytes, File.ReadAllBytes(file.Path));
                 Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
                 var after = XDocument.Load(file.Path);
 
-                Assert.Equal(before.Root.Elements("data").Select(e => e.Element("value").Value),
+                Assert.Equal(before.Root.Elements("data").OrderBy(e => (string)e.Attribute("name")).Select(e => e.Element("value").Value),
                     after.Root.Elements("data").Select(e => e.Element("value").Value));
                 Assert.Equal((string)before.Root.Element("data").Attribute("marker"),
-                    (string)after.Root.Element("data").Attribute("marker"));
+                    (string)after.Root.Elements("data").Last().Attribute("marker"));
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
             }
         }

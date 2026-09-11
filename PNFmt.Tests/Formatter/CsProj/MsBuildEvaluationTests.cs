@@ -11,6 +11,36 @@ namespace PNFmt.Tests.Formatter.CsProj
     public sealed class MsBuildEvaluationTests
     {
         [Theory]
+        [InlineData("")]
+        [InlineData("end_of_line = lf\n")]
+        [InlineData("end_of_line = crlf\n")]
+        [InlineData("end_of_line = cr\n")]
+        public async Task Formatting_preserves_property_and_metadata_newlines(string settings)
+        {
+            const string Value = "first&#xD;second&#xD;&#xA;third&#xA;fourth";
+            const string Expected = "first\rsecond\r\nthird\nfourth";
+            using (var project = new EvaluationProject(
+                "<PropertyGroup><Observed>" + Value + "</Observed></PropertyGroup>"
+                + "<ItemGroup><None Include=\"file\"><Observed>" + Value + "</Observed></None></ItemGroup>", settings))
+            {
+                async Task AssertValues()
+                {
+                    using (var properties = JsonDocument.Parse(await project.EvaluateAsync("-getProperty:Observed,EnableDefaultItems")))
+                    using (var items = JsonDocument.Parse(await project.EvaluateAsync("-getItem:None")))
+                    {
+                        Assert.Equal(Expected, properties.RootElement.GetProperty("Properties").GetProperty("Observed").GetString());
+                        Assert.Equal(Expected, items.RootElement.GetProperty("Items").GetProperty("None")[0].GetProperty("Observed").GetString());
+                    }
+                }
+
+                await AssertValues();
+                project.Format();
+                await AssertValues();
+                project.AssertIdempotent();
+            }
+        }
+
+        [Theory]
         [InlineData("<None Include=\"file\" Zebra=\"hello\" Alpha=\"%(Zebra)\" />", "Alpha", "hello")]
         [InlineData("<None Include=\"file\" Alpha=\"%(Zebra)\" Zebra=\"hello\" />", "Alpha", "")]
         [InlineData("<None Include=\"file\"><Zebra>hello</Zebra><Alpha>%(Zebra)</Alpha></None>", "Alpha", "hello")]
@@ -106,11 +136,11 @@ namespace PNFmt.Tests.Formatter.CsProj
             private readonly string directory = Path.Combine(Path.GetTempPath(), "PNFmtEvaluationTests", Guid.NewGuid().ToString("N"));
             private readonly string path;
 
-            public EvaluationProject(string body)
+            public EvaluationProject(string body, string settings = "")
             {
                 Directory.CreateDirectory(this.directory);
                 File.WriteAllText(Path.Combine(this.directory, ".editorconfig"),
-                    "root = true\n[*.csproj]\npnfmt_sort_entries = true\n");
+                    "root = true\n[*.csproj]\npnfmt_sort_entries = true\n" + settings);
                 this.path = Path.Combine(this.directory, "Evaluation.csproj");
                 File.WriteAllText(this.path, "<Project Sdk=\"Microsoft.NET.Sdk\">"
                     + "<PropertyGroup><EnableDefaultItems>false</EnableDefaultItems></PropertyGroup>"

@@ -121,7 +121,7 @@ namespace PNFmt
                 Indent = true,
                 IndentChars = indentChars,
                 NewLineChars = newLineChars,
-                NewLineHandling = NewLineHandling.Replace,
+                NewLineHandling = NewLineHandling.Entitize,
                 OmitXmlDeclaration = document.Declaration is null,
             };
 
