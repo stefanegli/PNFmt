@@ -557,8 +557,8 @@ namespace PNFmt
                 if (string.IsNullOrWhiteSpace(include)
                     || element.Attribute("Update") != null
                     || element.Attribute("Remove") != null
-                    || include.IndexOf("@(", StringComparison.Ordinal) >= 0
-                    || include.IndexOf("%(", StringComparison.Ordinal) >= 0
+                    || HasItemReference(element.Value)
+                    || element.DescendantsAndSelf().Attributes().Any(attribute => HasItemReference(attribute.Value))
                     || !identities.Add(include))
                 {
                     return false;
@@ -566,6 +566,14 @@ namespace PNFmt
             }
 
             return true;
+        }
+
+        private static bool HasItemReference(string text)
+        {
+            // Conditions, metadata values, and Exclude can depend on items defined
+            // earlier in the group just as Include can.
+            return text.IndexOf("@(", StringComparison.Ordinal) >= 0
+                || text.IndexOf("%(", StringComparison.Ordinal) >= 0;
         }
 
         private static void SortPackageReferencesInGroup(XElement itemGroup)

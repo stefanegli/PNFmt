@@ -1,6 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -40,6 +42,35 @@ namespace PNFmt.Tests.Formatter.CsProj
                 project.Format();
 
                 Assert.Equal("matched", await project.EvaluateAsync("-getProperty:Observed"));
+                project.AssertIdempotent();
+            }
+        }
+
+        [Theory]
+        [InlineData("<None Include=\"a\"><Prior>@(None)</Prior></None>", "a=z")]
+        [InlineData("<None Include=\"a\" Prior=\"@(None)\" />", "a=z")]
+        [InlineData("<None Include=\"a\" Condition=\"'@(None)' != ''\" />", "a=")]
+        public async Task Sorting_preserves_item_references_outside_include(string item, string expected)
+        {
+            using (var project = new EvaluationProject("<ItemGroup><None Include=\"z\" />" + item + "</ItemGroup>"))
+            {
+                async Task<string[]> ReadItems()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync("-getItem:None")))
+                    {
+                        return document.RootElement.GetProperty("Items").GetProperty("None").EnumerateArray()
+                            .Select(value => value.GetProperty("Identity").GetString() + "="
+                                + (value.TryGetProperty("Prior", out var prior) ? prior.GetString() : string.Empty))
+                            .ToArray();
+                    }
+                }
+
+                var before = await ReadItems();
+                Assert.Equal(new[] { "z=", expected }, before);
+
+                project.Format();
+
+                Assert.Equal(before, await ReadItems());
                 project.AssertIdempotent();
             }
         }
