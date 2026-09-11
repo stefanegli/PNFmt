@@ -52,7 +52,7 @@ pnfmt [options] [<path> ...]
 
 With no path, PNFmt processes the current directory. Directory processing is non-recursive unless `--recursive` is passed.
 
-Inside a Git working tree, PNFmt processes only staged, unstaged, and untracked files in the requested scope by default. Pass `--all` to include unchanged files. Outside Git repositories, all supported files in scope are processed.
+For targets inside a Git working tree, PNFmt processes only staged, unstaged, and untracked files in the requested scope by default, regardless of the caller's working directory. Each target uses its own repository. Pass `--all` to include unchanged files. Outside Git repositories, all supported files in scope are processed.
 
 ```powershell
 # Format changed supported files in the current directory
@@ -139,7 +139,7 @@ For XML-based files, an explicit charset updates the XML declaration to match th
 
 ### Repository settings
 
-PNFmt reads optional tool settings from `.pnfmt` at the Git repository root. Command-line options take precedence. The currently supported setting controls the maximum number of files processed concurrently:
+PNFmt reads optional tool settings from `.pnfmt` at each target's Git repository root, or in the target directory for paths outside Git. If the command spans several configurations, the lowest concurrency limit applies to the entire run. Command-line options take precedence. The currently supported setting controls the maximum number of files processed concurrently:
 
 ```json
 {

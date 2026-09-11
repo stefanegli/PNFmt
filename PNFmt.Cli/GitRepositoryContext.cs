@@ -24,7 +24,8 @@ namespace PNFmt.Cli
 
         public static GitRepositoryContext Discover(
             string startPath,
-            bool includeChangedFiles = true)
+            bool includeChangedFiles = true,
+            IDictionary<string, GitRepositoryContext> cache = null)
         {
             try
             {
@@ -34,13 +35,20 @@ namespace PNFmt.Cli
                     return null;
                 }
 
+                if (cache is not null && cache.TryGetValue(repositoryPath, out var cached))
+                {
+                    return cached;
+                }
+
                 using (var repository = new Repository(repositoryPath))
                 {
                     var rootPath = repository.Info.WorkingDirectory;
                     var files = includeChangedFiles
                         ? GetChangedFiles(repository, rootPath)
                         : Array.Empty<string>();
-                    return new GitRepositoryContext(rootPath, files);
+                    var context = new GitRepositoryContext(rootPath, files);
+                    cache?.Add(repositoryPath, context);
+                    return context;
                 }
             }
             catch (Exception ex) when (ex is LibGit2SharpException

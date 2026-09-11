@@ -41,7 +41,7 @@ namespace PNFmt.Cli
         public TargetFileResolution Resolve(
             IEnumerable<string> paths,
             bool recursive,
-            GitRepositoryContext repository = null)
+            bool allFiles = false)
         {
             if (paths is null)
             {
@@ -50,7 +50,7 @@ namespace PNFmt.Cli
 
             var files = new HashSet<string>(PathComparison.Comparer);
             var errors = new List<string>();
-            var gitFiltered = false;
+            var settings = new TargetRepositorySettings(allFiles);
             foreach (var rawPath in paths)
             {
                 if (string.IsNullOrWhiteSpace(rawPath))
@@ -71,9 +71,8 @@ namespace PNFmt.Cli
 
                 if (File.Exists(fullPath))
                 {
-                    var isInRepository = repository is not null && repository.Contains(fullPath);
-                    gitFiltered |= isInRepository;
-                    if (!isInRepository || repository.IsChanged(fullPath))
+                    var repository = settings.ForDirectory(Path.GetDirectoryName(fullPath));
+                    if (repository is null || repository.IsChanged(fullPath))
                     {
                         this.AddFile(fullPath, Path.GetDirectoryName(fullPath), files, errors);
                     }
@@ -83,21 +82,10 @@ namespace PNFmt.Cli
 
                 if (Directory.Exists(fullPath))
                 {
-                    if (repository is not null && repository.Contains(fullPath))
+                    var repository = settings.ForDirectory(fullPath);
+                    if (repository is not null)
                     {
-                        gitFiltered = true;
-                        foreach (var file in repository.GetChangedFiles(fullPath, recursive))
-                        {
-                            if (File.Exists(file) && !IsInIgnoredDirectory(file, fullPath))
-                            {
-                                this.AddFile(
-                                    file,
-                                    fullPath,
-                                    files,
-                                    errors,
-                                    reportUnsupported: false);
-                            }
-                        }
+                        this.CollectChangedFiles(repository, fullPath, fullPath, recursive, files, errors);
                     }
                     else
                     {
@@ -106,7 +94,8 @@ namespace PNFmt.Cli
                             fullPath,
                             recursive,
                             files,
-                            errors);
+                            errors,
+                            settings);
                     }
 
                     continue;
@@ -118,7 +107,8 @@ namespace PNFmt.Cli
             return new TargetFileResolution(
                 files.OrderBy(path => path, PathComparison.Comparer).ToArray(),
                 errors,
-                gitFiltered);
+                settings.GitFiltered,
+                settings.MaxCpuCount);
         }
 
         private static bool IsPathException(Exception exception)
@@ -165,12 +155,30 @@ namespace PNFmt.Cli
             }
         }
 
+        private void CollectChangedFiles(
+            GitRepositoryContext repository,
+            string directory,
+            string rootDirectory,
+            bool recursive,
+            HashSet<string> files,
+            List<string> errors)
+        {
+            foreach (var file in repository.GetChangedFiles(directory, recursive))
+            {
+                if (File.Exists(file) && !IsInIgnoredDirectory(file, directory))
+                {
+                    this.AddFile(file, rootDirectory, files, errors, reportUnsupported: false);
+                }
+            }
+        }
+
         private void CollectDirectoryFiles(
             string directoryPath,
             string rootDirectory,
             bool recursive,
             HashSet<string> files,
-            List<string> errors)
+            List<string> errors,
+            TargetRepositorySettings settings)
         {
             try
             {
@@ -202,12 +210,18 @@ namespace PNFmt.Cli
                         continue;
                     }
 
-                    this.CollectDirectoryFiles(
-                        childDirectory,
-                        rootDirectory,
-                        true,
-                        files,
-                        errors);
+                    var gitPath = Path.Combine(childDirectory, ".git");
+                    var repository = Directory.Exists(gitPath) || File.Exists(gitPath)
+                        ? settings.ForDirectory(childDirectory)
+                        : null;
+                    if (repository is not null)
+                    {
+                        this.CollectChangedFiles(repository, childDirectory, rootDirectory, true, files, errors);
+                    }
+                    else
+                    {
+                        this.CollectDirectoryFiles(childDirectory, rootDirectory, true, files, errors, settings);
+                    }
                 }
             }
             catch (Exception ex) when (IsPathException(ex))
@@ -217,21 +231,59 @@ namespace PNFmt.Cli
         }
     }
 
+    internal sealed class TargetRepositorySettings
+    {
+        private readonly bool allFiles;
+        private readonly Dictionary<string, GitRepositoryContext> repositories = new Dictionary<string, GitRepositoryContext>(PathComparison.Comparer);
+        private readonly Dictionary<string, PNFmtConfiguration> configurations = new Dictionary<string, PNFmtConfiguration>(PathComparison.Comparer);
+
+        public TargetRepositorySettings(bool allFiles)
+        {
+            this.allFiles = allFiles;
+        }
+
+        public bool GitFiltered { get; private set; }
+
+        public int MaxCpuCount => this.configurations.Values.Select(configuration => configuration.MaxCpuCount).DefaultIfEmpty(1).Min();
+
+        public GitRepositoryContext ForDirectory(string directory)
+        {
+            var repository = GitRepositoryContext.Discover(directory, !this.allFiles, this.repositories);
+            var configurationRoot = repository?.RootPath ?? directory;
+            if (!this.configurations.ContainsKey(configurationRoot))
+            {
+                this.configurations.Add(configurationRoot, PNFmtConfiguration.Load(configurationRoot));
+            }
+
+            if (this.allFiles)
+            {
+                return null;
+            }
+
+            this.GitFiltered |= repository is not null;
+            return repository;
+        }
+    }
+
     internal sealed class TargetFileResolution
     {
         public TargetFileResolution(
             IReadOnlyList<string> files,
             IReadOnlyList<string> errors,
-            bool gitFiltered)
+            bool gitFiltered,
+            int maxCpuCount)
         {
             this.Files = files ?? throw new ArgumentNullException(nameof(files));
             this.Errors = errors ?? throw new ArgumentNullException(nameof(errors));
             this.GitFiltered = gitFiltered;
+            this.MaxCpuCount = maxCpuCount;
         }
 
         public IReadOnlyList<string> Files { get; }
 
         public bool GitFiltered { get; }
+
+        public int MaxCpuCount { get; }
 
         public IReadOnlyList<string> Errors { get; }
     }

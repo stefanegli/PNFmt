@@ -65,14 +65,16 @@ namespace PNFmt.Cli
             }
 
             var filePatternMatcher = new FilePatternMatcher(options.FilePatterns);
-            GitRepositoryContext repository;
-            PNFmtConfiguration configuration;
+            TargetFileResolution targets;
             try
             {
-                repository = GitRepositoryContext.Discover(
-                    Environment.CurrentDirectory,
-                    includeChangedFiles: !options.AllFiles);
-                configuration = PNFmtConfiguration.Load(repository?.RootPath);
+                targets = new TargetFileResolver(
+                    registry,
+                    allFormatters,
+                    filePatternMatcher).Resolve(
+                        options.Paths,
+                        options.Recursive,
+                        options.AllFiles);
             }
             catch (Exception ex) when (ex is GitRepositoryContextException
                 || ex is PNFmtConfigurationException)
@@ -81,13 +83,6 @@ namespace PNFmt.Cli
                 return 2;
             }
 
-            var targets = new TargetFileResolver(
-                registry,
-                allFormatters,
-                filePatternMatcher).Resolve(
-                    options.Paths,
-                    options.Recursive,
-                    options.AllFiles ? null : repository);
             var files = targets.Files;
 
             foreach (var error in targets.Errors)
@@ -113,7 +108,7 @@ namespace PNFmt.Cli
                 files,
                 !options.DryRun,
                 options.Lint,
-                options.MaxCpuCount ?? configuration.MaxCpuCount);
+                options.MaxCpuCount ?? targets.MaxCpuCount);
 
             foreach (var outcome in run.Outcomes)
             {

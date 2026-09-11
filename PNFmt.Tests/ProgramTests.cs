@@ -1,6 +1,7 @@
 // Copyright (c) 2026 by Stefan Egli. All rights reserved.
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -394,6 +395,69 @@ namespace PNFmt.Tests
 
                 Assert.Equal(0, allResult.ExitCode);
                 Assert.Equal("a = 1\nz = 2\n", File.ReadAllText(clean));
+            }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void Absolute_targets_use_their_own_repository(bool explicitFile, bool allFiles)
+        {
+            using (var caller = new TemporaryDirectory())
+            using (var target = new TemporaryDirectory())
+            {
+                Repository.Init(caller.Path);
+                caller.Write(".pnfmt", "invalid caller configuration");
+                target.EnableFormatting();
+                var clean = target.Write("Clean.ini", "z=2\na=1\n");
+                Repository.Init(target.Path);
+                using (var repository = new Repository(target.Path))
+                {
+                    Commands.Stage(repository, "*");
+                    var signature = new Signature("PNFmt Tests", "tests@example.invalid", DateTimeOffset.UtcNow);
+                    repository.Commit("Initial", signature, signature);
+                }
+
+                var args = new List<string> { "--check", explicitFile ? clean : target.Path };
+                if (allFiles)
+                {
+                    args.Add("--all");
+                }
+
+                var result = RunInDirectory(caller.Path, args.ToArray());
+
+                Assert.Equal(allFiles ? 1 : 0, result.ExitCode);
+                Assert.Empty(result.Error);
+                Assert.Contains(allFiles ? "Would update" : "No changed supported files found.", result.Output);
+                Assert.Equal("z=2\na=1\n", File.ReadAllText(clean));
+            }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void Target_configuration_errors_are_reported_from_outside_the_target(bool git, bool allFiles)
+        {
+            using (var caller = new TemporaryDirectory())
+            using (var target = new TemporaryDirectory())
+            {
+                if (git)
+                {
+                    Repository.Init(target.Path);
+                }
+
+                target.Write(".pnfmt", "{\"maxCpuCount\":0}");
+                var args = allFiles ? new[] { "--all", target.Path } : new[] { target.Path };
+
+                var result = RunInDirectory(caller.Path, args);
+
+                Assert.Equal(2, result.ExitCode);
+                Assert.Contains(Path.Combine(target.Path, ".pnfmt"), result.Error);
+                Assert.Contains("positive integer", result.Error);
             }
         }
 

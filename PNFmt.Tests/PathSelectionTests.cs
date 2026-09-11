@@ -59,10 +59,49 @@ namespace PNFmt.Tests
 
                 var registry = new FormatterRegistry(new[] { new IniFormatter() });
                 var result = new TargetFileResolver(registry, registry, new FilePatternMatcher(Array.Empty<string>()))
-                    .Resolve(new[] { directory.Path }, recursive: true, context);
+                    .Resolve(new[] { directory.Path }, recursive: true);
                 Assert.Empty(result.Errors);
                 Assert.Equal(context.GetChangedFiles(directory.Path, recursive: true).OrderBy(path => path),
                     result.Files.OrderBy(path => path));
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Multiple_repositories_are_filtered_and_deduplicated_with_the_strictest_cpu_limit(bool parentScope)
+        {
+            using (var directory = new CaseDirectory())
+            {
+                var roots = new[] { Path.Combine(directory.Path, "first"), Path.Combine(directory.Path, "second") };
+                var changed = roots.Select(root => Path.Combine(root, "Changed.ini")).ToArray();
+                for (var index = 0; index < roots.Length; index++)
+                {
+                    Directory.CreateDirectory(roots[index]);
+                    File.WriteAllText(Path.Combine(roots[index], ".pnfmt"), "{\"maxCpuCount\":" + (index + 2) + "}");
+                    File.WriteAllText(Path.Combine(roots[index], "Clean.ini"), "clean");
+                    Repository.Init(roots[index]);
+                    using (var repository = new Repository(roots[index]))
+                    {
+                        Commands.Stage(repository, "*");
+                        var signature = new Signature("PNFmt Tests", "tests@example.invalid", DateTimeOffset.UtcNow);
+                        repository.Commit("Initial", signature, signature);
+                    }
+
+                    File.WriteAllText(changed[index], "changed");
+                }
+
+                File.Delete(directory.Upper);
+                File.WriteAllText(Path.Combine(directory.Path, ".pnfmt"), "{\"maxCpuCount\":8}");
+                var registry = new FormatterRegistry(new[] { new IniFormatter() });
+                var targets = (parentScope ? new[] { directory.Path } : roots).Concat(changed).ToArray();
+                var result = new TargetFileResolver(registry, registry, new FilePatternMatcher(Array.Empty<string>()))
+                    .Resolve(targets, recursive: true);
+
+                Assert.Empty(result.Errors);
+                Assert.True(result.GitFiltered);
+                Assert.Equal(changed, result.Files);
+                Assert.Equal(2, result.MaxCpuCount);
             }
         }
 
