@@ -555,18 +555,29 @@ namespace PNFmt.Tests
             }
         }
 
-        [Fact]
-        public void Invalid_repository_configuration_is_reported_by_the_command()
+        [Theory]
+        [InlineData("0")]
+        [InlineData("-1")]
+        [InlineData("1.5")]
+        [InlineData("2147483648")]
+        [InlineData("\"4\"")]
+        [InlineData("true")]
+        [InlineData("false")]
+        [InlineData("null")]
+        [InlineData("[]")]
+        [InlineData("{}")]
+        public void Invalid_repository_configuration_is_reported_by_the_command(string value)
         {
             using (var directory = new TemporaryDirectory())
             {
                 Repository.Init(directory.Path);
-                directory.Write(".pnfmt", "{\"maxCpuCount\":0}");
+                directory.Write(".pnfmt", "{\"maxCpuCount\":" + value + "}");
 
                 var result = RunInDirectory(directory.Path);
 
                 Assert.Equal(2, result.ExitCode);
                 Assert.Contains("Invalid PNFmt configuration", result.Error);
+                Assert.Contains("positive integer", result.Error);
             }
         }
 

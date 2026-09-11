@@ -59,7 +59,9 @@ namespace PNFmt.Cli
                         }
 
                         hasMaxCpuCount = true;
-                        if (!property.Value.TryGetInt32(out maxCpuCount) || maxCpuCount <= 0)
+                        if (property.Value.ValueKind != JsonValueKind.Number
+                            || !property.Value.TryGetInt32(out maxCpuCount)
+                            || maxCpuCount <= 0)
                         {
                             throw Invalid(path, "Setting 'maxCpuCount' must be a positive integer.");
                         }
