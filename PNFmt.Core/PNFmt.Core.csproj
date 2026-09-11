@@ -1,5 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <!-- Let Roslyn resolve this .NET Standard project through a reference assembly. -->
+        <ProduceReferenceAssembly>true</ProduceReferenceAssembly>
         <RootNamespace>PNFmt</RootNamespace>
         <TargetFramework>netstandard2.0</TargetFramework>
     </PropertyGroup>

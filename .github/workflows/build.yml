@@ -40,7 +40,17 @@ jobs:
         run: dotnet restore PNFmt.slnx
 
       - name: Verify formatting
-        run: dotnet format PNFmt.slnx --verify-no-changes --no-restore
+        shell: pwsh
+        run: |
+          $output = dotnet format PNFmt.slnx --verify-no-changes --no-restore --verbosity diagnostic 2>&1
+          $formatExitCode = $LASTEXITCODE
+          $output | ForEach-Object { Write-Host $_ }
+          if ($formatExitCode -ne 0) {
+            exit $formatExitCode
+          }
+          if ($output -match 'Found project reference without a matching metadata reference:') {
+            throw 'Formatting verification loaded an incomplete project graph.'
+          }
 
       - name: Build
         run: dotnet build PNFmt.slnx --configuration Release --no-restore
