@@ -33,9 +33,10 @@ namespace PNFmt
             }
 
             var encoding = FileEncoding.Load(request.FilePath, request.Log);
-            var file = preserveEncoding || encoding is not null
-                ? EncodedTextFile.Read(request.FilePath, encoding, xml && encoding is not null) : null;
-            var original = file?.Text ?? File.ReadAllText(request.FilePath);
+            // Decode strictly even when the formatter's default output is UTF-8.
+            // XML declarations identify the input independently of output settings.
+            var file = EncodedTextFile.Read(request.FilePath, encoding, xml);
+            var original = file.Text;
             var formatted = formatDocument(original);
             if (shouldSkip?.Invoke() == true)
             {
@@ -62,13 +63,13 @@ namespace PNFmt
                 {
                     File.WriteAllBytes(request.FilePath, bytes);
                 }
-                else if (file is not null)
+                else if (preserveEncoding)
                 {
                     file.Write(request.FilePath, formatted);
                 }
                 else
                 {
-                    File.WriteAllText(request.FilePath, formatted, new UTF8Encoding(false));
+                    File.WriteAllBytes(request.FilePath, new UTF8Encoding(false, true).GetBytes(formatted));
                 }
             }
 

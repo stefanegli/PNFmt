@@ -21,6 +21,13 @@ namespace PNFmt.Tests.Formatter
             from charset in new[] { "utf-8", "utf-8-bom", "utf-16le", "utf-16be", "latin1" }
             select new object[] { extension, charset };
 
+        public static IEnumerable<object[]> FallbackCases =>
+            from extension in new[] { "resx", "csproj", "cs", "xml", "xaml", "slnx", "ini", "editorconfig", "rsp" }
+            from charset in new[] { null, "unset", "invalid" }
+            select new object[] { extension, charset };
+
+        public static IEnumerable<object[]> XmlFallbackCases => FallbackCases.Where(test => IsXml((string)test[0]));
+
         [Theory]
         [MemberData(nameof(Cases))]
         public void Every_formatter_honors_charset_in_preview_write_and_encoding_only_changes(string extension, string charset)
@@ -177,15 +184,71 @@ namespace PNFmt.Tests.Formatter
         }
 
         [Theory]
-        [InlineData(null)]
-        [InlineData("unset")]
-        [InlineData("invalid")]
-        public void Absent_unset_or_invalid_charset_preserves_existing_encoding_behavior(string charset)
+        [MemberData(nameof(FallbackCases))]
+        public void Absent_unset_or_invalid_charset_preserves_existing_encoding_behavior(string extension, string charset)
         {
-            using (var file = new TemporaryFile("cs", charset))
+            using (var file = new TemporaryFile(extension, charset))
             {
+                var original = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Updated, file.Run(false).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
                 Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
-                Assert.Equal(new byte[] { 0xEF, 0xBB, 0xBF }, File.ReadAllBytes(file.Path).Take(3));
+                var bytes = File.ReadAllBytes(file.Path);
+                var expectBom = extension == "cs" || extension == "xml" || extension == "xaml" || extension == "resx";
+                Assert.Equal(expectBom, bytes.Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }));
+                Assert.Contains("caf\u00e9 \u00c3\u00a9", File.ReadAllText(file.Path));
+                Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
+                Assert.Equal(bytes, File.ReadAllBytes(file.Path));
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(FallbackCases))]
+        public void Invalid_utf8_is_rejected_without_replacing_characters(string extension, string charset)
+        {
+            using (var file = new TemporaryFile(extension, charset))
+            {
+                var invalid = Encoding.Latin1.GetBytes(File.ReadAllText(file.Path));
+                File.WriteAllBytes(file.Path, invalid);
+                foreach (var write in new[] { false, true })
+                {
+                    var exception = Record.Exception(() => file.Run(write));
+                    Assert.True(exception is DecoderFallbackException || exception is System.Xml.XmlException,
+                        "Expected an encoding error, got: " + exception);
+                    Assert.Equal(invalid, File.ReadAllBytes(file.Path));
+                }
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(XmlFallbackCases))]
+        public void Xml_declarations_identify_input_encoding_without_a_charset(string extension, string charset)
+        {
+            using (var file = new TemporaryFile(extension, charset))
+            {
+                var text = FileEncoding.UpdateXmlDeclaration(File.ReadAllText(file.Path), Encoding.Latin1);
+                var original = Encoding.Latin1.GetBytes(text);
+                File.WriteAllBytes(file.Path, original);
+                Assert.Equal(FileFormatStatus.Updated, file.Run(false).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
+                Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
+                Assert.Contains("caf\u00e9 \u00c3\u00a9", XDocument.Load(file.Path).ToString());
+                var formatted = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
+                Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
+        [Theory]
+        [InlineData("xml")]
+        [InlineData("xaml")]
+        public void Declared_utf8_without_a_bom_retains_its_bom_convention(string extension)
+        {
+            using (var file = new TemporaryFile(extension, null))
+            {
+                File.WriteAllText(file.Path, "<?xml version='1.0' encoding='utf-8'?>" + File.ReadAllText(file.Path), new UTF8Encoding(false));
+                Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
+                Assert.False(File.ReadAllBytes(file.Path).Take(3).SequenceEqual(new byte[] { 0xEF, 0xBB, 0xBF }));
                 Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
             }
         }

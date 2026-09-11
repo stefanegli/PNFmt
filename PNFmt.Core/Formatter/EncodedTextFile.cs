@@ -10,11 +10,13 @@ namespace PNFmt
     internal sealed class EncodedTextFile
     {
         private readonly Encoding encoding;
+        private readonly byte[] preamble;
 
-        private EncodedTextFile(string text, Encoding encoding)
+        private EncodedTextFile(string text, Encoding encoding, byte[] preamble = null)
         {
             this.Text = text;
             this.encoding = encoding;
+            this.preamble = preamble ?? Array.Empty<byte>();
         }
 
         public string Text { get; }
@@ -37,7 +39,7 @@ namespace PNFmt
                 if (bytes.Take(preamble.Length).SequenceEqual(preamble))
                 {
                     return new EncodedTextFile(
-                        encoding.GetString(bytes, preamble.Length, bytes.Length - preamble.Length), encoding);
+                        encoding.GetString(bytes, preamble.Length, bytes.Length - preamble.Length), encoding, preamble);
                 }
             }
 
@@ -69,7 +71,7 @@ namespace PNFmt
         {
             // Encode completely before opening the destination, so encoding failures
             // cannot truncate it. Keep precisely the original BOM convention.
-            var bytes = this.encoding.GetPreamble().Concat(this.encoding.GetBytes(text)).ToArray();
+            var bytes = this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
             File.WriteAllBytes(path, bytes);
         }
     }
