@@ -7,7 +7,6 @@ namespace PNFmt.Tests.Formatter.Resx
     using PNFmt.Tests.Snapshots;
 
     using System;
-    using System.Collections.Generic;
     using System.Globalization;
     using System.IO;
     using System.Linq;
@@ -87,16 +86,16 @@ namespace PNFmt.Tests.Formatter.Resx
                     .EndsWith("-expected", StringComparison.OrdinalIgnoreCase))
                 .Select(Path.GetFileName)
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
-            var registeredInputs = new ResxSnapshotData().Create()
-                .Select(testCase => testCase.Item2)
+            var registeredInputs = new ResxSnapshotData()
+                .Select(testCase => (string)testCase[1])
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 
             Assert.Equal(fixtureInputs, registeredInputs);
         }
 
-        internal class ResxSnapshotData : TheoryDataBase<string, string, string, IResxFormatSettings>
+        internal class ResxSnapshotData : TheoryData<string, string, string, object>
         {
-            public override IEnumerable<(string, string, string, IResxFormatSettings)> Create()
+            public ResxSnapshotData()
             {
                 var sortAndRemoveDocumentation = new FakeSettings
                 {
@@ -105,31 +104,31 @@ namespace PNFmt.Tests.Formatter.Resx
                     RemoveDocumentationComment = true
                 };
 
-                yield return ("Culture should not impact sorting", "InvariantCulture.resx", "et", sortAndRemoveDocumentation);
-                yield return ("Additional xml comments are kept.", "AdditionalXmlComments.resx", null, sortAndRemoveDocumentation);
-                yield return ("Comment is removed even if no sorting is required.", "AlreadySorted.resx", null, sortAndRemoveDocumentation);
-                yield return ("Data and metadata nodes are grouped and sorted.", "Mixed.resx", null, sortAndRemoveDocumentation);
-                yield return ("Entries are sorted alphabetically.", "Sort.resx", null, sortAndRemoveDocumentation);
-                yield return ("File remains untouched if no modification is necessary.", "NoModificationNeeded.resx", null, sortAndRemoveDocumentation);
+                this.Add("Culture should not impact sorting", "InvariantCulture.resx", "et", sortAndRemoveDocumentation);
+                this.Add("Additional xml comments are kept.", "AdditionalXmlComments.resx", null, sortAndRemoveDocumentation);
+                this.Add("Comment is removed even if no sorting is required.", "AlreadySorted.resx", null, sortAndRemoveDocumentation);
+                this.Add("Data and metadata nodes are grouped and sorted.", "Mixed.resx", null, sortAndRemoveDocumentation);
+                this.Add("Entries are sorted alphabetically.", "Sort.resx", null, sortAndRemoveDocumentation);
+                this.Add("File remains untouched if no modification is necessary.", "NoModificationNeeded.resx", null, sortAndRemoveDocumentation);
                 // TODO xml comments should retain their original position
-                yield return ("Invalid resx files are not touched.", "InvalidResx.resx", null, sortAndRemoveDocumentation);
-                yield return ("Meta data is sorted too.", "MetaData.resx", null, sortAndRemoveDocumentation);
-                yield return ("Plain xml files are not touched.", "Plain.xml", null, sortAndRemoveDocumentation);
-                yield return ("Comment nodes are kept.", "WithResxComments.resx", null, sortAndRemoveDocumentation);
+                this.Add("Invalid resx files are not touched.", "InvalidResx.resx", null, sortAndRemoveDocumentation);
+                this.Add("Meta data is sorted too.", "MetaData.resx", null, sortAndRemoveDocumentation);
+                this.Add("Plain xml files are not touched.", "Plain.xml", null, sortAndRemoveDocumentation);
+                this.Add("Comment nodes are kept.", "WithResxComments.resx", null, sortAndRemoveDocumentation);
 
-                yield return ("Entries are only sorted if 'sort' setting is active.", "DoNotSort.resx", null, new FakeSettings
+                this.Add("Entries are only sorted if 'sort' setting is active.", "DoNotSort.resx", null, new FakeSettings
                 {
                     SortEntries = false,
                     RemoveDocumentationComment = true
                 });
 
-                yield return ("Documentation is only removed if 'doc' setting is active.", "KeepComments.resx", null, new FakeSettings
+                this.Add("Documentation is only removed if 'doc' setting is active.", "KeepComments.resx", null, new FakeSettings
                 {
                     SortEntries = true,
                     RemoveDocumentationComment = false
                 });
 
-                yield return ("No formatter option means no rewrite.", "DoNothing.resx", null, new FakeSettings
+                this.Add("No formatter option means no rewrite.", "DoNothing.resx", null, new FakeSettings
                 {
                     SortEntries = false,
                     RemoveDocumentationComment = false

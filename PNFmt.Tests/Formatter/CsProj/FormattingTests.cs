@@ -4,11 +4,9 @@ namespace PNFmt.Tests.Formatter.CsProj
 {
     using PNFmt;
 
-    using PNFmt.Tests.Formatter.CsProj.TestFoundation;
     using PNFmt.Tests.Snapshots;
 
     using System;
-    using System.Collections.Generic;
     using System.IO;
 
     using Xunit;
@@ -30,13 +28,13 @@ namespace PNFmt.Tests.Formatter.CsProj
             GitSnapshot.Match(actual, typeof(CsProjSnapshotTests), caseName);
         }
 
-        internal class CsProjSnapshotData : TheoryDataBase<string, string, string>
+        internal class CsProjSnapshotData : TheoryData<string, string, string>
         {
-            public override IEnumerable<(string, string, string)> Create()
+            public CsProjSnapshotData()
             {
                 foreach (var testCase in FileSnapshotCaseSource.Create(GetFixtureRoot(), ".csproj"))
                 {
-                    yield return (testCase.InputFile, testCase.RelativePath, testCase.CaseName);
+                    this.Add(testCase.InputFile, testCase.RelativePath, testCase.CaseName);
                 }
             }
         }
