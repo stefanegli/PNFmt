@@ -31,6 +31,8 @@ Property groups containing property functions, member access, or nested property
 
 Item groups containing item or metadata references in any item value or attribute, including conditions and metadata, also retain their original item order.
 
+Groups with property expressions, globs, lists, or escaped characters in `Include` retain their item order because distinct expressions can resolve to the same item. Metadata attributes containing references also retain their order.
+
 Run `pnfmt --lint <paths>` to report project-structure diagnostics and formatting changes without writing files. The command returns exit code `1` when it finds either.
 
 [Back to the overview](../../README.md)

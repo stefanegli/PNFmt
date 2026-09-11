@@ -12,6 +12,36 @@ namespace PNFmt.Tests.Formatter.CsProj
     public sealed class MsBuildEvaluationTests
     {
         [Theory]
+        [InlineData("$(File)")]
+        [InlineData("*.txt")]
+        [InlineData("?.txt")]
+        [InlineData("a.txt;z.txt")]
+        [InlineData("%7A.txt")]
+        public async Task Sorting_preserves_the_first_expanded_duplicate_item(string include)
+        {
+            using (var project = new EvaluationProject("<PropertyGroup><File>z.txt</File></PropertyGroup>"
+                + "<ItemGroup><None Include=\"z.txt\" Tag=\"first\"/><None Include=\"" + include + "\" Tag=\"second\"/></ItemGroup>"
+                + "<Target Name=\"Audit\"><RemoveDuplicates Inputs=\"@(None)\">"
+                + "<Output TaskParameter=\"Filtered\" ItemName=\"Unique\"/></RemoveDuplicates></Target>"))
+            {
+                project.WriteFile("z.txt", "fixture");
+                async Task<string> ReadTag()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync("-t:Audit", "-getItem:Unique")))
+                    {
+                        return document.RootElement.GetProperty("Items").GetProperty("Unique").EnumerateArray()
+                            .Single(item => item.GetProperty("Identity").GetString() == "z.txt").GetProperty("Tag").GetString();
+                    }
+                }
+
+                Assert.Equal("first", await ReadTag());
+                project.Format();
+                Assert.Equal("first", await ReadTag());
+                project.AssertIdempotent();
+            }
+        }
+
+        [Theory]
         [InlineData("$(Zebra)", "hello", false)]
         [InlineData("$(Zebra)", "", true)]
         [InlineData("$(Zebra.ToUpper())", "HELLO", false)]
@@ -195,7 +225,9 @@ namespace PNFmt.Tests.Formatter.CsProj
                     + body + "</Project>");
             }
 
-            public async Task<string> EvaluateAsync(string query)
+            public void WriteFile(string name, string contents) => File.WriteAllText(Path.Combine(this.directory, name), contents);
+
+            public async Task<string> EvaluateAsync(params string[] queries)
             {
                 var start = new ProcessStartInfo("dotnet")
                 {
@@ -204,7 +236,7 @@ namespace PNFmt.Tests.Formatter.CsProj
                     UseShellExecute = false,
                     WorkingDirectory = this.directory,
                 };
-                foreach (var argument in new[] { "msbuild", this.path, "-nologo", query })
+                foreach (var argument in new[] { "msbuild", this.path, "-nologo" }.Concat(queries))
                 {
                     start.ArgumentList.Add(argument);
                 }

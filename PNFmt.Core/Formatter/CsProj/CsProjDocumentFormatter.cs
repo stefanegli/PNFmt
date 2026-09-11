@@ -555,6 +555,10 @@ namespace PNFmt
             {
                 var include = (string)element.Attribute("Include");
                 if (string.IsNullOrWhiteSpace(include)
+                    // Expressions, globs, lists, and escapes can expand to duplicate
+                    // identities even when the Include strings differ.
+                    || include.IndexOf("$(", StringComparison.Ordinal) >= 0
+                    || include.IndexOfAny(new[] { '*', '?', ';', '%' }) >= 0
                     || element.Attribute("Update") != null
                     || element.Attribute("Remove") != null
                     || HasItemReference(element.Value)
