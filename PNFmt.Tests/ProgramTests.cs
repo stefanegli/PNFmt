@@ -28,7 +28,7 @@ namespace PNFmt.Tests
                 foreach (var write in new[] { false, true })
                 {
                     var result = formatter.Format(new FileFormatRequest(path, write, false,
-                        new Formatter.Resx.Fake.FakeLog()));
+                        NullFormatterLog.Instance));
                     Assert.Equal(FileFormatStatus.Skipped, result.Status);
                     Assert.Equal("RESX001", Assert.Single(result.Diagnostics).Code);
                     Assert.Equal(original, File.ReadAllBytes(path));
@@ -1116,16 +1116,9 @@ namespace PNFmt.Tests
 
         private sealed class TemporaryDirectory : IDisposable
         {
-            public TemporaryDirectory()
-            {
-                this.Path = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
-                    "PNFmtTests",
-                    Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(this.Path);
-            }
+            private readonly TestDirectory directory = new TestDirectory();
 
-            public string Path { get; }
+            public string Path => this.directory.Path;
 
             public void EnableFormatting()
             {
@@ -1158,31 +1151,12 @@ namespace PNFmt.Tests
 
             public string Write(string relativePath, string contents)
             {
-                var path = System.IO.Path.Combine(this.Path, relativePath);
-                var parent = System.IO.Path.GetDirectoryName(path);
-                if (!string.IsNullOrEmpty(parent))
-                {
-                    Directory.CreateDirectory(parent);
-                }
-
-                File.WriteAllText(path, contents);
-                return path;
+                return this.directory.Write(relativePath, contents);
             }
 
             public void Dispose()
             {
-                if (Directory.Exists(this.Path))
-                {
-                    foreach (var file in Directory.GetFiles(
-                        this.Path,
-                        "*",
-                        SearchOption.AllDirectories))
-                    {
-                        File.SetAttributes(file, FileAttributes.Normal);
-                    }
-
-                    Directory.Delete(this.Path, true);
-                }
+                this.directory.Dispose();
             }
         }
     }

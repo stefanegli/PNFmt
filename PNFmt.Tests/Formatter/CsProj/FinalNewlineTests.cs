@@ -45,8 +45,8 @@ namespace PNFmt.Tests.Formatter.CsProj
                     "</Project>");
                 var expected = Encoding.UTF8.GetBytes(body + (insertFinalNewline ? newline : string.Empty));
                 var formatter = new CsProjFormatter();
-                var preview = new FileFormatRequest(path, writeChanges: false, lint: false, new FakeLog());
-                var write = new FileFormatRequest(path, writeChanges: true, lint: false, new FakeLog());
+                var preview = new FileFormatRequest(path, writeChanges: false, lint: false, NullFormatterLog.Instance);
+                var write = new FileFormatRequest(path, writeChanges: true, lint: false, NullFormatterLog.Instance);
 
                 foreach (var suffix in new[] { string.Empty, newline, newline + newline })
                 {

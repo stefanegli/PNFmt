@@ -1,6 +1,5 @@
 // Copyright (c) 2026 by Stefan Egli. All rights reserved.
 
-using System;
 using System.IO;
 using System.Linq;
 using Xunit;
@@ -18,7 +17,7 @@ namespace PNFmt.Tests.Snapshots
             bool allowSkippedWhenUnchanged = false)
         {
             var inputRoot = Path.Combine(fixtureRoot, "input");
-            using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
+            using (var stagedInput = TestDirectory.CopyFrom(inputRoot))
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
                 var inputBytes = File.ReadAllBytes(inputFile);
@@ -57,17 +56,5 @@ namespace PNFmt.Tests.Snapshots
                 $"Expected unchanged status for {caseName}, but received {status}.");
         }
 
-        private sealed class NullFormatterLog : IFormatterLog
-        {
-            public static NullFormatterLog Instance { get; } = new NullFormatterLog();
-
-            public void Write(Exception exception)
-            {
-            }
-
-            public void WriteLine(string message)
-            {
-            }
-        }
     }
 }

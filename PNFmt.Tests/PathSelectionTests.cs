@@ -107,29 +107,24 @@ namespace PNFmt.Tests
 
         private sealed class CaseDirectory : IDisposable
         {
+            private readonly TestDirectory directory = new TestDirectory();
+
             public CaseDirectory()
             {
-                this.Path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "PNFmtPathTests", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(this.Path);
                 this.Upper = System.IO.Path.Combine(this.Path, "A.ini");
                 this.Lower = System.IO.Path.Combine(this.Path, "a.ini");
                 File.WriteAllText(this.Upper, "upper");
                 this.IsCaseSensitive = !File.Exists(this.Lower);
             }
 
-            public string Path { get; }
+            public string Path => this.directory.Path;
             public string Upper { get; }
             public string Lower { get; }
             public bool IsCaseSensitive { get; }
 
             public void Dispose()
             {
-                foreach (var file in Directory.GetFiles(this.Path, "*", SearchOption.AllDirectories))
-                {
-                    File.SetAttributes(file, FileAttributes.Normal);
-                }
-
-                Directory.Delete(this.Path, recursive: true);
+                this.directory.Dispose();
             }
         }
     }

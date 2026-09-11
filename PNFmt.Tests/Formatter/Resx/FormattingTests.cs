@@ -31,7 +31,7 @@ namespace PNFmt.Tests.Formatter.Resx
             var sourceFile = Path.Combine(fixtureRoot, fileName);
             using (var actualFile = TemporaryFile.Copy(sourceFile))
             {
-                var formatter = new ResxDocumentFormatter((IResxFormatSettings)settings, new FakeLog());
+                var formatter = new ResxDocumentFormatter((IResxFormatSettings)settings, NullFormatterLog.Instance);
                 var originalCulture = Thread.CurrentThread.CurrentCulture;
                 try
                 {

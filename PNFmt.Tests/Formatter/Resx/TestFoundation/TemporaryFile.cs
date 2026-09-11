@@ -5,40 +5,36 @@ namespace PNFmt.Tests.Formatter.Resx.TestFoundation
 
     internal sealed class TemporaryFile : IDisposable
     {
-        private TemporaryFile(string directory, string path)
+        private readonly TestDirectory directory;
+
+        private TemporaryFile(TestDirectory directory, string path)
         {
-            this.DirectoryPath = directory;
+            this.directory = directory;
             this.Path = path;
         }
 
-        public string DirectoryPath { get; }
+        public string DirectoryPath => this.directory.Path;
         public string Path { get; }
 
         public static TemporaryFile Create(string contents, string extension = ".resx")
         {
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ResxFormatterTests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(directory);
-            var path = System.IO.Path.Combine(directory, "input" + extension);
-            File.WriteAllText(path, contents);
+            var directory = new TestDirectory();
+            var path = directory.Write("input" + extension, contents);
             return new TemporaryFile(directory, path);
         }
 
         public static TemporaryFile Copy(string sourcePath)
         {
             var extension = System.IO.Path.GetExtension(sourcePath);
-            var directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "ResxFormatterTests", Guid.NewGuid().ToString("N"));
-            Directory.CreateDirectory(directory);
-            var path = System.IO.Path.Combine(directory, "input" + extension);
+            var directory = new TestDirectory();
+            var path = directory.GetPath("input" + extension);
             File.Copy(sourcePath, path);
             return new TemporaryFile(directory, path);
         }
 
         public void Dispose()
         {
-            if (Directory.Exists(this.DirectoryPath))
-            {
-                Directory.Delete(this.DirectoryPath, true);
-            }
+            this.directory.Dispose();
         }
     }
 }

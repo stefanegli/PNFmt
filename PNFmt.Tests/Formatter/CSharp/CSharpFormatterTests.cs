@@ -266,34 +266,29 @@ namespace PNFmt.Tests.Formatter.CSharp
                 .Select(token => token.Text).ToArray();
         }
 
-        private sealed class TemporarySource : IDisposable, IFormatterLog
+        private sealed class TemporarySource : IDisposable
         {
-            private readonly string directory = Path.Combine(Path.GetTempPath(), "PNFmtCSharpTests", Guid.NewGuid().ToString("N"));
+            private readonly TestDirectory directory = new TestDirectory();
 
             public TemporarySource(string text)
             {
-                Directory.CreateDirectory(this.directory);
                 File.WriteAllText(this.FilePath, text);
                 this.Configure(string.Empty);
             }
 
-            public string FilePath => Path.Combine(this.directory, "Source.cs");
+            public string FilePath => this.directory.GetPath("Source.cs");
 
             public void Configure(string settings)
             {
-                File.WriteAllText(Path.Combine(this.directory, ".editorconfig"), "root = true\n\n[*.cs]\n" + settings);
+                this.directory.Write(".editorconfig", "root = true\n\n[*.cs]\n" + settings);
             }
 
             public FileFormatResult Run(IFileFormatter formatter, bool write)
             {
-                return formatter.Format(new FileFormatRequest(this.FilePath, write, false, this));
+                return formatter.Format(new FileFormatRequest(this.FilePath, write, false, NullFormatterLog.Instance));
             }
 
-            public void Dispose() => Directory.Delete(this.directory, true);
-
-            public void Write(Exception exception) { }
-
-            public void WriteLine(string message) { }
+            public void Dispose() => this.directory.Dispose();
         }
     }
 }

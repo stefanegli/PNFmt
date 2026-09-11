@@ -3,8 +3,6 @@ namespace PNFmt.Tests.Formatter.Resx
     using NFluent;
 
     using PNFmt;
-
-    using PNFmt.Tests.Formatter.Resx.Fake;
     using PNFmt.Tests.Snapshots;
 
     using System;
@@ -187,7 +185,7 @@ namespace PNFmt.Tests.Formatter.Resx
 
         private static FileFormatRequest CreateRequest(string filePath, bool writeChanges = true)
         {
-            return new FileFormatRequest(filePath, writeChanges, false, new FakeLog());
+            return new FileFormatRequest(filePath, writeChanges, false, NullFormatterLog.Instance);
         }
 
         private string PrepareFile(string fixtureName, string baseFileName, string extension = "resx")

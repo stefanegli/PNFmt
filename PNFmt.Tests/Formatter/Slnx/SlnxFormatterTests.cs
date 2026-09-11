@@ -25,14 +25,14 @@ namespace PNFmt.Tests.Formatter.Slnx
                 var formatter = new SlnxFormatter();
                 var original = XDocument.Parse(input, LoadOptions.PreserveWhitespace).Root.Elements().ElementAt(1);
                 Assert.Equal(FileFormatStatus.Updated,
-                    formatter.Format(new FileFormatRequest(file.Path, false, false, new TestLog())).Status);
+                    formatter.Format(new FileFormatRequest(file.Path, false, false, NullFormatterLog.Instance)).Status);
                 Assert.Equal(input, File.ReadAllText(file.Path));
-                formatter.Format(new FileFormatRequest(file.Path, true, false, new TestLog()));
+                formatter.Format(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var formatted = File.ReadAllText(file.Path);
                 var extension = XDocument.Parse(formatted, LoadOptions.PreserveWhitespace).Root.Elements().ElementAt(1);
                 Assert.True(XNode.DeepEquals(original, extension), formatted);
                 Assert.Equal(FileFormatStatus.Unchanged,
-                    formatter.Format(new FileFormatRequest(file.Path, true, false, new TestLog())).Status);
+                    formatter.Format(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
             }
         }
 
@@ -145,7 +145,7 @@ namespace PNFmt.Tests.Formatter.Slnx
                 "<Solution><Project Path=\"Z.csproj\" /><Project Path=\"A.csproj\" /></Solution>"))
             {
                 var formatter = new SlnxFormatter();
-                var log = new TestLog();
+                var log = NullFormatterLog.Instance;
                 var original = File.ReadAllText(file.Path);
 
                 var dryRun = formatter.Format(new FileFormatRequest(file.Path, false, false, log));
@@ -167,7 +167,7 @@ namespace PNFmt.Tests.Formatter.Slnx
             using (var file = TemporaryFile.Create("<Project />"))
             {
                 var formatter = new SlnxFormatter();
-                var request = new FileFormatRequest(file.Path, true, false, new TestLog());
+                var request = new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance);
 
                 Assert.Throws<InvalidDataException>(() => formatter.Format(request));
                 Assert.Equal("<Project />", File.ReadAllText(file.Path));
@@ -188,7 +188,7 @@ namespace PNFmt.Tests.Formatter.Slnx
                 var formatter = new SlnxFormatter();
                 var original = File.ReadAllText(file.Path);
                 var result = formatter.Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Skipped, result.Status);
                 Assert.Equal(original, File.ReadAllText(file.Path));
@@ -197,50 +197,37 @@ namespace PNFmt.Tests.Formatter.Slnx
 
         private sealed class TemporaryFile : IDisposable
         {
-            private TemporaryFile(string directoryPath, string path)
+            private readonly TestDirectory directory;
+
+            private TemporaryFile(TestDirectory directory, string path)
             {
-                this.DirectoryPath = directoryPath;
+                this.directory = directory;
                 this.Path = path;
             }
 
-            public string DirectoryPath { get; }
+            public string DirectoryPath => this.directory.Path;
 
             public string Path { get; }
 
             public static TemporaryFile Create(string contents, string settingValue = "true")
             {
-                var directory = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
-                    "PNFmtSlnxTests",
-                    Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(directory);
+                var directory = new TestDirectory();
                 if (settingValue is not null)
                 {
-                    File.WriteAllText(
-                        System.IO.Path.Combine(directory, ".editorconfig"),
+                    directory.Write(
+                        ".editorconfig",
                         "root = true\n\n[*.slnx]\npnfmt_sort_entries = " + settingValue + "\n");
                 }
 
-                var path = System.IO.Path.Combine(directory, "Solution.slnx");
-                File.WriteAllText(path, contents);
+                var path = directory.Write("Solution.slnx", contents);
                 return new TemporaryFile(directory, path);
             }
 
             public void Dispose()
             {
-                Directory.Delete(this.DirectoryPath, true);
+                this.directory.Dispose();
             }
         }
 
-        private sealed class TestLog : IFormatterLog
-        {
-            public void Write(Exception exception)
-            {
-            }
-
-            public void WriteLine(string message)
-            {
-            }
-        }
     }
 }

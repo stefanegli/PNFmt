@@ -3,7 +3,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using PNFmt.Tests.Formatter.Resx.Fake;
 using PNFmt.Tests.Formatter.Resx.TestFoundation;
 using Xunit;
 
@@ -211,12 +210,12 @@ namespace PNFmt.Tests.Formatter.Resx
                 File.WriteAllText(Path.Combine(child, ".editorconfig"), "[*.resx]\ninsert_final_newline = false\n");
                 var formatter = new ResxFormatter();
 
-                Assert.Equal(FileFormatStatus.Updated, formatter.Format(new FileFormatRequest(path, true, false, new FakeLog())).Status);
+                Assert.Equal(FileFormatStatus.Updated, formatter.Format(new FileFormatRequest(path, true, false, NullFormatterLog.Instance)).Status);
                 var formatted = File.ReadAllText(path);
                 Assert.Contains("\n   <resheader", formatted);
                 Assert.DoesNotContain("\r", formatted);
                 Assert.EndsWith("</root>", formatted);
-                Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(new FileFormatRequest(path, false, false, new FakeLog())).Status);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance)).Status);
             }
         }
 
@@ -235,7 +234,7 @@ namespace PNFmt.Tests.Formatter.Resx
 
         private static FileFormatResult Format(TemporaryFile file, bool write)
         {
-            return new ResxFormatter().Format(new FileFormatRequest(file.Path, write, false, new FakeLog()));
+            return new ResxFormatter().Format(new FileFormatRequest(file.Path, write, false, NullFormatterLog.Instance));
         }
 
         private static void Configure(TemporaryFile file, string properties)

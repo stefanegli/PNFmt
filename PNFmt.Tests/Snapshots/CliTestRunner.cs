@@ -18,7 +18,7 @@ namespace PNFmt.Tests.Snapshots
             string caseName)
         {
             var inputRoot = Path.Combine(fixtureRoot, "input");
-            using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
+            using (var stagedInput = TestDirectory.CopyFrom(inputRoot))
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
                 var inputBytes = File.ReadAllBytes(stagedFile);

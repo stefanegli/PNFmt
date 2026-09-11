@@ -74,7 +74,7 @@ namespace PNFmt.Tests.Formatter.Ini
             using (var file = TemporaryFile.Create("settings.ini", "z=2\na=1\n"))
             {
                 var formatter = new IniFormatter();
-                var log = new TestLog();
+                var log = NullFormatterLog.Instance;
 
                 var dryRun = formatter.Format(new FileFormatRequest(file.Path, false, false, log));
 
@@ -103,7 +103,7 @@ namespace PNFmt.Tests.Formatter.Ini
             {
                 var formatter = new IniFormatter();
                 var result = formatter.Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Skipped, result.Status);
                 Assert.Equal("z=2\na=1\n", File.ReadAllText(file.Path));
@@ -144,7 +144,7 @@ namespace PNFmt.Tests.Formatter.Ini
             {
                 var formatter = new IniFormatter();
                 var result = formatter.Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Updated, result.Status);
                 Assert.Equal(Expected, File.ReadAllText(file.Path));
@@ -225,7 +225,7 @@ namespace PNFmt.Tests.Formatter.Ini
                 prefixSettingValue: "true"))
             {
                 var result = new IniFormatter().Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Updated, result.Status);
                 Assert.Equal(Expected, File.ReadAllText(file.Path));
@@ -246,7 +246,7 @@ namespace PNFmt.Tests.Formatter.Ini
             {
                 var formatter = new IniFormatter();
                 var result = formatter.Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Skipped, result.Status);
                 Assert.Equal(Input, File.ReadAllText(file.Path));
@@ -266,7 +266,7 @@ namespace PNFmt.Tests.Formatter.Ini
                 mergeSettingValue: settingValue))
             {
                 var result = new IniFormatter().Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Skipped, result.Status);
                 Assert.Equal(Input, File.ReadAllText(file.Path));
@@ -284,7 +284,7 @@ namespace PNFmt.Tests.Formatter.Ini
                 mergeSettingValue: "true"))
             {
                 var result = new IniFormatter().Format(
-                    new FileFormatRequest(file.Path, true, false, new TestLog()));
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 Assert.Equal(FileFormatStatus.Updated, result.Status);
                 Assert.Equal("[shared]\nz = 2\na = 1\n", File.ReadAllText(file.Path));
@@ -293,13 +293,15 @@ namespace PNFmt.Tests.Formatter.Ini
 
         private sealed class TemporaryFile : IDisposable
         {
-            private TemporaryFile(string directoryPath, string path)
+            private readonly TestDirectory directory;
+
+            private TemporaryFile(TestDirectory directory, string path)
             {
-                this.DirectoryPath = directoryPath;
+                this.directory = directory;
                 this.Path = path;
             }
 
-            public string DirectoryPath { get; }
+            public string DirectoryPath => this.directory.Path;
 
             public string Path { get; }
 
@@ -311,11 +313,7 @@ namespace PNFmt.Tests.Formatter.Ini
                 string prefixSettingValue = null,
                 string mergeSettingValue = null)
             {
-                var directory = System.IO.Path.Combine(
-                    System.IO.Path.GetTempPath(),
-                    "PNFmtIniTests",
-                    Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(directory);
+                var directory = new TestDirectory();
                 if (settingValue is not null
                     || groupSettingValue is not null
                     || prefixSettingValue is not null
@@ -342,31 +340,20 @@ namespace PNFmt.Tests.Formatter.Ini
                         settings += "pnfmt_ini_merge_groups = " + mergeSettingValue + "\n";
                     }
 
-                    File.WriteAllText(
-                        System.IO.Path.Combine(directory, ".editorconfig"),
+                    directory.Write(
+                        ".editorconfig",
                         settings);
                 }
 
-                var path = System.IO.Path.Combine(directory, name);
-                File.WriteAllText(path, contents);
+                var path = directory.Write(name, contents);
                 return new TemporaryFile(directory, path);
             }
 
             public void Dispose()
             {
-                Directory.Delete(this.DirectoryPath, true);
+                this.directory.Dispose();
             }
         }
 
-        private sealed class TestLog : IFormatterLog
-        {
-            public void Write(Exception exception)
-            {
-            }
-
-            public void WriteLine(string message)
-            {
-            }
-        }
     }
 }

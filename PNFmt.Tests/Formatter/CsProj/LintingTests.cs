@@ -134,7 +134,7 @@ namespace PNFmt.Tests.Formatter.CsProj
             {
                 var formatter = new CsProjDocumentFormatter(
                     new DefaultCsProjFormatSettings(),
-                    new FakeLog());
+                    NullFormatterLog.Instance);
                 formatter.RunWithResult(tempFile, writeChanges: false, lint: lint);
                 return formatter.Diagnostics;
             }

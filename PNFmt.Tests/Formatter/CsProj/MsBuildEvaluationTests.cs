@@ -280,13 +280,13 @@ namespace PNFmt.Tests.Formatter.CsProj
 
             public void Format()
             {
-                new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, new FakeLog()));
+                new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance));
             }
 
             public void AssertIdempotent()
             {
                 var bytes = File.ReadAllBytes(this.path);
-                var result = new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, new FakeLog()));
+                var result = new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance));
                 Assert.Equal(FileFormatStatus.Unchanged, result.Status);
                 Assert.Equal(bytes, File.ReadAllBytes(this.path));
             }

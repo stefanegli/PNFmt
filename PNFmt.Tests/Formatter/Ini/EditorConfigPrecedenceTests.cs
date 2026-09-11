@@ -165,13 +165,9 @@ namespace PNFmt.Tests.Formatter.Ini
 
         private sealed class TemporaryConfiguration : IDisposable, IFormatterLog
         {
-            public TemporaryConfiguration()
-            {
-                this.DirectoryPath = Path.Combine(Path.GetTempPath(), "PNFmtPrecedenceTests", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(this.DirectoryPath);
-            }
+            private readonly TestDirectory directory = new TestDirectory();
 
-            public string DirectoryPath { get; }
+            public string DirectoryPath => this.directory.Path;
 
             public IReadOnlyDictionary<string, string> Parse(string text, string target)
             {
@@ -183,7 +179,7 @@ namespace PNFmt.Tests.Formatter.Ini
 
             public void Dispose()
             {
-                Directory.Delete(this.DirectoryPath, true);
+                this.directory.Dispose();
             }
 
             public void Write(Exception exception)

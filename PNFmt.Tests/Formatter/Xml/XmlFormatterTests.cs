@@ -152,23 +152,22 @@ namespace PNFmt.Tests.Formatter.Xml
             return XmlDocumentFormatter.Format(text, settings.ToDictionary(item => item.Key, item => item.Value));
         }
 
-        private sealed class TemporaryMarkup : IDisposable, IFormatterLog
+        private sealed class TemporaryMarkup : IDisposable
         {
-            private readonly string directory = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "PNFmtXmlTests", Guid.NewGuid().ToString("N"));
+            private readonly TestDirectory directory = new TestDirectory();
             private readonly bool xaml;
 
             public TemporaryMarkup(bool xaml)
             {
                 this.xaml = xaml;
-                Directory.CreateDirectory(this.directory);
-                File.WriteAllText(System.IO.Path.Combine(this.directory, ".editorconfig"), "root = true\n");
+                this.directory.Write(".editorconfig", "root = true\n");
             }
 
-            public string Path => System.IO.Path.Combine(this.directory, this.xaml ? "View.xaml" : "Data.xml");
+            public string Path => this.directory.GetPath(this.xaml ? "View.xaml" : "Data.xml");
 
             public void Enable(string value = "true")
             {
-                File.WriteAllText(System.IO.Path.Combine(this.directory, ".editorconfig"), (this.xaml
+                this.directory.Write(".editorconfig", (this.xaml
                     ? "root = true\n[*.xaml]\npnfmt_xaml_format = "
                     : "root = true\n[*.xml]\npnfmt_xml_format = ") + value + "\npnfmt_sort_entries = true\n");
             }
@@ -176,12 +175,10 @@ namespace PNFmt.Tests.Formatter.Xml
             public FileFormatResult Run(bool write)
             {
                 IFileFormatter formatter = this.xaml ? new XamlFormatter() : new XmlFormatter();
-                return formatter.Format(new FileFormatRequest(this.Path, write, false, this));
+                return formatter.Format(new FileFormatRequest(this.Path, write, false, NullFormatterLog.Instance));
             }
 
-            public void Dispose() => Directory.Delete(this.directory, true);
-            public void Write(Exception exception) { }
-            public void WriteLine(string message) { }
+            public void Dispose() => this.directory.Dispose();
         }
     }
 }
