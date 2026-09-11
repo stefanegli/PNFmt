@@ -55,6 +55,13 @@ jobs:
       - name: Build
         run: dotnet build PNFmt.slnx --configuration Release --no-restore
 
+      - name: Verify PNFmt project and configuration formatting
+        shell: pwsh
+        run: |
+          [xml]$solution = Get-Content -Raw PNFmt.slnx
+          $projectPaths = @($solution.SelectNodes('//Project') | ForEach-Object { $_.Path })
+          dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release --no-build -- --all --check --verbose .editorconfig PNFmt.slnx @projectPaths
+
       - name: Test
         run: dotnet test PNFmt.slnx --configuration Release --no-build --no-restore
 
