@@ -38,10 +38,23 @@ namespace PNFmt.Tests.Formatter.Resx
                 {
                     Thread.CurrentThread.CurrentCulture = new CultureInfo(culture ?? "en-US");
 
-                    // Act
-                    formatter.Run(actualFile.Path);
+                    var originalBytes = File.ReadAllBytes(actualFile.Path);
+                    formatter.Run(actualFile.Path, writeChanges: false);
+                    var previewChanged = formatter.IsFileChanged;
+                    Assert.Equal(originalBytes, File.ReadAllBytes(actualFile.Path));
 
-                    // Assert
+                    formatter.Run(actualFile.Path);
+                    var formattedBytes = File.ReadAllBytes(actualFile.Path);
+                    Assert.Equal(previewChanged, formatter.IsFileChanged);
+                    Assert.Equal(!originalBytes.SequenceEqual(formattedBytes), formatter.IsFileChanged);
+
+                    formatter.Run(actualFile.Path, writeChanges: false);
+                    Assert.False(formatter.IsFileChanged);
+                    Assert.Equal(formattedBytes, File.ReadAllBytes(actualFile.Path));
+                    formatter.Run(actualFile.Path);
+                    Assert.False(formatter.IsFileChanged);
+                    Assert.Equal(formattedBytes, File.ReadAllBytes(actualFile.Path));
+
                     var actual = File.ReadAllText(actualFile.Path);
                     try
                     {

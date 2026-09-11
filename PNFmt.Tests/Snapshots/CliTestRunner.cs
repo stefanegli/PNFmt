@@ -3,6 +3,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -25,10 +26,7 @@ namespace PNFmt.Tests.Snapshots
                 var context = $"Case: {caseName}{Environment.NewLine}"
                     + $"stdout:{Environment.NewLine}{result.StandardOutput}{Environment.NewLine}"
                     + $"stderr:{Environment.NewLine}{result.StandardError}";
-                var changed = !string.Equals(
-                    File.ReadAllText(inputFile),
-                    actual,
-                    StringComparison.Ordinal);
+                var changed = !File.ReadAllBytes(inputFile).SequenceEqual(File.ReadAllBytes(stagedFile));
 
                 Assert.True(result.ExitCode == 0, context);
                 Assert.Contains(Path.GetFileName(relativePath), result.StandardOutput);

@@ -2,6 +2,7 @@
 
 using System;
 using System.IO;
+using System.Linq;
 using Xunit;
 
 namespace PNFmt.Tests.Snapshots
@@ -20,15 +21,16 @@ namespace PNFmt.Tests.Snapshots
             using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
-                var inputText = File.ReadAllText(inputFile);
+                var inputBytes = File.ReadAllBytes(inputFile);
 
                 var firstRun = formatter.Format(
                     new FileFormatRequest(stagedFile, true, false, NullFormatterLog.Instance));
                 var actual = File.ReadAllText(stagedFile);
+                var formattedBytes = File.ReadAllBytes(stagedFile);
                 var secondRun = formatter.Format(
                     new FileFormatRequest(stagedFile, true, false, NullFormatterLog.Instance));
 
-                var changed = !string.Equals(inputText, actual, StringComparison.Ordinal);
+                var changed = !inputBytes.SequenceEqual(formattedBytes);
                 if (changed)
                 {
                     Assert.Equal(FileFormatStatus.Updated, firstRun.Status);
@@ -39,7 +41,7 @@ namespace PNFmt.Tests.Snapshots
                 }
 
                 AssertUnchangedOrSkipped(secondRun.Status, allowSkippedWhenUnchanged, caseName);
-                Assert.Equal(actual, File.ReadAllText(stagedFile));
+                Assert.Equal(formattedBytes, File.ReadAllBytes(stagedFile));
                 return actual;
             }
         }
