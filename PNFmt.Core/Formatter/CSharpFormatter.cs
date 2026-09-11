@@ -21,7 +21,7 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = EditorConfigSettings.Load(request.FilePath, request.Log);
+            var settings = EditorConfigSettings.Load(request.FilePath);
             FormatterDiagnostic diagnostic = null;
             var generated = false;
             var result = TextFileFormatPipeline.Format(

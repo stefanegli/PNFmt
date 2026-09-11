@@ -13,6 +13,29 @@ namespace PNFmt.Tests
 {
     public sealed class ProgramTests
     {
+        [Theory]
+        [InlineData("--check")]
+        [InlineData("--dry-run")]
+        [InlineData("--lint")]
+        [InlineData("--all")]
+        public void Unreadable_editorconfig_is_an_error_without_writing(string mode)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                var configuration = directory.Write(".editorconfig", "root = true\n[*.xml]\npnfmt_xml_format = true\n");
+                var path = directory.Write("Data.xml", "<root><child /></root>");
+                var original = File.ReadAllBytes(path);
+                using (var fileLock = new FileStream(configuration, FileMode.Open, FileAccess.Read, FileShare.None))
+                {
+                    var result = Run("--all", mode, path);
+                    Assert.Equal(2, result.ExitCode);
+                    Assert.Contains("EditorConfig", result.Error);
+                    Assert.Contains("failed 1", result.Output);
+                    Assert.Equal(original, File.ReadAllBytes(path));
+                }
+            }
+        }
+
         [Fact]
         public void Check_and_dry_run_detect_resx_bom_changes_without_writing()
         {

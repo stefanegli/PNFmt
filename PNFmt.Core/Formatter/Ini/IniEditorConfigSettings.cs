@@ -6,7 +6,7 @@ namespace PNFmt
     {
         public IniEditorConfigSettings(string targetFile, IFormatterLog log)
         {
-            var settings = EditorConfigSettings.Load(targetFile, log);
+            var settings = EditorConfigSettings.Load(targetFile);
             this.SortEntries = EditorConfigSettings.IsEnabled(
                 settings,
                 EditorConfigSettingNames.SortEntries);

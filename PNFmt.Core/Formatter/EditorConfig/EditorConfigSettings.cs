@@ -2,18 +2,13 @@
 
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.IO;
 
 namespace PNFmt
 {
     internal static class EditorConfigSettings
     {
-        private static readonly IReadOnlyDictionary<string, string> Empty =
-            new ReadOnlyDictionary<string, string>(new Dictionary<string, string>());
-
-        public static IReadOnlyDictionary<string, string> Load(
-            string targetFile,
-            IFormatterLog log)
+        public static IReadOnlyDictionary<string, string> Load(string targetFile)
         {
             try
             {
@@ -25,8 +20,8 @@ namespace PNFmt
             }
             catch (Exception ex)
             {
-                log?.WriteLine("Failed to parse EditorConfig file:\n" + ex.ToString());
-                return Empty;
+                throw new InvalidDataException(
+                    $"Unable to read EditorConfig settings for '{targetFile}': {ex.Message}", ex);
             }
         }
 

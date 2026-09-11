@@ -10,7 +10,7 @@ namespace PNFmt
         public CsProjEditorConfigSettings(string targetFile = "dummy.csproj", IFormatterLog log = null)
         {
             var isActive = false;
-            var settings = EditorConfigSettings.Load(targetFile, log);
+            var settings = EditorConfigSettings.Load(targetFile);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
                 LegacyEditorConfigSettingAliases.CsProjSortEntries,

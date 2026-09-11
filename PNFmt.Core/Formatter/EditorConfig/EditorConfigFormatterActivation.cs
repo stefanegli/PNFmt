@@ -18,7 +18,7 @@ namespace PNFmt
                 throw new ArgumentException("A setting name is required.", nameof(settingName));
             }
 
-            var settings = EditorConfigSettings.Load(targetFile, log);
+            var settings = EditorConfigSettings.Load(targetFile);
             return EditorConfigSettings.IsEnabled(settings, settingName);
         }
     }

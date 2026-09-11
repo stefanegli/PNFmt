@@ -15,7 +15,7 @@ namespace PNFmt
 
         public static Encoding Load(string path, IFormatterLog log)
         {
-            var settings = EditorConfigSettings.Load(path, log);
+            var settings = EditorConfigSettings.Load(path);
             settings.TryGetValue("charset", out var charset);
             switch (charset?.ToLowerInvariant())
             {

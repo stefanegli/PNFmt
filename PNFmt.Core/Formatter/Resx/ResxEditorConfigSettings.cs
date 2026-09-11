@@ -7,7 +7,7 @@ namespace PNFmt
         public ResxEditorConfigSettings(IFormatterLog log, string targetFile = "dummy.resx")
         {
             var isActive = false;
-            var settings = EditorConfigSettings.Load(targetFile, log);
+            var settings = EditorConfigSettings.Load(targetFile);
             this.Layout = new ResxLayoutSettings(settings);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
