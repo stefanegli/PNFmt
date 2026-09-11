@@ -11,6 +11,26 @@ namespace PNFmt.Tests.Formatter.Slnx
     public sealed class SlnxFormatterTests
     {
         [Theory]
+        [InlineData("\n")]
+        [InlineData("\r\n")]
+        [InlineData("\r")]
+        public void Layout_uses_literal_newlines_while_extension_carriage_returns_stay_escaped(string newline)
+        {
+            var input = string.Join(newline, "<?xml version='1.0'?>", "<Solution>", "<Folder Name='/Source/'>",
+                "<Project Path='Z' />", "<Project Path='A' />", "</Folder>",
+                "<Extension>first&#xD;second</Extension>", "</Solution>") + newline;
+            var expected = string.Join(newline, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<Solution>", "  <Folder Name=\"/Source/\">",
+                "    <Project Path=\"A\" />", "    <Project Path=\"Z\" />", "  </Folder>",
+                "  <Extension>first&#xD;second</Extension>", "</Solution>") + newline;
+
+            var actual = SlnxDocumentFormatter.Format(input);
+
+            Assert.Equal(expected, actual);
+            Assert.Equal("first\rsecond", XDocument.Parse(actual).Root.Element("Extension").Value);
+            Assert.Equal(actual, SlnxDocumentFormatter.Format(actual));
+        }
+
+        [Theory]
         [InlineData("<Extension>", "</Extension>")]
         [InlineData("<e:Project xmlns:e='urn:extension'>", "</e:Project>")]
         public void Extension_subtrees_preserve_all_character_data(string start, string end)

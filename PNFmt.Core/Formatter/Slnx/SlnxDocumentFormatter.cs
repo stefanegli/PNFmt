@@ -80,13 +80,13 @@ namespace PNFmt
                 }
 
                 var indent = new string(' ', container.Ancestors().Count() * 2);
-                container.ReplaceNodes(nodes.SelectMany(node => new XNode[] { new XText(newLine + indent + "  "), node })
-                    .Concat(new[] { new XText(newLine + indent) }).ToArray());
+                container.ReplaceNodes(nodes.SelectMany(node => new XNode[] { new LayoutWhitespace(newLine + indent + "  "), node })
+                    .Concat(new[] { new LayoutWhitespace(newLine + indent) }).ToArray());
             }
 
             var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
             document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
-                index > 0 || document.Declaration is not null ? new XNode[] { new XText(newLine), node } : new[] { node }).ToArray());
+                index > 0 || document.Declaration is not null ? new XNode[] { new LayoutWhitespace(newLine), node } : new[] { node }).ToArray());
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = new UTF8Encoding(false),
@@ -292,6 +292,18 @@ namespace PNFmt
 
         private sealed class LayoutContainer
         {
+        }
+
+        private sealed class LayoutWhitespace : XText
+        {
+            public LayoutWhitespace(string value) : base(value) { }
+
+            public override void WriteTo(XmlWriter writer)
+            {
+                // Entitize protects extension data, but layout must contain real
+                // CR/CRLF characters, including outside the document element.
+                writer.WriteRaw(this.Value);
+            }
         }
 
         private sealed class ElementGroup
