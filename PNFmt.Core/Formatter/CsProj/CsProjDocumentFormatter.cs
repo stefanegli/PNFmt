@@ -298,7 +298,7 @@ namespace PNFmt
             {
                 var element = groups[i].Element;
                 var text = element.Value;
-                foreach (var attribute in element.Attributes())
+                foreach (var attribute in element.DescendantsAndSelf().Attributes())
                 {
                     text += " " + attribute.Value;
                 }

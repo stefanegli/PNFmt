@@ -4,12 +4,60 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.CsProj
 {
     public sealed class MsBuildEvaluationTests
     {
+        [Theory]
+        [InlineData("$(Zebra)", "hello", false)]
+        [InlineData("$(Zebra)", "", true)]
+        [InlineData("$(Zebra.ToUpper())", "HELLO", false)]
+        [InlineData("$([System.String]::Copy('$(Zebra)'))", "hello", false)]
+        public async Task Sorting_preserves_references_in_structured_properties(string expression, string expected, bool forward)
+        {
+            var observed = "<Observed><Node Value=\"" + expression + "\" /></Observed>";
+            const string Zebra = "<Zebra>hello</Zebra>";
+            using (var project = new EvaluationProject("<PropertyGroup>"
+                + (forward ? observed + Zebra : Zebra + observed) + "</PropertyGroup>"))
+            {
+                async Task<string> ReadValue() => (string)XElement.Parse(await project.EvaluateAsync("-getProperty:Observed")).Attribute("Value");
+
+                Assert.Equal(expected, await ReadValue());
+                project.Format();
+                Assert.Equal(expected, await ReadValue());
+                project.AssertIdempotent();
+            }
+        }
+
+        [Theory]
+        [InlineData(false, "hello")]
+        [InlineData(true, "")]
+        public async Task Sorting_preserves_references_in_structured_metadata(bool forward, string expected)
+        {
+            const string Alpha = "<Alpha><Node Value=\"%(Zebra)\" /></Alpha>";
+            const string Zebra = "<Zebra>hello</Zebra>";
+            using (var project = new EvaluationProject("<ItemGroup><None Include=\"file\">"
+                + (forward ? Alpha + Zebra : Zebra + Alpha) + "</None></ItemGroup>"))
+            {
+                async Task<string> ReadValue()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync("-getItem:None")))
+                    {
+                        var xml = document.RootElement.GetProperty("Items").GetProperty("None")[0].GetProperty("Alpha").GetString();
+                        return (string)XElement.Parse(xml).Attribute("Value");
+                    }
+                }
+
+                Assert.Equal(expected, await ReadValue());
+                project.Format();
+                Assert.Equal(expected, await ReadValue());
+                project.AssertIdempotent();
+            }
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData("end_of_line = lf\n")]
