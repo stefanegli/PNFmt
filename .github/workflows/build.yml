@@ -15,8 +15,12 @@ concurrency:
 
 jobs:
   build:
-    name: Build, test, and validate package
-    runs-on: ubuntu-latest
+    name: Build, test, and validate package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
 
     env:

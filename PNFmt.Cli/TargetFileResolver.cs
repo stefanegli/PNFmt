@@ -11,7 +11,7 @@ namespace PNFmt.Cli
     internal sealed class TargetFileResolver
     {
         private static readonly HashSet<string> IgnoredRecursiveDirectories =
-            new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            new HashSet<string>(PathComparison.Comparer)
             {
                 ".git",
                 ".vs",
@@ -48,7 +48,7 @@ namespace PNFmt.Cli
                 throw new ArgumentNullException(nameof(paths));
             }
 
-            var files = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var files = new HashSet<string>(PathComparison.Comparer);
             var errors = new List<string>();
             var gitFiltered = false;
             foreach (var rawPath in paths)
@@ -116,7 +116,7 @@ namespace PNFmt.Cli
             }
 
             return new TargetFileResolution(
-                files.OrderBy(path => path, StringComparer.OrdinalIgnoreCase).ToArray(),
+                files.OrderBy(path => path, PathComparison.Comparer).ToArray(),
                 errors,
                 gitFiltered);
         }

@@ -17,7 +17,7 @@ namespace PNFmt.Cli
             this.RootPath = Path.GetFullPath(rootPath);
             this.changedFiles = new HashSet<string>(
                 changedFiles.Select(Path.GetFullPath),
-                StringComparer.OrdinalIgnoreCase);
+                PathComparison.Comparer);
         }
 
         public string RootPath { get; }
@@ -69,7 +69,7 @@ namespace PNFmt.Cli
             var fullDirectory = Path.GetFullPath(directory);
             return this.changedFiles
                 .Where(file => IsWithinDirectory(file, fullDirectory, recursive))
-                .OrderBy(file => file, StringComparer.OrdinalIgnoreCase)
+                .OrderBy(file => file, PathComparison.Comparer)
                 .ToArray();
         }
 
