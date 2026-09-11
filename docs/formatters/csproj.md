@@ -27,6 +27,8 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 
 Property and item sorting is deliberately limited to content that can be reordered without changing normal MSBuild evaluation. Forward property references, item operations, imports, conditions, and other evaluation-sensitive constructs retain their meaningful order.
 
+Property groups containing property functions, member access, or nested property expansions retain their original order because those dependencies cannot be resolved reliably without evaluating the project.
+
 Run `pnfmt --lint <paths>` to report project-structure diagnostics and formatting changes without writing files. The command returns exit code `1` when it finds either.
 
 [Back to the overview](../../README.md)

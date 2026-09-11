@@ -311,6 +311,16 @@ namespace PNFmt
                     }
 
                     var referenceName = match.Groups[1].Value;
+                    // Property functions, member access, and nested expansions cannot
+                    // be resolved by this file-local dependency scan. Preserve the
+                    // whole group rather than moving a prerequisite across the expression.
+                    if (referenceName.IndexOf('(') >= 0
+                        || referenceName.IndexOf('.') >= 0
+                        || referenceName.IndexOf('[') >= 0)
+                    {
+                        return groups;
+                    }
+
                     if (string.IsNullOrWhiteSpace(referenceName))
                     {
                         continue;
