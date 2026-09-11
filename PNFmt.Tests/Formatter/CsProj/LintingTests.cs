@@ -85,17 +85,50 @@ namespace PNFmt.Tests.Formatter.CsProj
             Assert.Empty(diagnostics);
         }
 
+        [Theory]
+        [InlineData("Compile", "Missing*.cs", "Existing.cs", false)]
+        [InlineData("Compile", "Existing*.cs", "Existing.cs", true)]
+        [InlineData("Compile", "*.cs", "nested/Existing.cs", false)]
+        [InlineData("Compile", "**/*.cs", "Existing.cs", true)]
+        [InlineData("Compile", "**/*.cs", "nested/Existing.cs", true)]
+        [InlineData("Compile", "**/Missing*.cs", "nested/Existing.cs", false)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match1.cs", true)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/deep/Match1.cs", false)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match10.cs", false)]
+        [InlineData("Compile", @"src\**\Match?.cs", "src/child/Match1.cs", true)]
+        [InlineData("Compile", @"src\Missing*.cs", "src/Existing.cs", false)]
+        [InlineData("Compile", "./src/*.cs", "src/Existing.cs", true)]
+        [InlineData("EmbeddedResource", "Missing*.resx", "Existing.resx", false)]
+        [InlineData("EmbeddedResource", @"src\*.resx", "src/Existing.resx", true)]
+        [InlineData("None", @"src\data.txt", "src/data.txt", true)]
+        public void Default_item_lint_requires_a_file_matching_the_entire_include(string itemType, string include, string file, bool expectedDiagnostic)
+        {
+            var project = "<Project Sdk=\"Microsoft.NET.Sdk\"><ItemGroup><" + itemType
+                + " Include=\"" + include + "\" /></ItemGroup></Project>";
+
+            var diagnostics = Analyze(project, true, file);
+
+            Assert.Equal(expectedDiagnostic, diagnostics.Any(diagnostic => diagnostic.Code == "CSPROJ005"));
+        }
+
         private static System.Collections.Generic.IReadOnlyList<FormatterDiagnostic> Analyze(
             string project,
-            bool lint = true)
+            bool lint = true,
+            params string[] files)
         {
-            var tempFile = Path.Combine(
+            var directory = Path.Combine(
                 Path.GetTempPath(),
                 "CsProjFormatterTests",
-                Guid.NewGuid().ToString("N") + ".csproj");
-            Directory.CreateDirectory(Path.GetDirectoryName(tempFile));
+                Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(directory);
+            var tempFile = Path.Combine(directory, "Test.csproj");
             File.WriteAllText(tempFile, project);
-            File.WriteAllText(Path.Combine(Path.GetDirectoryName(tempFile), "Program.cs"), string.Empty);
+            foreach (var file in files.Length == 0 ? new[] { "Program.cs" } : files)
+            {
+                var path = Path.Combine(directory, file.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.WriteAllText(path, string.Empty);
+            }
 
             try
             {
@@ -107,8 +140,7 @@ namespace PNFmt.Tests.Formatter.CsProj
             }
             finally
             {
-                File.Delete(tempFile);
-                File.Delete(Path.Combine(Path.GetDirectoryName(tempFile), "Program.cs"));
+                Directory.Delete(directory, recursive: true);
             }
         }
     }

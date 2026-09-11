@@ -156,7 +156,7 @@ namespace PNFmt
                         continue;
                     }
 
-                    if (!HasMatchingDefaultItem(projectPath, include, defaultItemType.Extension))
+                    if (!HasMatchingDefaultItem(projectPath, include))
                     {
                         continue;
                     }
@@ -225,36 +225,24 @@ namespace PNFmt
 
         private static bool HasMatchingDefaultItem(
             string projectPath,
-            string include,
-            string expectedExtension)
+            string include)
         {
             var projectDirectory = Path.GetDirectoryName(projectPath) ?? string.Empty;
             var normalizedInclude = include
-                .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar);
+                .Replace('\\', Path.DirectorySeparatorChar)
+                .Replace('/', Path.DirectorySeparatorChar);
             var wildcardIndex = normalizedInclude.IndexOfAny(new[] { '*', '?' });
             if (wildcardIndex < 0)
             {
                 return File.Exists(Path.Combine(projectDirectory, normalizedInclude));
             }
 
-            var prefix = normalizedInclude.Substring(0, wildcardIndex);
-            var separatorIndex = prefix.LastIndexOf(Path.DirectorySeparatorChar);
-            var searchDirectory = separatorIndex >= 0
-                ? Path.Combine(projectDirectory, prefix.Substring(0, separatorIndex))
-                : projectDirectory;
-            if (!Directory.Exists(searchDirectory))
-            {
-                return false;
-            }
-
             try
             {
-                return Directory
-                    .EnumerateFiles(searchDirectory, "*", SearchOption.AllDirectories)
-                    .Any(file => expectedExtension != null
-                        ? file.EndsWith(expectedExtension, StringComparison.OrdinalIgnoreCase)
-                        : !file.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                            && !file.EndsWith(".resx", StringComparison.OrdinalIgnoreCase));
+                var segments = normalizedInclude.Split(Path.DirectorySeparatorChar)
+                    .Where(segment => segment.Length > 0 && segment != ".")
+                    .ToArray();
+                return HasMatchingFile(projectDirectory, segments, 0);
             }
             catch (IOException)
             {
@@ -264,6 +252,77 @@ namespace PNFmt
             {
                 return false;
             }
+        }
+
+        private static bool HasMatchingFile(string directory, string[] segments, int index)
+        {
+            if (!Directory.Exists(directory) || index >= segments.Length)
+            {
+                return false;
+            }
+
+            var segment = segments[index];
+            if (index == segments.Length - 1)
+            {
+                return Directory.EnumerateFiles(directory)
+                    .Any(file => MatchesSegment(Path.GetFileName(file), segment));
+            }
+
+            if (segment == "**" && HasMatchingFile(directory, segments, index + 1))
+            {
+                return true;
+            }
+
+            if (segment.IndexOfAny(new[] { '*', '?' }) < 0)
+            {
+                return HasMatchingFile(Path.Combine(directory, segment), segments, index + 1);
+            }
+
+            foreach (var child in Directory.EnumerateDirectories(directory))
+            {
+                if ((File.GetAttributes(child) & FileAttributes.ReparsePoint) != 0)
+                {
+                    continue;
+                }
+
+                if (MatchesSegment(Path.GetFileName(child), segment)
+                    && HasMatchingFile(child, segments, segment == "**" ? index : index + 1))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool MatchesSegment(string name, string pattern)
+        {
+            // Dynamic programming bounds wildcard matching to O(name * pattern),
+            // avoiding the backtracking cost of repeated stars in regex globs.
+            var matches = new bool[name.Length + 1];
+            matches[0] = true;
+            foreach (var character in pattern)
+            {
+                if (character == '*')
+                {
+                    for (var index = 1; index <= name.Length; index++)
+                    {
+                        matches[index] |= matches[index - 1];
+                    }
+                }
+                else
+                {
+                    for (var index = name.Length; index > 0; index--)
+                    {
+                        matches[index] = matches[index - 1]
+                            && (character == '?' || char.ToUpperInvariant(character) == char.ToUpperInvariant(name[index - 1]));
+                    }
+
+                    matches[0] = false;
+                }
+            }
+
+            return matches[name.Length];
         }
 
         private static string GetDuplicateKey(XElement item)
