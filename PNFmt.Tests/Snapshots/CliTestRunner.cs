@@ -21,16 +21,24 @@ namespace PNFmt.Tests.Snapshots
             using (var stagedInput = TemporarySnapshotDirectory.CopyFrom(inputRoot))
             {
                 var stagedFile = stagedInput.GetPath(relativePath);
+                var inputBytes = File.ReadAllBytes(stagedFile);
+                var preview = await RunCliAsync(stagedInput.Path, "--check", stagedFile);
+                Assert.Equal(inputBytes, File.ReadAllBytes(stagedFile));
                 var result = await RunCliAsync(stagedInput.Path, stagedFile);
                 var actual = File.ReadAllText(stagedFile);
                 var context = $"Case: {caseName}{Environment.NewLine}"
                     + $"stdout:{Environment.NewLine}{result.StandardOutput}{Environment.NewLine}"
                     + $"stderr:{Environment.NewLine}{result.StandardError}";
-                var changed = !File.ReadAllBytes(inputFile).SequenceEqual(File.ReadAllBytes(stagedFile));
+                var formattedBytes = File.ReadAllBytes(stagedFile);
+                var changed = !File.ReadAllBytes(inputFile).SequenceEqual(formattedBytes);
 
+                Assert.Equal(changed ? 1 : 0, preview.ExitCode);
                 Assert.True(result.ExitCode == 0, context);
                 Assert.Contains(Path.GetFileName(relativePath), result.StandardOutput);
                 Assert.Contains(changed ? "[updated]" : "[unchanged]", result.StandardOutput);
+                var check = await RunCliAsync(stagedInput.Path, "--check", stagedFile);
+                Assert.True(check.ExitCode == 0, check.StandardOutput + check.StandardError);
+                Assert.Equal(formattedBytes, File.ReadAllBytes(stagedFile));
                 return actual;
             }
         }

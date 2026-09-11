@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -18,11 +19,21 @@ namespace PNFmt.Tests.Snapshots
                 yield return new object[] { "CSharp", "Cleanup.cs", "csharp" };
                 yield return new object[] { "CsProj", "SimpleSort.csproj", "csproj" };
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
+                yield return new object[] { "Resx", "Strings.resx", "resx" };
                 yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };
                 yield return new object[] { "Slnx", "Solution.slnx", "slnx" };
                 yield return new object[] { "Xml", "Data.xml", "xml" };
                 yield return new object[] { "Xml", "View.xaml", "xaml" };
             }
+        }
+
+        [Fact]
+        public void Every_registered_formatter_has_a_cli_fixture()
+        {
+            var registered = FormatterCatalog.CreateDefault().Formatters.Select(formatter => formatter.Name);
+            var covered = Cases.Select(testCase => (string)testCase[2]).Distinct(StringComparer.Ordinal);
+            Assert.Equal(registered.OrderBy(name => name, StringComparer.Ordinal),
+                covered.OrderBy(name => name, StringComparer.Ordinal));
         }
 
         [Theory]
@@ -38,7 +49,7 @@ namespace PNFmt.Tests.Snapshots
                 formatterDirectory,
                 "_files");
             var inputFile = Path.Combine(fixtureRoot, "input", relativePath);
-            var formatter = CreateFormatter(formatterName);
+            var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == formatterName);
             var expected = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
                 formatter,
                 fixtureRoot,
@@ -55,19 +66,5 @@ namespace PNFmt.Tests.Snapshots
             Assert.Equal(expected, actual);
         }
 
-        private static IFileFormatter CreateFormatter(string formatterName)
-        {
-            switch (formatterName)
-            {
-                case "csharp": return new CSharpFormatter();
-                case "csproj": return new CsProjFormatter();
-                case "ini": return new IniFormatter();
-                case "rsp": return new RspFormatter();
-                case "slnx": return new SlnxFormatter();
-                case "xml": return new XmlFormatter();
-                case "xaml": return new XamlFormatter();
-                default: throw new ArgumentOutOfRangeException(nameof(formatterName));
-            }
-        }
     }
 }

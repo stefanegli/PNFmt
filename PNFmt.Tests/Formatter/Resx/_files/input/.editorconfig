@@ -1,0 +1,8 @@
+root = true
+
+[*.resx]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+insert_final_newline = true
+pnfmt_sort_entries = true
