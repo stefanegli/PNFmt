@@ -39,7 +39,7 @@ The usual Git changed-file selection, `--all`, `--file-pattern`, `--dry-run`, an
 
 ## Whitespace formatting
 
-PNFmt passes the resolved EditorConfig settings to Roslyn 5.0's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied, apart from the explicitly enabled sorting described below. Formatting does not impose a maximum line length or reflow comments.
+PNFmt passes the resolved EditorConfig settings to Roslyn 5.9's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied, apart from the explicitly enabled sorting described below. Formatting does not impose a maximum line length or reflow comments.
 
 Without explicit settings, formatting uses spaces, four-column indentation and tab width, the file's detected newline convention, and Roslyn's remaining formatting defaults. `insert_final_newline = true` adds a missing final newline to nonempty files; missing or false preserves the existing final-newline state. `trim_trailing_whitespace = true` removes trailing spaces and tabs from ordinary code whitespace. Explicit `end_of_line` values are `lf`, `crlf`, and `cr`.
 

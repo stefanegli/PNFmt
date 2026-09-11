@@ -173,7 +173,7 @@ namespace PNFmt.Tests.Formatter.Ini
             {
                 File.WriteAllText(Path.Combine(this.DirectoryPath, ".editorconfig"), text);
                 // Bypass the shared file cache so each comparison parses the new contents.
-                var parser = new EditorConfigParser(EditorConfigFile.Parse, null, null);
+                var parser = new EditorConfigParser(path => EditorConfigFile.Parse(path), null, null);
                 return parser.Parse(Path.Combine(this.DirectoryPath, target)).Properties;
             }
 

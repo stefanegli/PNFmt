@@ -8,14 +8,16 @@ namespace PNFmt
 {
     internal static class EditorConfigSettings
     {
+        private static readonly EditorConfig.Core.EditorConfigFileCache FileCache =
+            new EditorConfig.Core.EditorConfigFileCache();
+
         public static IReadOnlyDictionary<string, string> Load(string targetFile)
         {
             try
             {
-                var parser = new EditorConfig.Core.EditorConfigParser(
-                    EditorConfig.Core.EditorConfigFileCache.GetOrCreate,
-                    null,
-                    null);
+                // Share parsed files while resolving the hierarchy afresh on each
+                // request, including newly created or removed child configurations.
+                var parser = new EditorConfig.Core.EditorConfigParser(null, FileCache);
                 return parser.Parse(targetFile).Properties;
             }
             catch (Exception ex)

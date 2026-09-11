@@ -286,6 +286,28 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             }
         }
 
+        [Fact]
+        public void Loads_observe_added_changed_and_removed_child_configurations()
+        {
+            using (var directory = new TestDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\ncustom = outer\n");
+                var target = directory.Write("child/Settings.ini", "");
+                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+
+                var childConfig = directory.Write("child/.editorconfig", "[*]\ncustom = inner\n");
+                Assert.Equal("inner", EditorConfigSettings.Load(target)["custom"]);
+
+                var timestamp = File.GetLastWriteTimeUtc(childConfig);
+                File.WriteAllText(childConfig, "[*]\ncustom = newer\n");
+                File.SetLastWriteTimeUtc(childConfig, timestamp.AddSeconds(2));
+                Assert.Equal("newer", EditorConfigSettings.Load(target)["custom"]);
+
+                File.Delete(childConfig);
+                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+            }
+        }
+
         private sealed class RecordingLog : IFormatterLog
         {
             public List<string> Messages { get; } = new List<string>();
