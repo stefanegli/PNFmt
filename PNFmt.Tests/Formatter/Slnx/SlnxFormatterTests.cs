@@ -76,6 +76,33 @@ namespace PNFmt.Tests.Formatter.Slnx
                     $"{element.Name.LocalName}:{(string)(element.Attribute("Path") ?? element.Attribute("Value"))}"));
         }
 
+        [Theory]
+        [InlineData("", "", "Project", "Path")]
+        [InlineData("<Folder Name='/'>", "</Folder>", "Project", "Path")]
+        [InlineData("<Configurations>", "</Configurations>", "Platform", "Name")]
+        [InlineData("<Configurations><ProjectType Extension='.csproj'>", "</ProjectType></Configurations>", "BuildType", "Solution")]
+        [InlineData("<Project Path='App.csproj'>", "</Project>", "BuildType", "Solution")]
+        [InlineData("<Properties Name='Settings'>", "</Properties>", "Property", "Name")]
+        public void Namespaced_elements_with_known_local_names_remain_sort_barriers(string prefix, string suffix, string elementName, string attribute)
+        {
+            var input = "<Solution xmlns:e='urn:extension'>" + prefix
+                + "<" + elementName + " " + attribute + "='Z' />"
+                + "<e:" + elementName + " " + attribute + "='M'><Project Path='Z' /><Project Path='A' /></e:" + elementName + ">"
+                + "<" + elementName + " " + attribute + "='B' />"
+                + "<" + elementName + " " + attribute + "='A' />"
+                + suffix + "</Solution>";
+            var extensionName = XName.Get(elementName, "urn:extension");
+            var originalExtension = XDocument.Parse(input).Descendants(extensionName).Single();
+
+            var formatted = SlnxDocumentFormatter.Format(input);
+            var extension = XDocument.Parse(formatted).Descendants(extensionName).Single();
+
+            Assert.Equal(new[] { "Z", "M", "A", "B" },
+                extension.Parent.Elements().Select(element => (string)element.Attribute(attribute)));
+            Assert.True(XNode.DeepEquals(originalExtension, extension));
+            Assert.Equal(formatted, SlnxDocumentFormatter.Format(formatted));
+        }
+
         [Fact]
         public void Dry_run_detects_changes_and_a_second_run_is_unchanged()
         {

@@ -216,7 +216,10 @@ namespace PNFmt
             var sortableGroups = new List<ElementGroup>();
             foreach (var group in groups)
             {
-                if (order(group.Element) != int.MaxValue)
+                // SLNX elements are unqualified. An extension can reuse a known
+                // local name without becoming part of a sortable SLNX run.
+                if (group.Element.Name.Namespace == XNamespace.None
+                    && order(group.Element) != int.MaxValue)
                 {
                     sortableGroups.Add(group);
                     continue;
