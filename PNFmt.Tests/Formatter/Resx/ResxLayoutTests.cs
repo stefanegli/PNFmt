@@ -18,6 +18,30 @@ namespace PNFmt.Tests.Formatter.Resx
             + "pnfmt_resx_remove_documentation_comment = true\n";
 
         [Theory]
+        [InlineData("end_of_line = lf\n")]
+        [InlineData("end_of_line = crlf\n")]
+        [InlineData("end_of_line = cr\n")]
+        [InlineData("charset = utf-8\n")]
+        [InlineData("charset = utf-16le\n")]
+        public void Adding_generated_documentation_is_idempotent_with_layout_or_encoding_overrides(string settings)
+        {
+            using (var file = TemporaryFile.Create("<root>" + Header + "<data name='a'><value>1</value></data></root>"))
+            {
+                Configure(file, "pnfmt_sort_entries = true\n" + settings);
+                var original = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Updated, Format(file, false).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
+                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
+                Assert.True(ResxDocumentFormatter.HasDocumentationComment(XDocument.Load(file.Path)));
+                Assert.True(ResxDocumentFormatter.HasSchemaNode(XDocument.Load(file.Path)));
+                var formatted = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
+                Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
+                Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
+        [Theory]
         [InlineData("lf", "\n", "true", true)]
         [InlineData("lf", "\n", "false", false)]
         [InlineData("lf", "\n", null, false)]

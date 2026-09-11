@@ -145,7 +145,10 @@ namespace PNFmt
             var hasCommentAdded = false;
             if (!this.Settings.RemoveDocumentationComment && !HasDocumentationComment(document))
             {
-                toSave.Insert(0, new XComment(ResxSchemaDefaults.OriginalCommentContent));
+                // XML readers normalize comment line endings to LF. Match that
+                // representation immediately so a second rewrite stays identical.
+                toSave.Insert(0, new XComment(ResxSchemaDefaults.OriginalCommentContent
+                    .Replace("\r\n", "\n").Replace('\r', '\n')));
                 hasCommentAdded = true;
             }
 
