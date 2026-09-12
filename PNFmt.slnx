@@ -9,4 +9,7 @@
   <Folder Name="/Tests/">
     <Project Path="PNFmt.Tests/PNFmt.Tests.csproj" />
   </Folder>
+  <Folder Name="/Tools/">
+    <Project Path="tools/SnapshotViewer/PNFmt.SnapshotViewer.csproj" />
+  </Folder>
 </Solution>
