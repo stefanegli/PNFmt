@@ -40,7 +40,7 @@ namespace PNFmt.Cli
 
             if (options.ShowVersion)
             {
-                PrintVersion();
+                Console.WriteLine(GetVersionLabel());
                 return 0;
             }
 
@@ -166,7 +166,7 @@ namespace PNFmt.Cli
             var changeLabel = options.DryRun ? "Would update" : "Updated";
             var elapsed = run.Elapsed.TotalSeconds.ToString("0.000", CultureInfo.InvariantCulture);
             Console.WriteLine(
-                $"Processed {files.Count} file(s) in {elapsed}s. {changeLabel} {changed}, "
+                $"{GetVersionLabel()}: Processed {files.Count} file(s) in {elapsed}s. {changeLabel} {changed}, "
                 + $"unchanged {unchanged}, skipped {skipped}, failed {failed}"
                 + (options.Lint ? $", diagnostics {diagnosticCount}." : "."));
 
@@ -184,14 +184,14 @@ namespace PNFmt.Cli
             return 0;
         }
 
-        private static void PrintVersion()
+        private static string GetVersionLabel()
         {
             var version = typeof(Program).Assembly
                 .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
                 .InformationalVersion
                 .Split('+')[0]
                 ?? "unknown";
-            Console.WriteLine($"{ToolName} {version}");
+            return $"{ToolName} {version}";
         }
 
         private static void PrintUsage(TextWriter writer)

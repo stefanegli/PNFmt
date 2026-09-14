@@ -785,6 +785,11 @@ namespace PNFmt.Tests
 
                 var normal = Run(first, second);
                 var verbose = Run("--verbose", first, second);
+                var version = Run("--version");
+
+                Assert.Equal(0, version.ExitCode);
+                Assert.StartsWith(version.Output.Trim() + ": Processed", normal.Output);
+                Assert.Contains(version.Output.Trim() + ": Processed", verbose.Output);
 
                 Assert.Single(
                     normal.Output.Split(
