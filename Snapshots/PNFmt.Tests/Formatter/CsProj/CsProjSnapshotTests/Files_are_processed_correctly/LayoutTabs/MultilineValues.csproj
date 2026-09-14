@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+	<PropertyGroup>
+		<Alpha>before
+  after</Alpha>
+		<Zulu>first&#xD;second&#xD;
+third
+fourth</Zulu>
+	</PropertyGroup>
+	<ItemGroup>
+		<None Include="file">
+			<Alpha>keep</Alpha>
+			<Zulu>first&#xD;second</Zulu>
+		</None>
+	</ItemGroup>
+</Project>

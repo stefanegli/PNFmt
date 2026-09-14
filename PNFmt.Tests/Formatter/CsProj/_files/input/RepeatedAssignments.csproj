@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup>
+<Before>$(Zebra)</Before><Zebra>first</Zebra><Middle>$(Zebra)</Middle>
+<Zebra>$(Zebra);second</Zebra><After>$(Zebra)</After>
+</PropertyGroup>
+<ItemGroup><None Include="file">
+<Before>%(Zebra)</Before><Zebra>first</Zebra><Middle>%(Zebra)</Middle>
+<Zebra>%(Zebra);second</Zebra><After>%(Zebra)</After>
+</None></ItemGroup>
+</Project>

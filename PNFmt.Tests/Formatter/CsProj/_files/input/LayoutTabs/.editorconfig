@@ -1,0 +1,7 @@
+[*.csproj]
+indent_style = tab
+indent_size = tab
+tab_width = 4
+end_of_line = lf
+insert_final_newline = false
+pnfmt_csproj_empty_lines_between_groups = 0

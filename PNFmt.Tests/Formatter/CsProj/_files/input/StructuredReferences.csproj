@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+<PropertyGroup><Zebra>hello</Zebra><Observed><Node Value="$(Zebra)" /></Observed></PropertyGroup>
+<PropertyGroup><Zebra>hello</Zebra><Observed>$(Zebra.ToUpper())</Observed></PropertyGroup>
+<PropertyGroup><Zebra>hello</Zebra><Observed Condition="'$(Zebra.Length)' == '5'">matched</Observed></PropertyGroup>
+<ItemGroup><None Include="file" Zebra="hello" Alpha="%(Zebra)"><Zebra>hello</Zebra><Alpha><Node Value="%(Zebra)" /></Alpha></None></ItemGroup>
+</Project>

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <File>z.txt</File>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" Tag="first" />
+        <None Include="$(File)" Tag="second" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" Tag="first" />
+        <None Include="*.txt" Tag="second" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" Tag="first" />
+        <None Include="a.txt;z.txt" Tag="second" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" Tag="first" />
+        <None Include="%7A.txt" Tag="second" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <None Include="z.txt" />
+        <None Include="a.txt">
+            <Prior>@(None)</Prior>
+        </None>
+    </ItemGroup>
+</Project>
