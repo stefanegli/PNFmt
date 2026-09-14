@@ -1,0 +1,3 @@
+[*.cs]
+pnfmt_csharp_sort_members = true
+pnfmt_csharp_remove_regions = true

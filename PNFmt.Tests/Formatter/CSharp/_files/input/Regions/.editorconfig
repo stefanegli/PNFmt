@@ -1,0 +1,2 @@
+[*.cs]
+pnfmt_csharp_remove_regions = true

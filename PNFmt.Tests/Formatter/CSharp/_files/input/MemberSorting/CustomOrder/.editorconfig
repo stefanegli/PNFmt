@@ -1,0 +1,4 @@
+[*.cs]
+pnfmt_csharp_member_order = method,property
+pnfmt_csharp_member_accessibility_order = private,public
+pnfmt_csharp_sort_members_by_name = false
