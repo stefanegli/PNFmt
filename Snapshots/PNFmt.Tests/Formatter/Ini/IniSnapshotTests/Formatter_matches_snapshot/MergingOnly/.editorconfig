@@ -1,0 +1,5 @@
+[*.ini]
+pnfmt_ini_group_by_prefix = false
+pnfmt_ini_merge_groups = true
+pnfmt_ini_sort_groups = false
+pnfmt_sort_entries = false
