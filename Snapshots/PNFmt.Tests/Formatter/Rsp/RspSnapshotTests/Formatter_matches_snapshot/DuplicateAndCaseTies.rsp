@@ -1,0 +1,11 @@
+-reference:"lib/Alpha.dll"
+-reference:"lib/alpha.dll"
+ALPHA.cs
+Alpha.cs
+alpha.cs
+alpha.cs
+  alpha.cs
+Zeta.cs
+# Duplicate options on opposite sides cannot cross this barrier.
+-out:first.dll
+-out:second.dll

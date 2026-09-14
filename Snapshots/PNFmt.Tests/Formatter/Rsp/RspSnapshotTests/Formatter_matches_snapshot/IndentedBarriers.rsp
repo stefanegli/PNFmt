@@ -1,0 +1,11 @@
+ alpha.cs
+  zeta.cs
+
+   # This indented comment divides sorting runs.
+ beta.cs
+  delta.cs
+
+# Adjacent comment barrier.
+# Another barrier.
+@alpha.rsp
+@zeta.rsp

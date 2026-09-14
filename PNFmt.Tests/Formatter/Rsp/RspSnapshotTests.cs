@@ -33,6 +33,20 @@ namespace PNFmt.Tests.Formatter.Rsp
                 relativePath,
                 inputFile,
                 caseName);
+            if (relativePath.StartsWith("Newlines" + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+            {
+                var newline = Path.GetFileNameWithoutExtension(relativePath) switch
+                {
+                    "Lf" => "\n",
+                    "CrLf" => "\r\n",
+                    "Cr" => "\r",
+                    _ => throw new InvalidOperationException("Unknown newline fixture: " + relativePath),
+                };
+                // Git snapshots normalize newlines; also check the physical convention.
+                Assert.Equal(actual.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", newline), actual);
+                Assert.EndsWith(newline, actual);
+            }
+
             GitSnapshot.Match(actual, typeof(RspSnapshotTests), caseName);
         }
 

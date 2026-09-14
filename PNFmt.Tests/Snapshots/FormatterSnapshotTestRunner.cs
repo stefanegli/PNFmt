@@ -22,8 +22,12 @@ namespace PNFmt.Tests.Snapshots
                 var stagedFile = stagedInput.GetPath(relativePath);
                 var inputBytes = File.ReadAllBytes(inputFile);
 
+                var preview = formatter.Format(
+                    new FileFormatRequest(stagedFile, false, false, NullFormatterLog.Instance));
+                Assert.Equal(inputBytes, File.ReadAllBytes(stagedFile));
                 var firstRun = formatter.Format(
                     new FileFormatRequest(stagedFile, true, false, NullFormatterLog.Instance));
+                Assert.Equal(preview.Status, firstRun.Status);
                 var actual = File.ReadAllText(stagedFile);
                 var formattedBytes = File.ReadAllBytes(stagedFile);
                 var secondRun = formatter.Format(

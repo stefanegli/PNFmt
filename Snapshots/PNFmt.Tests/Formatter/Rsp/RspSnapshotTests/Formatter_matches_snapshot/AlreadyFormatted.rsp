@@ -1,0 +1,7 @@
+# References
+-reference:"lib/Alpha.dll"
+-reference:"lib/Zeta.dll"
+
+# Sources
+alpha.cs
+zeta.cs

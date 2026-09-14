@@ -4,4 +4,7 @@
 *.slnx text eol=crlf
 PNFmt.Tests/Formatter/CSharp/_files/** text eol=lf -whitespace
 PNFmt.Tests/Formatter/Xml/_files/** text eol=lf -whitespace
+PNFmt.Tests/Formatter/**/_files/** -whitespace
+PNFmt.Tests/Formatter/Rsp/_files/input/Newlines/** -text
+PNFmt.Tests/Formatter/Rsp/_files/input/WhitespaceOnly.rsp -text
 Snapshots/** text eol=lf -whitespace
