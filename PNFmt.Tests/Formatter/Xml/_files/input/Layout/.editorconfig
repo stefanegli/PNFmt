@@ -1,0 +1,15 @@
+[Tabs.{xml,xaml}]
+indent_style = tab
+indent_size = tab
+tab_width = 8
+
+[TabWidth.{xml,xaml}]
+indent_style = space
+indent_size = tab
+tab_width = 3
+
+[InvalidIndent.xml]
+indent_size = invalid
+
+[OversizedIndent.xml]
+indent_size = 257

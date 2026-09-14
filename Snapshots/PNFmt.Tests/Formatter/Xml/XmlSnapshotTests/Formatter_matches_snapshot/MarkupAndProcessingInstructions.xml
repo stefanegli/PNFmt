@@ -1,0 +1,14 @@
+<?xml version='1.0'?>
+<?before keep='single quotes'?>
+<!-- The header stays before the root. -->
+<root xmlns:p='urn:example' z='last' a="first">
+  <p:item
+  value='one &quot; &#x41; > two'
+  second="&apos;" />
+  <!-- Keep
+   this exact comment. -->
+  <?inside keep="spacing"?>
+  <raw><![CDATA[ < > & ]]></raw>
+  <other />
+</root>
+<?after keep='last'?>

@@ -11,8 +11,13 @@ namespace PNFmt.Tests.Formatter.Xml
 {
     public sealed class XmlSnapshotTests
     {
-        public static IEnumerable<object[]> Snapshots => new[] { ".xml", ".xaml" }
+        public static IEnumerable<object[]> Snapshots => GetCases(rejected: false);
+
+        public static IEnumerable<object[]> RejectedSnapshots => GetCases(rejected: true);
+
+        private static IEnumerable<object[]> GetCases(bool rejected) => new[] { ".xml", ".xaml" }
             .SelectMany(extension => FileSnapshotCaseSource.Create(GetFixtureRoot(), extension))
+            .Where(testCase => testCase.RelativePath.StartsWith("Rejected" + Path.DirectorySeparatorChar, StringComparison.Ordinal) == rejected)
             .Select(testCase => new object[] { testCase.RelativePath, testCase.InputFile, testCase.CaseName });
 
         [Theory]
@@ -23,6 +28,28 @@ namespace PNFmt.Tests.Formatter.Xml
             var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
                 formatter, GetFixtureRoot(), relativePath, inputFile, caseName);
             GitSnapshot.Match(actual, typeof(XmlSnapshotTests), caseName);
+        }
+
+        [Theory]
+        [MemberData(nameof(RejectedSnapshots))]
+        public void Rejected_files_remain_unchanged(string relativePath, string inputFile, string caseName)
+        {
+            using (var staged = TestDirectory.CopyFrom(Path.Combine(GetFixtureRoot(), "input")))
+            {
+                var path = staged.GetPath(relativePath);
+                var original = File.ReadAllBytes(inputFile);
+                var xaml = Path.GetExtension(inputFile) == ".xaml";
+                IFileFormatter formatter = xaml ? new XamlFormatter() : new XmlFormatter();
+                foreach (var write in new[] { false, true })
+                {
+                    var result = formatter.Format(new FileFormatRequest(path, write, false, NullFormatterLog.Instance));
+                    Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                    Assert.Equal(xaml ? "XAML001" : "XML001", Assert.Single(result.Diagnostics).Code);
+                    Assert.Equal(original, File.ReadAllBytes(path));
+                }
+
+                GitSnapshot.Match(File.ReadAllText(path), typeof(XmlSnapshotTests), caseName);
+            }
         }
 
         private static string GetFixtureRoot()

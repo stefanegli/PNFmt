@@ -1,0 +1,4 @@
+<local:View xmlns:local="clr-namespace:Example" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"><local:Inlines><local:Run/><local:Run/> <local:Run/></local:Inlines><Grid>
+        <Button/>
+        <Button/>
+    </Grid><Grid xml:space="preserve"> <Button/> <Button/> </Grid></local:View>

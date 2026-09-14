@@ -1,0 +1,14 @@
+<root>
+  <message>Hello <b>world</b> !</message>
+  <leading>&#32;<b>space</b></leading>
+  <nbsp>&#xA0;</nbsp>
+  <whitespace>   </whitespace>
+  <empty></empty>
+  <raw><![CDATA[first
+  second]]><b>third</b></raw>
+  <protected xml:space="preserve"> <nested xml:space="default"><z/><a/></nested> </protected>
+  <normal>
+    <z/>
+    <a/>
+  </normal>
+</root>

@@ -1,0 +1,8 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<Grid.RowDefinitions>
+		<RowDefinition Height="Auto"/>
+		<RowDefinition Height="*"/>
+	</Grid.RowDefinitions>
+	<Button Content="Tabs"/>
+	<TextBlock><Run Text="Left"/><Run Text="Right"/></TextBlock>
+</Grid>

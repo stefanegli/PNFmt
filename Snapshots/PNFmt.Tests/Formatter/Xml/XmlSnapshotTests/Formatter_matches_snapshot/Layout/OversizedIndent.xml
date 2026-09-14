@@ -1,0 +1,5 @@
+<root>
+    <group>
+        <item value="indentation above 256 falls back to four spaces"/>
+    </group>
+</root>

@@ -1,0 +1,5 @@
+<root>
+    <group>
+        <item value="invalid indentation falls back to four spaces"/>
+    </group>
+</root>

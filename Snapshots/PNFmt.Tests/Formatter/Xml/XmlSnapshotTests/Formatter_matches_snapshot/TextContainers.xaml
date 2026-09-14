@@ -1,0 +1,8 @@
+<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+    <TextBox><Run Text="First"/><Run Text="Second"/> <Run Text="Third"/></TextBox>
+    <RichTextBox><FlowDocument><Section><Paragraph><Run Text="One"/><Run Text="Two"/> <Bold>Three</Bold></Paragraph></Section></FlowDocument></RichTextBox>
+    <String>  significant spacing  </String>
+    <TextBlock><TextBlock.Inlines><Run Text="Left"/><Run Text="Right"/></TextBlock.Inlines></TextBlock>
+    <FormattedString><Span Text="First"/><Span Text="Second"/></FormattedString>
+    <Button Content="A structural sibling"/>
+</StackPanel>
