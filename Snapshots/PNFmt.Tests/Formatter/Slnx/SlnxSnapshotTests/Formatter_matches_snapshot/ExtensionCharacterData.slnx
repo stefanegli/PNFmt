@@ -1,0 +1,8 @@
+<Solution xmlns:e="urn:extension">
+  <Project Path="Z.csproj" />
+  <e:Project Path="Owned"><Value> </Value><Text xml:space="preserve">first&#xD;second&#xD;
+third</Text><Compact><A /><B /></Compact><Mixed>left <A /> right</Mixed><!-- extension comment --><![CDATA[keep
+this]]></e:Project>
+  <Project Path="A.csproj" />
+  <Project Path="B.csproj" />
+</Solution>

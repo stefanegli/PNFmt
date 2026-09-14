@@ -1,0 +1,15 @@
+<Solution>
+  <Project Path="App.csproj">
+    <BuildDependency Project="A.csproj" />
+    <BuildDependency Project="Z.csproj" />
+    <BuildType Solution="Debug|x64" Project="Debug" />
+    <BuildType Solution="Release|x64" Project="Release" />
+    <Platform Solution="Release|x64" Project="x64" />
+    <Build Solution="Release|x64" Project="true" />
+    <Deploy Solution="Release|x64" Project="true" />
+    <Properties Name="Project">
+      <Property Name="Alpha" Value="1" />
+      <Property Name="Zulu" Value="2" />
+    </Properties>
+  </Project>
+</Solution>

@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Normal/">
+    <Project Path="A.csproj" />
+    <Project Path="Z.csproj" />
+  </Folder>
+  <Folder Name="/Preserved/" xml:space="preserve"> <Project Path="Z.csproj" /> <Project Path="A.csproj" xml:space="default"><BuildType Solution="Release" /><BuildType Solution="Debug" /></Project> </Folder>
+</Solution>

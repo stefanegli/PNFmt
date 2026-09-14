@@ -1,0 +1,2 @@
+<!DOCTYPE Solution [<!ENTITY project "Z.csproj">]>
+<Solution><Project Path="&project;"/><Project Path="A.csproj"/></Solution>

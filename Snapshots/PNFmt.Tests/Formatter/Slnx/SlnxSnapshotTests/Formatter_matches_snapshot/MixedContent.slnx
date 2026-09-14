@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/Text/">before <Project Path="Z.csproj" /> between <Project Path="A.csproj" /> after</Folder>
+  <Project Path="A.csproj" />
+  <Project Path="B.csproj" />
+</Solution>
