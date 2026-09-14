@@ -1,0 +1,3 @@
+[*.resx]
+pnfmt_resx_remove_xsd_schema = true
+pnfmt_resx_remove_documentation_comment = true

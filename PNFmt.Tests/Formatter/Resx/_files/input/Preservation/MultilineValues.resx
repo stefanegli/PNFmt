@@ -1,0 +1,6 @@
+<root><resheader name="resmimetype"><value>text/microsoft-resx</value></resheader>
+<data name="Zebra" xml:space="preserve"><value>first&#xD;second&#xD;&#xA;third
+  fourth</value><comment>Keep
+  this explanation.</comment></data>
+<data name="Alpha"><value>  leading and trailing  </value></data>
+</root>

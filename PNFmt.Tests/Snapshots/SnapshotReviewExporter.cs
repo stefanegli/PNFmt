@@ -61,7 +61,7 @@ namespace PNFmt.Tests.Snapshots
                     settings = "DefaultEditorConfigDocument.Update(string.Empty)";
                     description = "Generate the default configuration from an empty document.";
                 }
-                else if (testClass == nameof(ResxSnapshotTests))
+                else if (testClass == nameof(ResxSnapshotTests) && testMethod == nameof(ResxSnapshotTests.Files_are_processed_correctly))
                 {
                     var data = new ResxSnapshotTests.ResxSnapshotData().Single(row => Path.GetFileNameWithoutExtension((string)row[1]) == Path.GetFileNameWithoutExtension(name));
                     var source = Path.Combine(fixtureRoot, "_files", (string)data[1]);

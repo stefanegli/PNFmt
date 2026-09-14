@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:ext="urn:extension">
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <ext:data name="owned">
+    <ext:value xml:space="preserve"> keep  this </ext:value>
+  </ext:data>
+  <data name="Alpha">
+    <value>first resource</value>
+  </data>
+  <data name="Zebra">
+    <value>last resource</value>
+  </data>
+  <metadata name="Zebra">
+    <value>metadata</value>
+  </metadata>
+</root>

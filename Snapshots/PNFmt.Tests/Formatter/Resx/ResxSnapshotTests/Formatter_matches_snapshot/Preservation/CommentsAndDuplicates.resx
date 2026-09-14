@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <!-- Alpha explanation -->
+  <data name="Alpha">
+    <value>first alphabetically</value>
+  </data>
+  <!-- Zebra explanation -->
+  <data name="Zebra">
+    <value>last</value>
+  </data>
+  <!-- First duplicate explanation -->
+  <data name="same">
+    <value>first occurrence</value>
+  </data>
+  <!-- Second duplicate explanation -->
+  <data name="same">
+    <value>second occurrence</value>
+  </data>
+  <!-- File footer stays at the end. -->
+</root>

@@ -1,0 +1,4 @@
+[*.resx]
+pnfmt_sort_entries = false
+indent_size = 4
+insert_final_newline = false

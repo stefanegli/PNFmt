@@ -17,6 +17,22 @@ namespace PNFmt.Tests.Formatter.Resx
 
     public class ResxSnapshotTests
     {
+        public static System.Collections.Generic.IEnumerable<object[]> FileSnapshots =>
+            FileSnapshotCaseSource.Create(GetFixtureRoot(), ".resx")
+                .Select(testCase => new object[] { testCase.RelativePath, testCase.InputFile, testCase.CaseName });
+
+        [Theory]
+        [MemberData(nameof(FileSnapshots))]
+        public void Formatter_matches_snapshot(string relativePath, string inputFile, string caseName)
+        {
+            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
+                new ResxFormatter(), GetFixtureRoot(), relativePath, inputFile, caseName);
+            GitSnapshot.Match(actual, typeof(ResxSnapshotTests), caseName);
+        }
+
+        private static string GetFixtureRoot() =>
+            Path.Combine(AppContext.BaseDirectory, "Formatter", "Resx", "_files");
+
         [Theory]
         [ClassData(typeof(ResxSnapshotData))]
         public void Files_are_processed_correctly(string message, string fileName, string culture, object settings)
