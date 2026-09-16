@@ -76,8 +76,9 @@ namespace PNFmt.Tests.Formatter.Ini
                 var before = targets.Select(target => configuration.Parse(input, target)).ToArray();
                 Assert.Equal(expectedIndentSize, before[0]["indent_size"]);
 
-                // Exercise every combination, including prefix grouping without key sorting.
-                for (var options = 0; options < 16; options++)
+                // Exercise every combination, including grouping without sorting
+                // and all transformations with layout disabled.
+                for (var options = 0; options < 32; options++)
                 {
                     string Format(string text) => IniDocumentFormatter.Format(
                         text,
@@ -85,7 +86,8 @@ namespace PNFmt.Tests.Formatter.Ini
                         sortGroups: (options & 2) != 0,
                         groupByPrefix: (options & 4) != 0,
                         mergeGroups: (options & 8) != 0,
-                        isEditorConfig: true);
+                        isEditorConfig: true,
+                        formatLayout: (options & 16) == 0);
 
                     var actual = Format(input);
                     Assert.Equal(actual, Format(actual));

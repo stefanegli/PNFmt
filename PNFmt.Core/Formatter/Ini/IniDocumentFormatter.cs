@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PNFmt
 {
@@ -14,11 +15,17 @@ namespace PNFmt
             bool sortGroups = false,
             bool groupByPrefix = false,
             bool mergeGroups = false,
-            bool isEditorConfig = false)
+            bool isEditorConfig = false,
+            bool formatLayout = true)
         {
             if (text is null)
             {
                 throw new ArgumentNullException(nameof(text));
+            }
+
+            if (!formatLayout)
+            {
+                return FormatWithoutLayout(text, sortEntries, sortGroups, groupByPrefix, mergeGroups, isEditorConfig);
             }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
@@ -91,6 +98,80 @@ namespace PNFmt
             }
         }
 
+        private static string FormatWithoutLayout(
+            string text, bool sortEntries, bool sortGroups, bool groupByPrefix, bool mergeGroups, bool isEditorConfig)
+        {
+            var newLine = TextFileFormatting.DetectNewLine(text);
+            if (mergeGroups || (sortGroups && !isEditorConfig))
+            {
+                IReadOnlyList<string> lines = Regex.Split(text, "\r\n|\r|\n");
+                if (mergeGroups)
+                {
+                    lines = isEditorConfig ? MergeAdjacentGroups(lines) : MergeGroups(lines);
+                }
+
+                if (sortGroups && !isEditorConfig)
+                {
+                    lines = SortGroups(lines);
+                }
+
+                text = string.Join(newLine, lines);
+            }
+
+            if (!sortEntries && !groupByPrefix)
+            {
+                return text;
+            }
+
+            // Sort the original assignments in their existing slots. Comments, blank
+            // lines, separators, and assignment spacing are not layout-formatted.
+            var parts = Regex.Split(text, "(\r\n|\r|\n)");
+            var indexes = new List<int>();
+            var properties = new List<PropertyLine>();
+            for (var index = 0; index < parts.Length; index += 2)
+            {
+                if (TryParseProperty(parts[index], isEditorConfig, out var property))
+                {
+                    indexes.Add(index);
+                    properties.Add(new PropertyLine(property.Key, property.Prefix, parts[index]));
+                }
+                else if (!string.IsNullOrWhiteSpace(parts[index]))
+                {
+                    Flush();
+                }
+            }
+
+            Flush();
+            return string.Concat(parts);
+
+            void Flush()
+            {
+                IEnumerable<PropertyLine> orderedProperties = sortEntries
+                    ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
+                    : properties;
+                var ordered = (groupByPrefix ? GroupPrefixes(orderedProperties) : orderedProperties).ToArray();
+                var counts = ordered.Where(property => property.Prefix is not null)
+                    .GroupBy(property => property.Prefix, StringComparer.OrdinalIgnoreCase)
+                    .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+                string previousGroup = null;
+                for (var index = 0; index < ordered.Length; index++)
+                {
+                    var property = ordered[index];
+                    var group = property.Prefix is not null && counts[property.Prefix] > 1 ? property.Prefix : null;
+                    var slot = indexes[index];
+                    var separator = groupByPrefix && index > 0
+                        && !string.Equals(previousGroup, group, StringComparison.OrdinalIgnoreCase)
+                        && (previousGroup is not null || group is not null)
+                        && slot >= 2 && !string.IsNullOrWhiteSpace(parts[slot - 2]) ? newLine : string.Empty;
+                    parts[slot] = separator + property.Formatted;
+                    previousGroup = group;
+                }
+
+                indexes.Clear();
+                properties.Clear();
+            }
+        }
+
         private static void FlushProperties(
             List<PropertyLine> properties,
             List<string> output,
@@ -99,13 +180,13 @@ namespace PNFmt
         {
             // OrderBy is stable: duplicate keys (including casing variants) must
             // retain their assignment order, also after merging adjacent sections.
-            IEnumerable<PropertyLine> orderedProperties = sortEntries || groupByPrefix
+            IEnumerable<PropertyLine> orderedProperties = sortEntries
                 ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
                 : properties;
 
             if (groupByPrefix)
             {
-                AddPrefixGroups(orderedProperties.ToArray(), output);
+                AddPrefixGroups(GroupPrefixes(orderedProperties).ToArray(), output);
             }
             else
             {
@@ -113,6 +194,30 @@ namespace PNFmt
             }
 
             properties.Clear();
+        }
+
+        private static IEnumerable<PropertyLine> GroupPrefixes(IEnumerable<PropertyLine> properties)
+        {
+            var items = properties.ToArray();
+            var groups = items.Where(property => property.Prefix is not null)
+                .GroupBy(property => property.Prefix, StringComparer.OrdinalIgnoreCase)
+                .Where(group => group.Count() > 1)
+                .ToDictionary(group => group.Key, group => group.ToArray(), StringComparer.OrdinalIgnoreCase);
+            var emitted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items)
+            {
+                if (item.Prefix is null || !groups.TryGetValue(item.Prefix, out var group))
+                {
+                    yield return item;
+                }
+                else if (emitted.Add(item.Prefix))
+                {
+                    foreach (var member in group)
+                    {
+                        yield return member;
+                    }
+                }
+            }
         }
 
         private static void AddPrefixGroups(

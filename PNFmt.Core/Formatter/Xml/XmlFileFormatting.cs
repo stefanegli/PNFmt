@@ -22,6 +22,11 @@ namespace PNFmt
                     EditorConfigSettings.IsEnabled(settings, activationSetting), request.Log),
                 text =>
                 {
+                    if (!EditorConfigFormatterOptions.Format(settings, xaml ? "xaml" : "xml"))
+                    {
+                        return text;
+                    }
+
                     try
                     {
                         return XmlDocumentFormatter.Format(text, settings, xaml);

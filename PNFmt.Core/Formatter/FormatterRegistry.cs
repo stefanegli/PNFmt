@@ -83,6 +83,12 @@ namespace PNFmt
         internal bool TryGetConfiguredFormatter(string filePath, out IFileFormatter formatter)
         {
             var settings = EditorConfigSettings.Load(Path.GetFullPath(filePath));
+            if (EditorConfigFormatterActivation.GetEnablement(settings) == false)
+            {
+                formatter = null;
+                return true;
+            }
+
             var name = EditorConfigFormatterActivation.GetSelection(settings);
             if (name is null)
             {

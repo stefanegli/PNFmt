@@ -55,13 +55,13 @@ namespace PNFmt
             this.Run(resxPath, true);
         }
 
-        public void Run(string resxPath, bool writeChanges)
+        public void Run(string resxPath, bool writeChanges, bool formatLayout = true, bool hasExplicitLayout = false)
         {
             this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
-            this.Result = this.FormatResx(resxPath, writeChanges);
+            this.Result = this.FormatResx(resxPath, writeChanges, formatLayout, hasExplicitLayout);
         }
 
-        private FileFormatResult FormatResx(string resxPath, bool writeChanges)
+        private FileFormatResult FormatResx(string resxPath, bool writeChanges, bool formatLayout, bool hasExplicitLayout)
         {
             var hasSchemaRemoved = false;
             var hasCommentRemoved = false;
@@ -94,7 +94,10 @@ namespace PNFmt
                 });
             }
 
-            RemoveLayoutWhitespace(document);
+            if (formatLayout)
+            {
+                RemoveLayoutWhitespace(document);
+            }
 
             foreach (var node in root.Nodes())
             {
@@ -143,7 +146,7 @@ namespace PNFmt
                 : toSort;
 
             var hasCommentAdded = false;
-            if (!this.Settings.RemoveDocumentationComment && !HasDocumentationComment(document))
+            if (this.Settings.InsertDocumentationComment && !this.Settings.RemoveDocumentationComment && !HasDocumentationComment(document))
             {
                 // XML readers normalize comment line endings to LF. Match that
                 // representation immediately so a second rewrite stays identical.
@@ -153,9 +156,9 @@ namespace PNFmt
             }
 
             var hasSchemaAdded = false;
-            if (!this.Settings.RemoveXsdSchema && !HasSchemaNode(document))
+            if (this.Settings.InsertXsdSchema && !this.Settings.RemoveXsdSchema && !HasSchemaNode(document))
             {
-                toSave.Insert(1, XElement.Parse(ResxSchemaDefaults.OriginalSchema));
+                toSave.Insert(Math.Min(1, toSave.Count), XElement.Parse(ResxSchemaDefaults.OriginalSchema));
                 hasSchemaAdded = true;
             }
 
@@ -177,10 +180,18 @@ namespace PNFmt
             byte[] formattedBytes = null;
             var hasChanges = hasContentChanges;
             var encoding = FileEncoding.Load(resxPath, this.Log);
-            if (hasContentChanges || this.Settings.Layout?.HasOverrides == true || encoding is not null)
+            if (hasContentChanges || (formatLayout && (hasExplicitLayout || this.Settings.Layout?.HasOverrides == true)) || encoding is not null)
             {
                 var layout = this.Settings.Layout ?? new ResxLayoutSettings(new Dictionary<string, string>());
-                formattedBytes = layout.Serialize(document, encoding);
+                if (!formatLayout && !hasContentChanges && encoding is not null)
+                {
+                    var original = EncodedTextFile.Read(resxPath, encoding, xml: true).Text;
+                    formattedBytes = FileEncoding.GetBytes(FileEncoding.UpdateXmlDeclaration(original, encoding), encoding);
+                }
+                else
+                {
+                    formattedBytes = layout.Serialize(document, encoding, formatLayout);
+                }
                 hasChanges = !File.ReadAllBytes(resxPath).SequenceEqual(formattedBytes);
             }
 

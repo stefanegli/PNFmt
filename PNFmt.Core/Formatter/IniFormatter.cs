@@ -33,7 +33,8 @@ namespace PNFmt
                     settings.MergeGroups,
                     isEditorConfig: request.FilePath.EndsWith(
                         ".editorconfig",
-                        StringComparison.OrdinalIgnoreCase)));
+                        StringComparison.OrdinalIgnoreCase),
+                    formatLayout: settings.FormatLayout));
         }
     }
 }

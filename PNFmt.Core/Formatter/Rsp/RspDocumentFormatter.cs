@@ -3,16 +3,22 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace PNFmt
 {
     internal static class RspDocumentFormatter
     {
-        public static string Format(string text)
+        public static string Format(string text, bool sortEntries = true, bool formatLayout = true)
         {
             if (text is null)
             {
                 throw new ArgumentNullException(nameof(text));
+            }
+
+            if (!formatLayout)
+            {
+                return sortEntries ? SortWithoutFormatting(text) : text;
             }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
@@ -48,7 +54,7 @@ namespace PNFmt
                     continue;
                 }
 
-                FlushEntries(entries, output);
+                FlushEntries(entries, output, sortEntries);
                 if (hasBlankLineAfterEntries)
                 {
                     AddBlankLine(output);
@@ -58,7 +64,7 @@ namespace PNFmt
                 output.Add(line.TrimEnd());
             }
 
-            FlushEntries(entries, output);
+            FlushEntries(entries, output, sortEntries);
             while (output.Count > 0 && output[output.Count - 1].Length == 0)
             {
                 output.RemoveAt(output.Count - 1);
@@ -77,14 +83,51 @@ namespace PNFmt
             }
         }
 
+        private static string SortWithoutFormatting(string text)
+        {
+            // Keep separators in their original slots, including a missing final newline.
+            var parts = Regex.Split(text, "(\r\n|\r|\n)");
+            var indexes = new List<int>();
+            for (var index = 0; index < parts.Length; index += 2)
+            {
+                var line = parts[index].Trim();
+                if (line.StartsWith("#", StringComparison.Ordinal))
+                {
+                    Flush();
+                }
+                else if (line.Length > 0)
+                {
+                    indexes.Add(index);
+                }
+            }
+
+            Flush();
+            return string.Concat(parts);
+
+            void Flush()
+            {
+                var sorted = indexes.Select(index => parts[index])
+                    .OrderBy(line => line.Trim(), StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(line => line.Trim(), StringComparer.Ordinal).ToArray();
+                for (var index = 0; index < indexes.Count; index++)
+                {
+                    parts[indexes[index]] = sorted[index];
+                }
+
+                indexes.Clear();
+            }
+        }
+
         private static void FlushEntries(
             List<ResponseFileEntry> entries,
-            List<string> output)
+            List<string> output,
+            bool sortEntries)
         {
-            output.AddRange(entries
-                .OrderBy(entry => entry.SortKey, StringComparer.OrdinalIgnoreCase)
-                .ThenBy(entry => entry.SortKey, StringComparer.Ordinal)
-                .Select(entry => entry.Text));
+            var ordered = sortEntries
+                ? entries.OrderBy(entry => entry.SortKey, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(entry => entry.SortKey, StringComparer.Ordinal)
+                : (IEnumerable<ResponseFileEntry>)entries;
+            output.AddRange(ordered.Select(entry => entry.Text));
             entries.Clear();
         }
 

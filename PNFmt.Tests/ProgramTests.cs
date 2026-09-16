@@ -22,7 +22,7 @@ namespace PNFmt.Tests
         {
             using (var directory = new TemporaryDirectory())
             {
-                directory.Write(".editorconfig", "root = true\n[Data*]\npnfmt_formatter = XML\nindent_size = 2\n");
+                directory.Write(".editorconfig", "root = true\n[Data*]\npnfmt_enabled = true\npnfmt_formatter = XML\nindent_size = 2\n");
                 const string Input = "<root><child /></root>";
                 var path = directory.Write(fileName, Input);
 
@@ -62,6 +62,27 @@ namespace PNFmt.Tests
                 Assert.Empty(result.Error);
                 Assert.Equal(original, File.ReadAllBytes(path));
             }
+        }
+
+        [Theory]
+        [InlineData("--all")]
+        [InlineData("--check")]
+        [InlineData("--dry-run")]
+        [InlineData("--lint")]
+        public void Disabled_processing_overrides_selected_formatter_and_options(string mode)
+        {
+            using var directory = new TemporaryDirectory();
+            directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = false\npnfmt_formatter = csproj\n"
+                + "pnfmt_format = true\npnfmt_sort_entries = true\ncharset = utf-8-bom\n");
+            var path = directory.Write("Project.csproj", "malformed input must not be parsed");
+            var original = File.ReadAllBytes(path);
+
+            var result = Run("--all", "--formatter", "csproj", mode, path);
+
+            Assert.Equal(0, result.ExitCode);
+            Assert.Contains("skipped 1", result.Output);
+            Assert.Empty(result.Error);
+            Assert.Equal(original, File.ReadAllBytes(path));
         }
 
         [Theory]

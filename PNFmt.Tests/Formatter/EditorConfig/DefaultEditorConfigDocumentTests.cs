@@ -8,6 +8,15 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 {
     public sealed class DefaultEditorConfigDocumentTests
     {
+        [Fact]
+        public void Defaults_preserve_disabled_processing_and_layout_preferences()
+        {
+            const string Existing = "[*.csproj]\npnfmt_enabled = false\npnfmt_format = false\npnfmt_formatter = csproj\n";
+            var updated = DefaultEditorConfigDocument.Update(Existing);
+            Assert.Contains("pnfmt_enabled = false\npnfmt_format = false\npnfmt_formatter = csproj", updated);
+            Assert.Equal(updated, DefaultEditorConfigDocument.Update(updated));
+        }
+
         [Theory]
         [InlineData("None")]
         [InlineData("xml")]
@@ -93,6 +102,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Contains(
                 "[*.ini]\n"
                 + "alpha = unchanged\n"
+                + "pnfmt_enabled = true\n"
+                + "pnfmt_format = true\n"
                 + "pnfmt_formatter = ini\n"
                 + "pnfmt_ini_group_by_prefix = true\n"
                 + "pnfmt_ini_merge_groups = false\n"
@@ -102,7 +113,11 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 updated);
             Assert.Contains(
                 "[*.resx]\n"
+                + "pnfmt_enabled = true\n"
+                + "pnfmt_format = true\n"
                 + "pnfmt_formatter = resx\n"
+                + "pnfmt_resx_insert_documentation_comment = false\n"
+                + "pnfmt_resx_insert_xsd_schema = false\n"
                 + "pnfmt_resx_remove_documentation_comment = true\n"
                 + "pnfmt_resx_remove_xsd_schema = true\n"
                 + "pnfmt_resx_sort_comparer = CurrentCulture\n"
@@ -190,6 +205,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.StartsWith(Existing, updated);
             Assert.Contains(
                 "[*.editorconfig]\n"
+                + "pnfmt_enabled = true\n"
+                + "pnfmt_format = true\n"
                 + "pnfmt_formatter = ini\n"
                 + "pnfmt_ini_merge_groups = false\n"
                 + "pnfmt_ini_sort_groups = false\n"

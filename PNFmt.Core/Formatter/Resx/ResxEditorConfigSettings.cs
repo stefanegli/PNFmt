@@ -8,6 +8,14 @@ namespace PNFmt
         {
             var isActive = false;
             var settings = EditorConfigSettings.Load(targetFile);
+            var legacy = EditorConfigFormatterActivation.GetSelection(settings) is null
+                && EditorConfigFormatterActivation.GetEnablement(settings) is null;
+            this.FormatLayout = EditorConfigFormatterOptions.Format(settings, "resx");
+            this.HasExplicitLayout = settings.ContainsKey(EditorConfigSettingNames.Format) || !legacy;
+            this.InsertDocumentationComment = settings.TryGetValue(EditorConfigSettingNames.ResxInsertDocumentationComment, out var insertComment)
+                ? EditorConfigSettings.IsEnabled(insertComment) : legacy;
+            this.InsertXsdSchema = settings.TryGetValue(EditorConfigSettingNames.ResxInsertXsdSchema, out var insertSchema)
+                ? EditorConfigSettings.IsEnabled(insertSchema) : legacy;
             this.Layout = new ResxLayoutSettings(settings);
             var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
             if (resolver.TryGet(
@@ -58,6 +66,10 @@ namespace PNFmt
 
         public StringComparer Comparer { get; private set; } = StringComparer.Ordinal;
         public bool IsActive { get; }
+        public bool FormatLayout { get; }
+        public bool HasExplicitLayout { get; }
+        public bool InsertDocumentationComment { get; }
+        public bool InsertXsdSchema { get; }
         public ResxLayoutSettings Layout { get; }
         public bool RemoveDocumentationComment { get; }
         public bool RemoveXsdSchema { get; }

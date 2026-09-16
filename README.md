@@ -5,7 +5,7 @@
 
 PNFmt is a .NET global tool for consistently formatting C# source, project, and supporting files. It processes each file independently without loading a project or solution. Formatting behavior is configured through `.editorconfig`, while repository-wide tool settings live in an optional `.pnfmt` file.
 
-Choose a formatter explicitly with `pnfmt_formatter = <name>` in the applicable `.editorconfig` section. `pnfmt_formatter = None` disables formatting. For this version, a missing setting retains the previous extension-based selection and activation rules, with warning `PNFMT004` when they enable formatting. A future version will disable formatting when the setting is missing. See [activation and final-newline rules](docs/configuration-contracts.md).
+Enable processing with `pnfmt_enabled = true` and choose a formatter with `pnfmt_formatter = <name>` in the applicable `.editorconfig` section. `pnfmt_enabled = false` disables processing while retaining the selection and options. Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup default off unless configured. For this version, missing enablement or selection retains compatibility behavior with warning `PNFMT004`. See [activation, behavior switches, and final-newline rules](docs/configuration-contracts.md).
 
 ## Supported files
 

@@ -39,7 +39,8 @@ namespace PNFmt
             var runResult = formatter.RunWithResult(
                 request.FilePath,
                 request.WriteChanges,
-                request.Lint);
+                request.Lint,
+                EditorConfigFormatterOptions.Format(properties, this.Name));
             if (runResult == CsProjFormatResult.SkippedNonSdkStyle)
             {
                 return new FileFormatResult(FileFormatStatus.Skipped, formatter.Diagnostics);

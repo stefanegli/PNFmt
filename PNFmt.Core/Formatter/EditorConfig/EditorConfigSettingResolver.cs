@@ -51,6 +51,8 @@ namespace PNFmt
 
     internal static class EditorConfigSettingNames
     {
+        public const string Enabled = "pnfmt_enabled";
+        public const string Format = "pnfmt_format";
         public const string Formatter = "pnfmt_formatter";
         public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CSharpCollapseBlankLines = "pnfmt_csharp_collapse_blank_lines";
@@ -67,6 +69,8 @@ namespace PNFmt
         public const string IniSortGroups = "pnfmt_ini_sort_groups";
         public const string ResxRemoveDocumentationComment = "pnfmt_resx_remove_documentation_comment";
         public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
+        public const string ResxInsertDocumentationComment = "pnfmt_resx_insert_documentation_comment";
+        public const string ResxInsertXsdSchema = "pnfmt_resx_insert_xsd_schema";
         public const string ResxSortComparer = "pnfmt_resx_sort_comparer";
         public const string SortEntries = "pnfmt_sort_entries";
         public const string XamlFormat = "pnfmt_xaml_format";

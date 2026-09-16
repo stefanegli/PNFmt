@@ -233,9 +233,11 @@ namespace PNFmt.Cli
             writer.WriteLine("  If no path is provided, the current directory is used.");
             writer.WriteLine("  maxCpuCount defaults to the repository .pnfmt value, or 1.");
             writer.WriteLine($"  Registered formatters support {fileExtensions} files.");
-            writer.WriteLine("  Select a formatter with pnfmt_formatter = <name> in .editorconfig; None disables formatting.");
-            writer.WriteLine("  Missing pnfmt_formatter retains implicit activation with warning PNFMT004 for this version.");
-            writer.WriteLine("  A future version will skip files without an explicit formatter selection.");
+            writer.WriteLine("  Set pnfmt_enabled = true and pnfmt_formatter = <name> in .editorconfig to enable processing.");
+            writer.WriteLine("  pnfmt_enabled = false skips all processing, including lint; formatter None also skips it.");
+            writer.WriteLine("  pnfmt_format controls layout (default true); sorting and cleanup require their own switches.");
+            writer.WriteLine("  Missing enablement or selection retains compatibility behavior with warning PNFMT004.");
+            writer.WriteLine("  A future version will require explicit enablement and formatter selection.");
             writer.WriteLine("  --formatter filters the selected formatters; it does not override EditorConfig activation.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");

@@ -27,7 +27,9 @@ namespace PNFmt
                 EditorConfigFormatterActivation.IsEnabled(
                     settings, request.FilePath, this.Name,
                     EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries), request.Log),
-                SlnxDocumentFormatter.Format,
+                text => SlnxDocumentFormatter.Format(
+                    text, EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries),
+                    EditorConfigFormatterOptions.Format(settings, this.Name)),
                 xml: true);
         }
     }

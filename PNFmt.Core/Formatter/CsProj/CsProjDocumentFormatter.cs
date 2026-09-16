@@ -48,10 +48,13 @@ namespace PNFmt
         public CsProjFormatResult RunWithResult(
             String projectPath,
             bool writeChanges,
-            bool lint)
+            bool lint,
+            bool formatLayout = true)
         {
             var originalText = File.ReadAllText(projectPath);
-            var document = XDocument.Load(projectPath, LoadOptions.SetLineInfo);
+            var document = XDocument.Load(projectPath, LoadOptions.SetLineInfo
+                | (formatLayout ? LoadOptions.None : LoadOptions.PreserveWhitespace));
+            var originalDocument = formatLayout ? null : new XDocument(document);
             if (!IsSdkStyleProjectDocument(document))
             {
                 this.Diagnostics = Array.Empty<FormatterDiagnostic>();
@@ -76,7 +79,9 @@ namespace PNFmt
                 }
             }
 
-            var formattedText = FormatDocument(document, this.Settings);
+            var formattedText = !formatLayout && XNode.DeepEquals(originalDocument, document)
+                ? originalText
+                : FormatDocument(document, this.Settings, formatLayout);
             var encoding = FileEncoding.Load(projectPath, this.Log);
             byte[] formattedBytes = null;
             if (encoding is not null)
@@ -112,13 +117,13 @@ namespace PNFmt
             return CsProjFormatResult.Unchanged;
         }
 
-        private static string FormatDocument(XDocument document, ICsProjFormatSettings settings)
+        private static string FormatDocument(XDocument document, ICsProjFormatSettings settings, bool formatLayout)
         {
             var indentChars = settings.ResolveIndentChars();
             var newLineChars = settings.ResolveNewLineChars();
             var writerSettings = new XmlWriterSettings
             {
-                Indent = true,
+                Indent = formatLayout,
                 IndentChars = indentChars,
                 NewLineChars = newLineChars,
                 NewLineHandling = NewLineHandling.Entitize,
@@ -130,6 +135,11 @@ namespace PNFmt
             {
                 document.Save(xmlWriter);
                 xmlWriter.Flush();
+                if (!formatLayout)
+                {
+                    return stringWriter.ToString();
+                }
+
                 var formatted = ApplyTopLevelGroupSpacing(
                     stringWriter.ToString(),
                     settings,

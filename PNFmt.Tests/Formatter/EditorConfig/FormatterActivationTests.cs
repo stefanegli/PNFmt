@@ -12,11 +12,11 @@ namespace PNFmt.Tests.Formatter.EditorConfig
     {
         [Theory]
         [MemberData(nameof(FormatterContractTests.ActivationCases), MemberType = typeof(FormatterContractTests))]
-        public void Selection_alone_activates_each_formatter(string name, string fileName, string input)
+        public void Enablement_and_selection_activate_each_formatter(string name, string fileName, string input)
         {
             using (var directory = new TestDirectory())
             {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = " + name.ToUpperInvariant() + "\n");
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = " + name.ToUpperInvariant() + "\n");
                 var path = directory.Write(fileName, input);
                 var log = new RecordingLog();
                 var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == name);
@@ -36,7 +36,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         {
             using (var directory = new TestDirectory())
             {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = nOnE\n"
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = nOnE\n"
                     + "pnfmt_sort_entries = true\npnfmt_csharp_format = true\npnfmt_xml_format = true\n"
                     + "pnfmt_xaml_format = true\nindent_size = 4\ncharset = utf-8-bom\n");
                 var path = directory.Write(fileName, input);
@@ -79,26 +79,27 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 var warning = Assert.Single(log.Messages, message => message.Contains("warning PNFMT004"));
                 Assert.Contains(path, warning);
                 Assert.Contains("pnfmt_formatter = " + name, warning);
-                Assert.Contains("pnfmt_formatter = None", warning);
+                Assert.Contains("pnfmt_enabled = false", warning);
                 Assert.Contains("future version", warning);
                 Assert.Equal(input, File.ReadAllText(path));
             }
         }
 
         [Fact]
-        public void Selection_overrides_old_activation_switches_and_retains_cleanup_preferences()
+        public void Old_format_switch_controls_layout_without_disabling_other_behaviors()
         {
             using (var directory = new TestDirectory())
             {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = csharp\n"
-                    + "pnfmt_csharp_format = false\npnfmt_sort_entries = false\n");
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = csharp\n"
+                    + "pnfmt_csharp_format = false\npnfmt_sort_entries = true\n");
                 var path = directory.Write("Sample.cs", "using Z;\nusing A;\nclass C{void M(){}}\n");
                 var log = new RecordingLog();
 
                 var result = new CSharpFormatter().Format(new FileFormatRequest(path, true, false, log));
 
                 Assert.Equal(FileFormatStatus.Updated, result.Status);
-                Assert.StartsWith("using Z;\nusing A;", File.ReadAllText(path));
+                Assert.StartsWith("using A;\nusing Z;", File.ReadAllText(path));
+                Assert.Contains("class C{void M(){}}", File.ReadAllText(path));
                 Assert.DoesNotContain(log.Messages, message => message.Contains("PNFMT004"));
             }
         }
@@ -108,7 +109,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         {
             using (var directory = new TestDirectory())
             {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = None\npnfmt_xml_format = true\n");
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = None\npnfmt_xml_format = true\n");
                 directory.Write("nested/.editorconfig", "[*.xml]\npnfmt_formatter = XML\n"
                     + "[Legacy.xml]\npnfmt_formatter = unset\n");
                 var disabled = directory.Write("Disabled.xml", "<root/>");

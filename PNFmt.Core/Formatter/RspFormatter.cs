@@ -27,7 +27,9 @@ namespace PNFmt
                 EditorConfigFormatterActivation.IsEnabled(
                     settings, request.FilePath, this.Name,
                     EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries), request.Log),
-                RspDocumentFormatter.Format);
+                text => RspDocumentFormatter.Format(
+                    text, EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries),
+                    EditorConfigFormatterOptions.Format(settings, this.Name)));
         }
     }
 }

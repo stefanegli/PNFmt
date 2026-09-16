@@ -7,6 +7,7 @@ namespace PNFmt
         public IniEditorConfigSettings(string targetFile, IFormatterLog log)
         {
             var settings = EditorConfigSettings.Load(targetFile);
+            this.FormatLayout = EditorConfigFormatterOptions.Format(settings, "ini");
             this.SortEntries = EditorConfigSettings.IsEnabled(
                 settings,
                 EditorConfigSettingNames.SortEntries);
@@ -20,6 +21,14 @@ namespace PNFmt
                 settings,
                 EditorConfigSettingNames.IniSortGroups);
 
+            // Legacy prefix grouping also sorted entries. Explicit configurations
+            // control sorting independently from grouping.
+            if (this.GroupByPrefix && EditorConfigFormatterActivation.GetSelection(settings) is null
+                && EditorConfigFormatterActivation.GetEnablement(settings) is null)
+            {
+                this.SortEntries = true;
+            }
+
             this.IsActive = this.SortEntries
                 || this.GroupByPrefix
                 || this.MergeGroups
@@ -27,6 +36,7 @@ namespace PNFmt
         }
 
         public bool GroupByPrefix { get; }
+        public bool FormatLayout { get; }
 
         public bool IsActive { get; }
 

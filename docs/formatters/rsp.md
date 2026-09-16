@@ -6,14 +6,16 @@ The response-file formatter sorts arguments stored as physical lines in .NET com
 
 ```ini
 [*.rsp]
+pnfmt_enabled = true
 pnfmt_formatter = rsp
+pnfmt_sort_entries = true
 ```
 
-Select this formatter with `pnfmt_formatter = rsp`; use `None` to disable it. Sorting is part of the selected formatter's behavior. Without a selection, `pnfmt_sort_entries = true` still activates formatting for this version and prints warning `PNFMT004`. See the [activation rules](../configuration-contracts.md).
+Enable processing with `pnfmt_enabled = true` and select `pnfmt_formatter = rsp`. Use `pnfmt_enabled = false` to disable it while retaining its options. Layout defaults on; sorting defaults off and requires `pnfmt_sort_entries = true`. Set `pnfmt_format = false` to sort without normalizing whitespace or final newlines. See [activation and compatibility rules](../configuration-contracts.md).
 
 ## Behavior
 
-PNFmt sorts non-empty physical lines using ordinal, case-insensitive comparison with an ordinal tie-breaker. It does not tokenize a line or rearrange multiple arguments within it.
+When sorting is enabled, PNFmt sorts non-empty physical lines using ordinal, case-insensitive comparison with an ordinal tie-breaker. It does not tokenize a line or rearrange multiple arguments within it.
 
 Blank lines do not divide sortable content. A line whose first non-whitespace character is `#` acts as a barrier and remains in place, preventing entries from moving across it.
 

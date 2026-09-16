@@ -12,7 +12,7 @@ namespace PNFmt
 {
     internal static class SlnxDocumentFormatter
     {
-        public static string Format(string text)
+        public static string Format(string text, bool sortEntries = true, bool formatLayout = true)
         {
             if (text is null)
             {
@@ -39,39 +39,49 @@ namespace PNFmt
                 throw new InvalidDataException("The file does not contain an SLNX Solution root element.");
             }
 
-            SortChildren(root, GetSolutionOrder, GetSolutionKey);
+            if (!sortEntries && !formatLayout)
+            {
+                return text;
+            }
+
+            var originalDocument = formatLayout ? null : new XDocument(document);
+            SortChildren(root, GetSolutionOrder, GetSolutionKey, sortEntries, formatLayout);
 
             foreach (var configurations in root.Elements("Configurations"))
             {
-                SortChildren(configurations, GetConfigurationOrder, GetConfigurationKey);
+                SortChildren(configurations, GetConfigurationOrder, GetConfigurationKey, sortEntries, formatLayout);
                 foreach (var projectType in configurations.Elements("ProjectType"))
                 {
-                    SortChildren(projectType, GetProjectRuleOrder, GetProjectRuleKey);
+                    SortChildren(projectType, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
                 }
             }
 
             foreach (var folder in root.Elements("Folder"))
             {
-                SortChildren(folder, GetFolderOrder, GetFolderKey);
-                SortProperties(folder);
+                SortChildren(folder, GetFolderOrder, GetFolderKey, sortEntries, formatLayout);
+                SortProperties(folder, sortEntries, formatLayout);
                 foreach (var project in folder.Elements("Project"))
                 {
-                    SortProject(project);
+                    SortProject(project, sortEntries, formatLayout);
                 }
             }
 
             foreach (var project in root.Elements("Project"))
             {
-                SortProject(project);
+                SortProject(project, sortEntries, formatLayout);
             }
 
-            SortProperties(root);
+            SortProperties(root, sortEntries, formatLayout);
+            if (!formatLayout && XNode.DeepEquals(originalDocument, document))
+            {
+                return text;
+            }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
             // Only containers visited by the SLNX sorter own layout whitespace.
             // Serialize without implicit indentation so extension subtrees retain
             // even whitespace-only values and compact element-only content.
-            foreach (var container in document.Descendants().Where(element => element.Annotation<LayoutContainer>() is not null).ToArray())
+            foreach (var container in document.Descendants().Where(element => formatLayout && element.Annotation<LayoutContainer>() is not null).ToArray())
             {
                 var nodes = container.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
                 if (nodes.Length == 0)
@@ -84,9 +94,12 @@ namespace PNFmt
                     .Concat(new[] { new LayoutWhitespace(newLine + indent) }).ToArray());
             }
 
-            var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
-            document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
-                index > 0 || document.Declaration is not null ? new XNode[] { new LayoutWhitespace(newLine), node } : new[] { node }).ToArray());
+            if (formatLayout)
+            {
+                var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
+                document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
+                    index > 0 || document.Declaration is not null ? new XNode[] { new LayoutWhitespace(newLine), node } : new[] { node }).ToArray());
+            }
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = new UTF8Encoding(false),
@@ -102,7 +115,7 @@ namespace PNFmt
                 document.Save(xmlWriter);
                 xmlWriter.Flush();
                 var formatted = writer.ToString();
-                return formatted.EndsWith(newLine, StringComparison.Ordinal)
+                return !formatLayout || formatted.EndsWith(newLine, StringComparison.Ordinal)
                     ? formatted
                     : formatted + newLine;
             }
@@ -187,27 +200,31 @@ namespace PNFmt
                 ?? element.Name.LocalName;
         }
 
-        private static void SortProject(XElement project)
+        private static void SortProject(XElement project, bool sortEntries, bool formatLayout)
         {
-            SortChildren(project, GetProjectRuleOrder, GetProjectRuleKey);
-            SortProperties(project);
+            SortChildren(project, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
+            SortProperties(project, sortEntries, formatLayout);
         }
 
-        private static void SortProperties(XContainer parent)
+        private static void SortProperties(XContainer parent, bool sortEntries, bool formatLayout)
         {
             foreach (var properties in parent.Elements("Properties"))
             {
                 SortChildren(
                     properties,
                     element => element.Name.LocalName == "Property" ? 0 : int.MaxValue,
-                    element => Attribute(element, "Name") ?? string.Empty);
+                    element => Attribute(element, "Name") ?? string.Empty,
+                    sortEntries,
+                    formatLayout);
             }
         }
 
         private static void SortChildren(
             XContainer parent,
             Func<XElement, int> order,
-            Func<XElement, string> key)
+            Func<XElement, string> key,
+            bool sortEntries,
+            bool formatLayout)
         {
             if (parent is XElement parentElement && parentElement.AncestorsAndSelf().Any(element =>
                 (string)element.Attribute(XNamespace.Xml + "space") == "preserve"
@@ -217,6 +234,11 @@ namespace PNFmt
             }
 
             parent.AddAnnotation(new LayoutContainer());
+            if (!sortEntries)
+            {
+                return;
+            }
+
             var groups = new List<ElementGroup>();
             var leadingNodes = new List<XNode>();
 
@@ -227,7 +249,7 @@ namespace PNFmt
                     groups.Add(new ElementGroup(element, new List<XNode>(leadingNodes)));
                     leadingNodes.Clear();
                 }
-                else if (!IsLayoutWhitespace(node))
+                else if (!formatLayout || !IsLayoutWhitespace(node))
                 {
                     leadingNodes.Add(node);
                 }

@@ -7,6 +7,17 @@ namespace PNFmt
 {
     internal static class EditorConfigFormatterActivation
     {
+        public static bool? GetEnablement(IReadOnlyDictionary<string, string> settings)
+        {
+            if (!settings.TryGetValue(EditorConfigSettingNames.Enabled, out var value)
+                || string.Equals(value, "unset", StringComparison.OrdinalIgnoreCase))
+            {
+                return null;
+            }
+
+            return EditorConfigSettings.IsEnabled(value);
+        }
+
         public static string GetSelection(IReadOnlyDictionary<string, string> settings)
         {
             return settings.TryGetValue(EditorConfigSettingNames.Formatter, out var value)
@@ -32,20 +43,23 @@ namespace PNFmt
             IFormatterLog log)
         {
             var selectedFormatter = GetSelection(settings);
-            if (selectedFormatter is not null)
+            var enabled = GetEnablement(settings);
+            if (enabled == false || (selectedFormatter is not null
+                && !string.Equals(selectedFormatter, formatterName, StringComparison.OrdinalIgnoreCase)))
             {
-                return string.Equals(selectedFormatter, formatterName, StringComparison.OrdinalIgnoreCase);
+                return false;
             }
 
-            if (implicitlyEnabled)
+            var active = enabled == true || selectedFormatter is not null || implicitlyEnabled;
+            if (active && (enabled is null || selectedFormatter is null))
             {
                 log?.WriteLine($"{targetFile}: warning PNFMT004: Implicit formatter activation is deprecated. "
-                    + $"Set 'pnfmt_formatter = {formatterName}' in the applicable .editorconfig section "
-                    + "to keep formatting, or 'pnfmt_formatter = None' to disable it. "
-                    + "A missing pnfmt_formatter setting will disable formatting in a future version.");
+                    + $"Set 'pnfmt_enabled = true' and 'pnfmt_formatter = {formatterName}' in the applicable "
+                    + ".editorconfig section to keep processing, or 'pnfmt_enabled = false' to disable it. "
+                    + "Missing enablement or formatter selection will disable processing in a future version.");
             }
 
-            return implicitlyEnabled;
+            return active;
         }
     }
 }

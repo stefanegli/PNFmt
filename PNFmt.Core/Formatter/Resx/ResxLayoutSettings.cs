@@ -65,11 +65,11 @@ namespace PNFmt
         private bool InsertFinalNewline { get; }
         private string NewLine { get; } = Environment.NewLine;
 
-        public byte[] Serialize(XDocument document, Encoding encoding = null)
+        public byte[] Serialize(XDocument document, Encoding encoding = null, bool formatLayout = true)
         {
             // Explicit layout/encoding settings recreate indentation around <value>.
             // Legacy content-only updates retain the entry's existing xml:space layout.
-            if (this.HasOverrides || encoding is not null)
+            if (formatLayout && (this.HasOverrides || encoding is not null))
             {
                 foreach (var entry in document.Root.Elements()
                     .Where(element => element.Name == "data" || element.Name == "metadata"))
@@ -88,7 +88,7 @@ namespace PNFmt
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = encoding ?? Encoding.GetEncoding(document.Declaration?.Encoding ?? "utf-8"),
-                Indent = true,
+                Indent = formatLayout,
                 IndentChars = this.IndentChars,
                 NewLineChars = this.NewLine,
                 // Preserve resource values, including carriage returns written as character references.
@@ -101,7 +101,7 @@ namespace PNFmt
                     document.Save(writer);
                 }
 
-                if (this.InsertFinalNewline)
+                if (formatLayout && this.InsertFinalNewline)
                 {
                     var newline = writerSettings.Encoding.GetBytes(this.NewLine);
                     stream.Write(newline, 0, newline.Length);

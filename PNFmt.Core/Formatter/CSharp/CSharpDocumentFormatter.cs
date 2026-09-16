@@ -65,6 +65,69 @@ namespace PNFmt
                     CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
             }
 
+            var formatLayout = EditorConfigFormatterOptions.Format(settings, "csharp");
+            var formattedText = formatLayout
+                ? FormatWhitespace(sourceRoot, tree, text, settings)
+                : sourceRoot.ToFullString();
+            var exclusions = CSharpFormattingExclusions.Parse(sourceRoot);
+            if (exclusions.Spans.Count > 0)
+            {
+                // Restore complete marked regions after formatting. A whitespace edit
+                // may span the closing marker's newline and the following declaration's
+                // indentation; dropping that whole edit would leave enabled code unformatted.
+                formattedText = exclusions.Restore(formattedText);
+                if (formattedText is null)
+                {
+                    diagnostic = new FormatterDiagnostic("PNFMT003", "C# formatting skipped because exclusion markers would change.", null);
+                    return text;
+                }
+            }
+            var result = formatLayout ? CSharpWhitespaceCleanup.Apply(formattedText, settings) : formattedText;
+            if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpCollapseBlankLines))
+            {
+                result = CSharpBlankLineCleanup.Apply(result);
+            }
+            if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
+                && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
+            {
+                // Sorting can move the final import into the middle of the list,
+                // where it needs a newline. Preserve the original EOF convention,
+                // unless removing a region exposed a protected newline at EOF.
+                var trimmed = result.TrimEnd('\r', '\n');
+                var touchesExclusion = exclusions.Spans.Count > 0 && CSharpFormattingExclusions.Parse(
+                    CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options).GetRoot())
+                    .Intersects(TextSpan.FromBounds(trimmed.Length, result.Length));
+                if (!touchesExclusion)
+                {
+                    result = trimmed;
+                }
+            }
+
+            // In particular, literals (including raw strings) and inactive #if text
+            // must remain byte-for-byte identical as text. Fail closed if a formatting
+            // service ever proposes a change to either.
+            var resultTree = CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options);
+            var resultRoot = resultTree.GetRoot();
+            if (resultTree.GetDiagnostics().Any(item => item.Severity == DiagnosticSeverity.Error)
+                || !sourceRoot.DescendantTokens().Select(token => token.Text)
+                    .SequenceEqual(resultRoot.DescendantTokens().Select(token => token.Text))
+                || !protectedTrivia.SequenceEqual(ProtectedTrivia(resultRoot))
+                || !originalExclusions.HasSameText(CSharpFormattingExclusions.Parse(resultRoot)))
+            {
+                diagnostic = new FormatterDiagnostic(
+                    "PNFMT003", "C# formatting skipped because protected source text would change.", null);
+                return text;
+            }
+
+            return result;
+        }
+
+        private static string FormatWhitespace(
+            SyntaxNode sourceRoot,
+            SyntaxTree tree,
+            string text,
+            IReadOnlyDictionary<string, string> settings)
+        {
             using (var workspace = new AdhocWorkspace(Host.Value))
             {
                 // These paths only identify in-memory documents; no project/config file
@@ -80,58 +143,7 @@ namespace PNFmt
                     "Source.cs", sourceRoot, filePath: Path.Combine(directory, "Source.cs"));
                 var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document)
                     .GetAwaiter().GetResult();
-                var formattedText = formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
-                var exclusions = CSharpFormattingExclusions.Parse(sourceRoot);
-                if (exclusions.Spans.Count > 0)
-                {
-                    // Restore complete marked regions after formatting. A whitespace edit
-                    // may span the closing marker's newline and the following declaration's
-                    // indentation; dropping that whole edit would leave enabled code unformatted.
-                    formattedText = exclusions.Restore(formattedText);
-                    if (formattedText is null)
-                    {
-                        diagnostic = new FormatterDiagnostic("PNFMT003", "C# formatting skipped because exclusion markers would change.", null);
-                        return text;
-                    }
-                }
-                var result = CSharpWhitespaceCleanup.Apply(formattedText, settings);
-                if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpCollapseBlankLines))
-                {
-                    result = CSharpBlankLineCleanup.Apply(result);
-                }
-                if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
-                    && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
-                {
-                    // Sorting can move the final import into the middle of the list,
-                    // where it needs a newline. Preserve the original EOF convention,
-                    // unless removing a region exposed a protected newline at EOF.
-                    var trimmed = result.TrimEnd('\r', '\n');
-                    var touchesExclusion = exclusions.Spans.Count > 0 && CSharpFormattingExclusions.Parse(
-                        CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options).GetRoot())
-                        .Intersects(TextSpan.FromBounds(trimmed.Length, result.Length));
-                    if (!touchesExclusion)
-                    {
-                        result = trimmed;
-                    }
-                }
-
-                // In particular, literals (including raw strings) and inactive #if text
-                // must remain byte-for-byte identical as text. Fail closed if a formatting
-                // service ever proposes a change to either.
-                var resultTree = CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options);
-                var resultRoot = resultTree.GetRoot();
-                if (resultTree.GetDiagnostics().Any(item => item.Severity == DiagnosticSeverity.Error)
-                    || !sourceRoot.DescendantTokens().Select(token => token.Text)
-                        .SequenceEqual(resultRoot.DescendantTokens().Select(token => token.Text))
-                    || !protectedTrivia.SequenceEqual(ProtectedTrivia(resultRoot))
-                    || !originalExclusions.HasSameText(CSharpFormattingExclusions.Parse(resultRoot)))
-                {
-                    diagnostic = new FormatterDiagnostic(
-                        "PNFMT003", "C# formatting skipped because protected source text would change.", null);
-                    return text;
-                }
-
-                return result;
+                return formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
             }
         }
 

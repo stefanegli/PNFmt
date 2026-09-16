@@ -29,7 +29,7 @@ namespace PNFmt
             }
 
             var formatter = new ResxDocumentFormatter(settings, request.Log);
-            formatter.Run(request.FilePath, request.WriteChanges);
+            formatter.Run(request.FilePath, request.WriteChanges, settings.FormatLayout, settings.HasExplicitLayout);
             return formatter.Result;
         }
     }
