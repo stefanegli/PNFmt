@@ -6,6 +6,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../PNFmt.Core/PNFmt.Core.csproj" />
+        <ProjectReference Include="../PNFmt.Cli/PNFmt.Cli.csproj" />
     </ItemGroup>
 </Project>

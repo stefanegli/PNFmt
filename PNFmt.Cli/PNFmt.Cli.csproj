@@ -18,6 +18,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="PNFmt.Benchmarks" />
         <InternalsVisibleTo Include="PNFmt.Tests" />
     </ItemGroup>
 

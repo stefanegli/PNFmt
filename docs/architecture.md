@@ -36,5 +36,8 @@ The EditorConfig parsed-file cache remains shared; a resolved hierarchy is scope
 - Activation and option matrices exercise the configuration contract; hierarchy-refresh and request-reuse tests cover configuration lifetime.
 - MSBuild evaluation and XML preservation tests protect format-specific semantics.
 - Reporting tests use captured text writers; CLI integration tests verify dispatch, output, and exit codes together.
+- File replacement tests cover partial staging failures, intervening edits, read-only files, cleanup, and platform-specific permission/link behavior.
+
+The [benchmark suite](../benchmarks/README.md) measures dependency sorting and repository discovery/execution, including mixed formats, nested configuration, serial/parallel work, and staged writes. Its short CI run checks outcomes and byte stability without timing thresholds.
 
 `TargetFileResolver`, `GitRepositoryContext`, `FormattingRunner`, and MSBuild original-order dependency sorting keep their existing seams. They already concentrate substantive behavior and have tests through those interfaces.

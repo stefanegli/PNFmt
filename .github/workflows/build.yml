@@ -65,6 +65,9 @@ jobs:
       - name: Test
         run: dotnet test PNFmt.slnx --configuration Release --no-build --no-restore
 
+      - name: Validate benchmark scenarios
+        run: dotnet run --project benchmarks/PNFmt.Benchmarks.csproj --configuration Release --no-build -- --quick
+
       - name: Pack and validate global tool
         shell: pwsh
         run: >
