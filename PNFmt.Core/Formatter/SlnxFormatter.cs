@@ -21,12 +21,12 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
+            var settings = EditorConfigSettings.Load(request.FilePath);
             return TextFileFormatPipeline.Format(
                 request,
                 EditorConfigFormatterActivation.IsEnabled(
-                    request.FilePath,
-                    EditorConfigSettingNames.SortEntries,
-                    request.Log),
+                    settings, request.FilePath, this.Name,
+                    EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.SortEntries), request.Log),
                 SlnxDocumentFormatter.Format,
                 xml: true);
         }

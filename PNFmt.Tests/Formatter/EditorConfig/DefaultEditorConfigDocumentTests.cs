@@ -8,6 +8,18 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 {
     public sealed class DefaultEditorConfigDocumentTests
     {
+        [Theory]
+        [InlineData("None")]
+        [InlineData("xml")]
+        public void Defaults_preserve_existing_formatter_selections(string selection)
+        {
+            var existing = "[*.csproj]\npnfmt_formatter = " + selection + "\n";
+            var updated = DefaultEditorConfigDocument.Update(existing);
+            Assert.Contains("pnfmt_formatter = " + selection, updated);
+            Assert.DoesNotContain("pnfmt_formatter = csproj", updated);
+            Assert.Equal(updated, DefaultEditorConfigDocument.Update(updated));
+        }
+
         [Fact]
         public void Default_configuration_matches_snapshot_and_is_idempotent()
         {
@@ -81,6 +93,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Contains(
                 "[*.ini]\n"
                 + "alpha = unchanged\n"
+                + "pnfmt_formatter = ini\n"
                 + "pnfmt_ini_group_by_prefix = true\n"
                 + "pnfmt_ini_merge_groups = false\n"
                 + "pnfmt_ini_sort_groups = false\n"
@@ -89,6 +102,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 updated);
             Assert.Contains(
                 "[*.resx]\n"
+                + "pnfmt_formatter = resx\n"
                 + "pnfmt_resx_remove_documentation_comment = true\n"
                 + "pnfmt_resx_remove_xsd_schema = true\n"
                 + "pnfmt_resx_sort_comparer = CurrentCulture\n"
@@ -176,6 +190,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.StartsWith(Existing, updated);
             Assert.Contains(
                 "[*.editorconfig]\n"
+                + "pnfmt_formatter = ini\n"
                 + "pnfmt_ini_merge_groups = false\n"
                 + "pnfmt_ini_sort_groups = false\n"
                 + "pnfmt_sort_entries = true\n",

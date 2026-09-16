@@ -26,7 +26,9 @@ namespace PNFmt
             var generated = false;
             var result = TextFileFormatPipeline.Format(
                 request,
-                EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpFormat),
+                EditorConfigFormatterActivation.IsEnabled(
+                    settings, request.FilePath, this.Name,
+                    EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpFormat), request.Log),
                 text =>
                 {
                     generated = CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings);

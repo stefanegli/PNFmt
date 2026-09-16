@@ -18,47 +18,53 @@ namespace PNFmt
                 new DefaultSection(
                     "[*.cs]",
                     new DefaultSetting(EditorConfigSettingNames.CSharpCollapseBlankLines, "true"),
-                    new DefaultSetting(EditorConfigSettingNames.CSharpFormat, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpMemberAccessibilityOrder, CSharpMemberSorter.DefaultAccessibilityOrder),
                     new DefaultSetting(EditorConfigSettingNames.CSharpMemberOrder, CSharpMemberSorter.DefaultOrder),
                     new DefaultSetting(EditorConfigSettingNames.CSharpRemoveRegions, "false"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortMembers, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortMembersByName, "true"),
                     new DefaultSetting(EditorConfigSettingNames.CSharpSortModifiers, "true"),
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "csharp"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.csproj]",
                     new DefaultSetting(EditorConfigSettingNames.CsProjEmptyLinesBetweenGroups, "1"),
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "csproj"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.editorconfig]",
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "ini"),
                     new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.ini]",
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "ini"),
                     new DefaultSetting(EditorConfigSettingNames.IniGroupByPrefix, "true"),
                     new DefaultSetting(EditorConfigSettingNames.IniMergeGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.IniSortGroups, "false"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.resx]",
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "resx"),
                     new DefaultSetting(EditorConfigSettingNames.ResxRemoveDocumentationComment, "true"),
                     new DefaultSetting(EditorConfigSettingNames.ResxRemoveXsdSchema, "true"),
                     new DefaultSetting(EditorConfigSettingNames.ResxSortComparer, "OrdinalIgnoreCase"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.rsp]",
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "rsp"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.slnx]",
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "slnx"),
                     new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
                 new DefaultSection(
                     "[*.xaml]",
-                    new DefaultSetting(EditorConfigSettingNames.XamlFormat, "true")),
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "xaml")),
                 new DefaultSection(
                     "[*.xml]",
-                    new DefaultSetting(EditorConfigSettingNames.XmlFormat, "true")),
+                    new DefaultSetting(EditorConfigSettingNames.Formatter, "xml")),
             };
 
         public static int CountLegacySettings(string text)

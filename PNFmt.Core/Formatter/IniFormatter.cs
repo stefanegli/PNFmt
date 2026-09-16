@@ -24,7 +24,7 @@ namespace PNFmt
             var settings = new IniEditorConfigSettings(request.FilePath, request.Log);
             return TextFileFormatPipeline.Format(
                 request,
-                settings.IsActive,
+                EditorConfigFormatterActivation.IsEnabled(request.FilePath, this.Name, settings.IsActive, request.Log),
                 text => IniDocumentFormatter.Format(
                     text,
                     settings.SortEntries,

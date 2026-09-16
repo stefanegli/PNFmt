@@ -40,6 +40,8 @@ namespace PNFmt.Tests
         [Fact]
         public void Runner_finishes_editorconfig_files_before_dependent_files()
         {
+            using var directory = new TestDirectory();
+            var configuration = directory.Write(".editorconfig", "root = true\n");
             var state = new ConfigurationState();
             var registry = new FormatterRegistry(
                 new IFileFormatter[]
@@ -47,7 +49,7 @@ namespace PNFmt.Tests
                     new ConfigurationFormatter(state),
                     new DependentFormatter(state),
                 });
-            var files = new[] { "project.dependent", ".editorconfig" };
+            var files = new[] { directory.GetPath("project.dependent"), configuration };
 
             var result = new FormattingRunner(registry).Run(files, true, false, 2);
 
@@ -59,13 +61,15 @@ namespace PNFmt.Tests
         [Fact]
         public void Runner_formats_parent_editorconfig_before_nested_editorconfig()
         {
+            using var directory = new TestDirectory();
+            var configuration = directory.Write(".editorconfig", "root = true\n");
             var state = new ConfigurationState();
             var registry = new FormatterRegistry(
                 new IFileFormatter[] { new ConfigurationFormatter(state) });
             var files = new[]
             {
-                System.IO.Path.Combine("nested", ".editorconfig"),
-                ".editorconfig",
+                directory.Write("nested/.editorconfig", ""),
+                configuration,
             };
 
             var result = new FormattingRunner(registry).Run(files, true, false, 2);
@@ -162,7 +166,7 @@ namespace PNFmt.Tests
 
             public FileFormatResult Format(FileFormatRequest request)
             {
-                var isNested = !string.IsNullOrEmpty(System.IO.Path.GetDirectoryName(request.FilePath));
+                var isNested = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(request.FilePath)) == "nested";
                 if (isNested && !this.state.IsReady)
                 {
                     throw new InvalidOperationException(

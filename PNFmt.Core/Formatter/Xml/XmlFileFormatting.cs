@@ -17,7 +17,9 @@ namespace PNFmt
             var settings = EditorConfigSettings.Load(request.FilePath);
             FormatterDiagnostic diagnostic = null;
             var result = TextFileFormatPipeline.Format(request,
-                EditorConfigSettings.IsEnabled(settings, activationSetting),
+                EditorConfigFormatterActivation.IsEnabled(
+                    settings, request.FilePath, xaml ? "xaml" : "xml",
+                    EditorConfigSettings.IsEnabled(settings, activationSetting), request.Log),
                 text =>
                 {
                     try

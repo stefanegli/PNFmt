@@ -6,17 +6,17 @@ PNFmt formats `.xml` and `.xaml` files independently, without loading schemas, a
 
 ```ini
 [*.xml]
-pnfmt_xml_format = true
+pnfmt_formatter = xml
 indent_size = 2
 indent_style = space
 
 [*.xaml]
-pnfmt_xaml_format = true
+pnfmt_formatter = xaml
 indent_size = 4
 indent_style = space
 ```
 
-Each formatter requires its own activation setting to be explicitly `true`. Missing, invalid, and `false` values skip the file. `pnfmt_sort_entries` does not activate either formatter and never enables sorting for these file types. `--write-default-config` adds both activation settings in their respective sections, preserving existing values.
+Select a formatter with `pnfmt_formatter = xml` or `pnfmt_formatter = xaml`; use `None` to disable it. Without a selection, `pnfmt_xml_format = true` and `pnfmt_xaml_format = true` still activate their respective formatters for this version and print warning `PNFMT004`. `pnfmt_sort_entries` never enables sorting for these formatters. `--write-default-config` adds explicit selections in their respective sections, preserving existing choices. See the [activation rules](../configuration-contracts.md).
 
 ```powershell
 pnfmt --formatter xml,xaml --recursive .

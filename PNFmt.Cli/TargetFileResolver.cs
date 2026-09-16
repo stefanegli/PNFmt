@@ -145,13 +145,26 @@ namespace PNFmt.Cli
                 return;
             }
 
-            if (this.activeFormatters.TryGetFormatter(file, out _))
+            try
             {
-                files.Add(Path.GetFullPath(file));
+                if (this.allFormatters.TryGetConfiguredFormatter(file, out var formatter))
+                {
+                    if (formatter is not null
+                        ? this.activeFormatters.Formatters.Contains(formatter)
+                        : this.activeFormatters.TryGetFormatter(file, out _))
+                    {
+                        files.Add(Path.GetFullPath(file));
+                    }
+                }
+                else if (reportUnsupported)
+                {
+                    errors.Add($"Path is not a supported file type: {file}");
+                }
             }
-            else if (reportUnsupported && !this.allFormatters.TryGetFormatter(file, out _))
+            catch (InvalidDataException)
             {
-                errors.Add($"Path is not a supported file type: {file}");
+                // Let the runner report configuration errors as per-file failures.
+                files.Add(Path.GetFullPath(file));
             }
         }
 

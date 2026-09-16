@@ -23,7 +23,7 @@ namespace PNFmt
 
             var settings = new ResxEditorConfigSettings(request.Log, request.FilePath);
 
-            if (!settings.IsActive)
+            if (!EditorConfigFormatterActivation.IsEnabled(request.FilePath, this.Name, settings.IsActive, request.Log))
             {
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }

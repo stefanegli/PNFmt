@@ -6,6 +6,7 @@ The resource formatter normalizes RESX XML, sorts resource entries, and can remo
 
 ```ini
 [*.resx]
+pnfmt_formatter = resx
 pnfmt_resx_remove_documentation_comment = true
 pnfmt_resx_remove_xsd_schema = true
 pnfmt_resx_sort_comparer = OrdinalIgnoreCase
@@ -21,6 +22,8 @@ pnfmt_sort_entries = true
 | `indent_style`, `indent_size`, `tab_width`, `end_of_line` | Control standard XML layout through EditorConfig. |
 | `insert_final_newline` | End the file with one configured newline when `true`, or omit the final newline when `false` (the legacy default). |
 | `charset` | Choose the output encoding and BOM. `utf-8` writes without a BOM; `utf-8-bom` writes with one. Also supports `utf-16le`, `utf-16be`, and `latin1`. |
+
+Select this formatter with `pnfmt_formatter = resx`; use `None` to disable it. Without a selection, the previous activation rules remain for this version and print warning `PNFMT004`. See the [activation rules](../configuration-contracts.md).
 
 ## Behavior
 

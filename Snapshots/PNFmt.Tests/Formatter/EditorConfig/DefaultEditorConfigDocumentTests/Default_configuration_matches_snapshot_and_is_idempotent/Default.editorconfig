@@ -2,44 +2,50 @@ root = true
 
 [*.cs]
 pnfmt_csharp_collapse_blank_lines = true
-pnfmt_csharp_format = true
 pnfmt_csharp_member_accessibility_order = public,internal,protected_internal,protected,private_protected,private
 pnfmt_csharp_member_order = constant,constructor,destructor,property,indexer,event,method,operator,conversion_operator,type
 pnfmt_csharp_remove_regions = false
 pnfmt_csharp_sort_members = true
 pnfmt_csharp_sort_members_by_name = true
 pnfmt_csharp_sort_modifiers = true
+pnfmt_formatter = csharp
 pnfmt_sort_entries = true
 
 [*.csproj]
 pnfmt_csproj_empty_lines_between_groups = 1
+pnfmt_formatter = csproj
 pnfmt_sort_entries = true
 
 [*.editorconfig]
+pnfmt_formatter = ini
 pnfmt_ini_merge_groups = false
 pnfmt_ini_sort_groups = false
 pnfmt_sort_entries = true
 
 [*.ini]
+pnfmt_formatter = ini
 pnfmt_ini_group_by_prefix = true
 pnfmt_ini_merge_groups = false
 pnfmt_ini_sort_groups = false
 pnfmt_sort_entries = true
 
 [*.resx]
+pnfmt_formatter = resx
 pnfmt_resx_remove_documentation_comment = true
 pnfmt_resx_remove_xsd_schema = true
 pnfmt_resx_sort_comparer = OrdinalIgnoreCase
 pnfmt_sort_entries = true
 
 [*.rsp]
+pnfmt_formatter = rsp
 pnfmt_sort_entries = true
 
 [*.slnx]
+pnfmt_formatter = slnx
 pnfmt_sort_entries = true
 
 [*.xaml]
-pnfmt_xaml_format = true
+pnfmt_formatter = xaml
 
 [*.xml]
-pnfmt_xml_format = true
+pnfmt_formatter = xml

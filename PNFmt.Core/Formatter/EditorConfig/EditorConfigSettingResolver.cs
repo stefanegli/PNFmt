@@ -51,6 +51,7 @@ namespace PNFmt
 
     internal static class EditorConfigSettingNames
     {
+        public const string Formatter = "pnfmt_formatter";
         public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CSharpCollapseBlankLines = "pnfmt_csharp_collapse_blank_lines";
         public const string CSharpMemberAccessibilityOrder = "pnfmt_csharp_member_accessibility_order";

@@ -215,7 +215,7 @@ namespace PNFmt.Cli
             writer.WriteLine("      --file-pattern <glob>");
             writer.WriteLine("                     Include only files matching the glob; repeat to include more.");
             writer.WriteLine("      --formatter <name>[,<name>...]");
-            writer.WriteLine("                     Enable only the named formatters; repeat or use comma-separated names.");
+            writer.WriteLine("                     Run only the named formatters; repeat or use comma-separated names.");
             writer.WriteLine($"                     Available names: {formatterNames}.");
             writer.WriteLine("  -n, --dry-run     Show what would change without writing files.");
             writer.WriteLine("      --check       Exit with code 1 if any file would change (implies --dry-run).");
@@ -233,11 +233,10 @@ namespace PNFmt.Cli
             writer.WriteLine("  If no path is provided, the current directory is used.");
             writer.WriteLine("  maxCpuCount defaults to the repository .pnfmt value, or 1.");
             writer.WriteLine($"  Registered formatters support {fileExtensions} files.");
-            writer.WriteLine("  Every formatter requires applicable EditorConfig settings.");
-            writer.WriteLine("  C# formatting requires pnfmt_csharp_format = true; pnfmt_sort_entries also sorts imports.");
-            writer.WriteLine("  INI formatting requires an enabled pnfmt_sort_entries or pnfmt_ini_* setting.");
-            writer.WriteLine("  RSP and SLNX formatters require pnfmt_sort_entries = true.");
-            writer.WriteLine("  XML and XAML formatting require pnfmt_xml_format or pnfmt_xaml_format = true.");
+            writer.WriteLine("  Select a formatter with pnfmt_formatter = <name> in .editorconfig; None disables formatting.");
+            writer.WriteLine("  Missing pnfmt_formatter retains implicit activation with warning PNFMT004 for this version.");
+            writer.WriteLine("  A future version will skip files without an explicit formatter selection.");
+            writer.WriteLine("  --formatter filters the selected formatters; it does not override EditorConfig activation.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
         }

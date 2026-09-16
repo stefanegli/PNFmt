@@ -15,6 +15,97 @@ namespace PNFmt.Tests
     public sealed class ProgramTests
     {
         [Theory]
+        [InlineData("Data.config")]
+        [InlineData("Data.ini")]
+        [InlineData("Data")]
+        public void Explicit_selection_controls_discovery_dispatch_and_cli_filtering(string fileName)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[Data*]\npnfmt_formatter = XML\nindent_size = 2\n");
+                const string Input = "<root><child /></root>";
+                var path = directory.Write(fileName, Input);
+
+                var filtered = Run("--all", "--formatter", "ini", path);
+                Assert.Equal(0, filtered.ExitCode);
+                Assert.Equal(Input, File.ReadAllText(path));
+                var preview = Run("--all", "--check", "--formatter", "xml", "--file-pattern", "Data*", directory.Path);
+                Assert.Equal(1, preview.ExitCode);
+                Assert.Equal(Input, File.ReadAllText(path));
+
+                var result = Run("--all", "--formatter", "xml", "--file-pattern", "Data*", directory.Path);
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("Updated 1", result.Output);
+                Assert.DoesNotContain("PNFMT004", result.Error);
+                Assert.Equal("<root>\n  <child />\n</root>", File.ReadAllText(path));
+                Assert.Equal(0, Run("--all", "--check", path).ExitCode);
+            }
+        }
+
+        [Theory]
+        [InlineData("--all")]
+        [InlineData("--check")]
+        [InlineData("--dry-run")]
+        [InlineData("--lint")]
+        public void None_disables_cli_formatting_in_every_mode(string mode)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = None\npnfmt_sort_entries = true\n");
+                var path = directory.Write("Project.csproj", "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><Z>1</Z><A>2</A></PropertyGroup></Project>");
+                var original = File.ReadAllBytes(path);
+
+                var result = Run("--all", "--formatter", "csproj", mode, path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("skipped 1", result.Output);
+                Assert.Empty(result.Error);
+                Assert.Equal(original, File.ReadAllBytes(path));
+            }
+        }
+
+        [Theory]
+        [InlineData("unknown")]
+        [InlineData("")]
+        [InlineData("xml,ini")]
+        public void Invalid_formatter_selection_fails_without_falling_back(string selection)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_formatter = " + selection + "\npnfmt_sort_entries = true\n");
+                var path = directory.Write("Data.ini", "z=1\na=2\n");
+                var original = File.ReadAllBytes(path);
+
+                var result = Run("--all", path);
+
+                Assert.Equal(2, result.ExitCode);
+                Assert.Contains("Unknown formatter", result.Error);
+                Assert.Contains("pnfmt_formatter", result.Error);
+                Assert.Equal(original, File.ReadAllBytes(path));
+            }
+        }
+
+        [Theory]
+        [InlineData("--all")]
+        [InlineData("--check")]
+        [InlineData("--dry-run")]
+        [InlineData("--lint")]
+        public void Legacy_activation_warning_is_visible_without_verbose_and_does_not_fail_checks(string mode)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*.ini]\npnfmt_sort_entries = true\n");
+                var path = directory.Write("Data.ini", "a = 1\n");
+
+                var result = Run("--all", mode, path);
+
+                Assert.Equal(0, result.ExitCode);
+                Assert.Contains("warning PNFMT004", result.Error);
+                Assert.Contains("pnfmt_formatter = ini", result.Error);
+            }
+        }
+
+        [Theory]
         [InlineData("<root/>")]
         [InlineData("<root><resheader name='resmimetype'><value>text/microsoft-resx</value></resheader><data><value>unnamed</value></data></root>")]
         public void Invalid_resource_structure_is_skipped_with_a_diagnostic(string input)

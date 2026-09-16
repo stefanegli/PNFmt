@@ -6,10 +6,10 @@ The solution formatter normalizes XML layout and orders known elements in XML so
 
 ```ini
 [*.slnx]
-pnfmt_sort_entries = true
+pnfmt_formatter = slnx
 ```
 
-Only `pnfmt_sort_entries = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged.
+Select this formatter with `pnfmt_formatter = slnx`; use `None` to disable it. Sorting is part of the selected formatter's behavior. Without a selection, `pnfmt_sort_entries = true` still activates formatting for this version and prints warning `PNFMT004`. See the [activation rules](../configuration-contracts.md).
 
 ## Behavior
 

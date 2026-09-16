@@ -80,6 +80,33 @@ namespace PNFmt
 
         public IReadOnlyCollection<string> SupportedExtensions { get; }
 
+        internal bool TryGetConfiguredFormatter(string filePath, out IFileFormatter formatter)
+        {
+            var settings = EditorConfigSettings.Load(Path.GetFullPath(filePath));
+            var name = EditorConfigFormatterActivation.GetSelection(settings);
+            if (name is null)
+            {
+                return this.TryGetFormatter(filePath, out formatter);
+            }
+
+            formatter = null;
+            if (string.Equals(name, "None", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            formatter = this.Formatters.FirstOrDefault(
+                item => string.Equals(item.Name, name, StringComparison.OrdinalIgnoreCase));
+            if (formatter is null)
+            {
+                throw new InvalidDataException(
+                    $"Unknown formatter '{name}' in EditorConfig setting '{EditorConfigSettingNames.Formatter}'. "
+                    + $"Available formatters: {string.Join(", ", this.Formatters.Select(item => item.Name))}, None.");
+            }
+
+            return true;
+        }
+
         public bool TryGetFormatter(string filePath, out IFileFormatter formatter)
         {
             if (string.IsNullOrEmpty(filePath))

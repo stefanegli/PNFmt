@@ -6,6 +6,7 @@ The project formatter normalizes MSBuild project XML, sorts eligible properties 
 
 ```ini
 [*.csproj]
+pnfmt_formatter = csproj
 end_of_line = crlf
 indent_style = space
 pnfmt_csproj_empty_lines_between_groups = 1
@@ -23,7 +24,7 @@ tab_width = 4
 
 Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 
-Project-specific settings and standard layout settings can activate this formatter. Positive `indent_size` or `tab_width`, `indent_style`, `end_of_line`, and valid `insert_final_newline` values enable layout formatting even without sorting. `pnfmt_sort_entries = false` also enables layout formatting while keeping sorting disabled. `charset` alone does not activate it. These rules preserve the legacy project formatter's behavior; see the [cross-formatter comparison](../configuration-contracts.md).
+Select this formatter with `pnfmt_formatter = csproj`; use `None` to disable formatting and linting. Sorting still requires `pnfmt_sort_entries = true`. Without a selection, the previous activation rules remain for this version and print warning `PNFMT004`: project-specific settings, standard layout settings, or `--lint` can activate formatting. `charset` alone does not activate it. See the [activation rules](../configuration-contracts.md).
 
 ## Behavior
 

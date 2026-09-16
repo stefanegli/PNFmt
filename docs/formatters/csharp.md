@@ -6,7 +6,7 @@ The C# formatter uses Roslyn to format individual files. It does not load MSBuil
 
 ```ini
 [*.cs]
-pnfmt_csharp_format = true
+pnfmt_formatter = csharp
 pnfmt_csharp_sort_modifiers = true
 pnfmt_csharp_sort_members = true
 pnfmt_csharp_collapse_blank_lines = true
@@ -26,7 +26,7 @@ dotnet_sort_system_directives_first = true
 dotnet_separate_import_directive_groups = false
 ```
 
-Only `pnfmt_csharp_format = true` activates this formatter. Missing, invalid, and `false` values leave the file unchanged. Import sorting, member sorting, modifier ordering, blank-line cleanup, and region removal each require their own setting to be `true`; none activates C# formatting on its own. `--write-default-config` enables sorting and blank-line cleanup, adds the member-order defaults below, and adds `pnfmt_csharp_remove_regions = false` to `[*.cs]`, preserving existing values.
+Select this formatter with `pnfmt_formatter = csharp`; use `None` to disable it. Without a selection, `pnfmt_csharp_format = true` still activates formatting for this version and prints warning `PNFMT004`. Import sorting, member sorting, modifier ordering, blank-line cleanup, and region removal each require their own setting to be `true`. `--write-default-config` selects the formatter, enables sorting and blank-line cleanup, adds the member-order defaults below, and adds `pnfmt_csharp_remove_regions = false` to `[*.cs]`, preserving existing values. See the [activation rules](../configuration-contracts.md).
 
 Run only this formatter with:
 
@@ -51,7 +51,7 @@ Multiline string contents, comments, directives, and disabled preprocessor text 
 
 ```ini
 [*.cs]
-pnfmt_csharp_format = true
+pnfmt_formatter = csharp
 pnfmt_csharp_remove_regions = true
 ```
 
@@ -85,7 +85,7 @@ PNFmt uses standard .NET option names wherever the behavior has an equivalent. T
 
 ```ini
 [*.cs]
-pnfmt_csharp_format = true
+pnfmt_formatter = csharp
 pnfmt_csharp_sort_members = true
 pnfmt_csharp_member_order = constant,constructor,destructor,property,indexer,event,method,operator,conversion_operator,type
 pnfmt_csharp_member_accessibility_order = public,internal,protected_internal,protected,private_protected,private
@@ -167,7 +167,7 @@ You can also disable formatting with a more specific EditorConfig section:
 
 ```ini
 [*.{g,designer}.cs]
-pnfmt_csharp_format = false
+pnfmt_formatter = None
 ```
 
 [Back to the overview](../../README.md)

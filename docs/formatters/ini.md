@@ -8,11 +8,13 @@ An `.editorconfig` containing `root = true` must include its own matching `[*.ed
 
 ```ini
 [*.editorconfig]
+pnfmt_formatter = ini
 pnfmt_ini_merge_groups = false
 pnfmt_ini_sort_groups = false
 pnfmt_sort_entries = true
 
 [*.ini]
+pnfmt_formatter = ini
 pnfmt_ini_group_by_prefix = true
 pnfmt_ini_merge_groups = false
 pnfmt_ini_sort_groups = false
@@ -26,7 +28,7 @@ pnfmt_sort_entries = true
 | `pnfmt_ini_merge_groups` | In `.editorconfig`, merge only adjacent sections with exactly the same header, including case. In `.ini`, merge all sections with the same header, ignoring case. Contents retain occurrence order. |
 | `pnfmt_ini_sort_groups` | In `.ini`, sort named sections by header using ordinal, case-insensitive comparison, keeping the preamble at the top. In `.editorconfig`, section sorting is skipped to preserve precedence. |
 
-At least one of these settings must be `true` for the formatter to run. Missing, invalid, and `false` values do not activate it.
+Select this formatter with `pnfmt_formatter = ini`; use `None` to disable it. The selection alone enables assignment layout; the settings above control optional transformations. Without a selection, at least one of those settings must be `true` to activate formatting for this version, with warning `PNFMT004`. See the [activation rules](../configuration-contracts.md).
 
 ## Behavior
 

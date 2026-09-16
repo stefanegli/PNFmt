@@ -22,7 +22,9 @@ namespace PNFmt
             }
 
             var settings = new CsProjEditorConfigSettings(request.FilePath, request.Log);
-            var isActive = settings.IsActive || request.Lint;
+            var properties = EditorConfigSettings.Load(request.FilePath);
+            var isActive = EditorConfigFormatterActivation.IsEnabled(
+                properties, request.FilePath, this.Name, settings.IsActive || request.Lint, request.Log);
 
             if (!isActive)
             {
@@ -30,6 +32,7 @@ namespace PNFmt
             }
 
             ICsProjFormatSettings effectiveSettings = settings.IsActive
+                || EditorConfigFormatterActivation.GetSelection(properties) is not null
                 ? settings
                 : new DefaultCsProjFormatSettings();
             var formatter = new CsProjDocumentFormatter(effectiveSettings, request.Log);
