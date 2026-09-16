@@ -8,10 +8,15 @@ namespace PNFmt
     internal sealed class CsProjEditorConfigSettings : ICsProjFormatSettings
     {
         public CsProjEditorConfigSettings(string targetFile = "dummy.csproj", IFormatterLog log = null)
+            : this(FileFormattingConfiguration.Load(targetFile, log))
+        {
+        }
+
+        internal CsProjEditorConfigSettings(FileFormattingConfiguration configuration)
         {
             var isActive = false;
-            var settings = EditorConfigSettings.Load(targetFile);
-            var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+            var settings = configuration.Properties;
+            var resolver = configuration.CreateSettingResolver();
             if (resolver.TryGet(
                 LegacyEditorConfigSettingAliases.CsProjSortEntries,
                 out var sortEntries))

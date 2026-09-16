@@ -65,7 +65,7 @@ namespace PNFmt
                     CSharpFormattingExclusions.Parse(sourceRoot)).Visit(sourceRoot);
             }
 
-            var formatLayout = EditorConfigFormatterOptions.Format(settings, "csharp");
+            var formatLayout = FileFormattingConfiguration.FormatLayout(settings, "csharp");
             var formattedText = formatLayout
                 ? FormatWhitespace(sourceRoot, tree, text, settings)
                 : sourceRoot.ToFullString();

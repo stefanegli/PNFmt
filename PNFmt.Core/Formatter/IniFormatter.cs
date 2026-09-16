@@ -21,10 +21,11 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = new IniEditorConfigSettings(request.FilePath, request.Log);
+            request = request.ResolveConfiguration();
+            var settings = request.Configuration.IniSettings;
             return TextFileFormatPipeline.Format(
                 request,
-                EditorConfigFormatterActivation.IsEnabled(request.FilePath, this.Name, settings.IsActive, request.Log),
+                request.Configuration.IsActive(this.Name),
                 text => IniDocumentFormatter.Format(
                     text,
                     settings.SortEntries,

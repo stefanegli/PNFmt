@@ -107,13 +107,13 @@ namespace PNFmt.Cli
             var log = new BufferedFormatterLog();
             try
             {
-                if (!this.registry.TryGetConfiguredFormatter(file, out var formatter))
+                var request = new FileFormatRequest(file, writeChanges, lint, log).ResolveConfiguration();
+                if (!request.Configuration.TryGetFormatter(this.registry, out var formatter))
                 {
                     throw new InvalidOperationException(
                         $"No formatter is registered for '{System.IO.Path.GetExtension(file)}'.");
                 }
 
-                var request = new FileFormatRequest(file, writeChanges, lint, log);
                 var result = formatter is null
                     ? new FileFormatResult(FileFormatStatus.Skipped)
                     : formatter.Format(request);

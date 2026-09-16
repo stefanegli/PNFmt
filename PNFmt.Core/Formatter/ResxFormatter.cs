@@ -21,15 +21,16 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = new ResxEditorConfigSettings(request.Log, request.FilePath);
+            request = request.ResolveConfiguration();
+            var settings = request.Configuration.ResourceSettings;
 
-            if (!EditorConfigFormatterActivation.IsEnabled(request.FilePath, this.Name, settings.IsActive, request.Log))
+            if (!request.Configuration.IsActive(this.Name))
             {
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
             var formatter = new ResxDocumentFormatter(settings, request.Log);
-            formatter.Run(request.FilePath, request.WriteChanges, settings.FormatLayout, settings.HasExplicitLayout);
+            formatter.Run(request, settings.FormatLayout, settings.HasExplicitLayout);
             return formatter.Result;
         }
     }

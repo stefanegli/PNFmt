@@ -21,24 +21,17 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = new CsProjEditorConfigSettings(request.FilePath, request.Log);
-            var properties = EditorConfigSettings.Load(request.FilePath);
-            var isActive = EditorConfigFormatterActivation.IsEnabled(
-                properties, request.FilePath, this.Name, settings.IsActive || request.Lint, request.Log);
-
-            if (!isActive)
+            request = request.ResolveConfiguration();
+            var configuration = request.Configuration;
+            if (!configuration.IsActive(this.Name, request.Lint))
             {
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
-            ICsProjFormatSettings effectiveSettings = settings.IsActive
-                || EditorConfigFormatterActivation.GetSelection(properties) is not null
-                ? settings
-                : new DefaultCsProjFormatSettings();
-            var formatter = new CsProjDocumentFormatter(effectiveSettings);
+            var formatter = new CsProjDocumentFormatter(configuration.ProjectSettings);
             return formatter.Run(
                 request,
-                EditorConfigFormatterOptions.Format(properties, this.Name));
+                configuration.FormatLayout(this.Name));
         }
     }
 }

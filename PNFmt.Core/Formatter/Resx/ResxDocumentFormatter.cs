@@ -58,8 +58,13 @@ namespace PNFmt
 
         public void Run(string resxPath, bool writeChanges, bool formatLayout = true, bool hasExplicitLayout = false)
         {
-            this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
             var request = new FileFormatRequest(resxPath, writeChanges, false, this.Log ?? SilentLog.Instance);
+            this.Run(request, formatLayout, hasExplicitLayout);
+        }
+
+        public void Run(FileFormatRequest request, bool formatLayout, bool hasExplicitLayout)
+        {
+            this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
             this.Result = TextFileFormatPipeline.Format(request, true,
                 (text, encoding) => this.FormatResx(text, encoding, formatLayout, hasExplicitLayout), xml: true);
         }

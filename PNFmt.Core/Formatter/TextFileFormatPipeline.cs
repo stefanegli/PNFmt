@@ -46,7 +46,8 @@ namespace PNFmt
                 return new FileFormatResult(FileFormatStatus.Skipped);
             }
 
-            var encoding = FileEncoding.Load(request.FilePath, request.Log);
+            request = request.ResolveConfiguration();
+            var encoding = request.Configuration.Encoding;
             // Decode strictly even when the formatter's default output is UTF-8.
             // XML declarations identify the input independently of output settings.
             var file = EncodedTextFile.Read(request.FilePath, encoding, xml);

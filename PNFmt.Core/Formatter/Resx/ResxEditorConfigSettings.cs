@@ -5,19 +5,23 @@ namespace PNFmt
     internal sealed class ResxEditorConfigSettings : IResxFormatSettings
     {
         public ResxEditorConfigSettings(IFormatterLog log, string targetFile = "dummy.resx")
+            : this(FileFormattingConfiguration.Load(targetFile, log))
+        {
+        }
+
+        internal ResxEditorConfigSettings(FileFormattingConfiguration configuration)
         {
             var isActive = false;
-            var settings = EditorConfigSettings.Load(targetFile);
-            var legacy = EditorConfigFormatterActivation.GetSelection(settings) is null
-                && EditorConfigFormatterActivation.GetEnablement(settings) is null;
-            this.FormatLayout = EditorConfigFormatterOptions.Format(settings, "resx");
+            var settings = configuration.Properties;
+            var legacy = configuration.IsLegacy;
+            this.FormatLayout = configuration.FormatLayout("resx");
             this.HasExplicitLayout = settings.ContainsKey(EditorConfigSettingNames.Format) || !legacy;
             this.InsertDocumentationComment = settings.TryGetValue(EditorConfigSettingNames.ResxInsertDocumentationComment, out var insertComment)
                 ? EditorConfigSettings.IsEnabled(insertComment) : legacy;
             this.InsertXsdSchema = settings.TryGetValue(EditorConfigSettingNames.ResxInsertXsdSchema, out var insertSchema)
                 ? EditorConfigSettings.IsEnabled(insertSchema) : legacy;
             this.Layout = new ResxLayoutSettings(settings);
-            var resolver = new EditorConfigSettingResolver(settings, targetFile, log);
+            var resolver = configuration.CreateSettingResolver();
             if (resolver.TryGet(
                 LegacyEditorConfigSettingAliases.ResxSortEntries,
                 out var sortEntries))

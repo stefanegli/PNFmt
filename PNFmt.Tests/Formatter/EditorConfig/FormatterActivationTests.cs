@@ -4,12 +4,38 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.EditorConfig
 {
     public sealed class FormatterActivationTests
     {
+        [Fact]
+        public void Configuration_is_consistent_during_formatting_and_refreshes_when_a_request_is_reused()
+        {
+            using (var directory = new TestDirectory())
+            {
+                var configPath = directory.Write(".editorconfig", "root = true\n[*.rsp]\ncharset = utf-8\npnfmt_sort_entries = true\n");
+                var path = directory.Write("Sample.rsp", "z.cs\na.cs\n");
+                var log = new UpdatingConfigurationLog(configPath);
+                var request = new FileFormatRequest(path, true, false, log);
+                var formatter = new RspFormatter();
+
+                Assert.Equal(FileFormatStatus.Updated, formatter.Format(request).Status);
+                Assert.True(log.Updated);
+                const string Expected = "a.cs\nz.cs\n";
+                Assert.Equal(new UTF8Encoding(false, true).GetBytes(Expected), File.ReadAllBytes(path));
+
+                // The warning changed the on-disk charset during the previous call.
+                // It takes effect in this call, even when the original request is reused.
+                Assert.Equal(FileFormatStatus.Updated, formatter.Format(request).Status);
+                var encoding = new UnicodeEncoding(false, true, true);
+                Assert.Equal(encoding.GetPreamble().Concat(encoding.GetBytes(Expected)), File.ReadAllBytes(path));
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(request).Status);
+            }
+        }
+
         [Theory]
         [MemberData(nameof(FormatterContractTests.ActivationCases), MemberType = typeof(FormatterContractTests))]
         public void Enablement_and_selection_activate_each_formatter(string name, string fileName, string input)
@@ -133,6 +159,27 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             public void Write(Exception exception) => throw exception;
 
             public void WriteLine(string message) => this.Messages.Add(message);
+        }
+
+        private sealed class UpdatingConfigurationLog : IFormatterLog
+        {
+            private readonly string path;
+
+            public UpdatingConfigurationLog(string path) => this.path = path;
+
+            public bool Updated { get; private set; }
+
+            public void Write(Exception exception) => throw exception;
+
+            public void WriteLine(string message)
+            {
+                if (!this.Updated && message.Contains("PNFMT004"))
+                {
+                    File.WriteAllText(this.path, "root = true\n[*.rsp]\npnfmt_enabled = true\npnfmt_formatter = rsp\n"
+                        + "pnfmt_sort_entries = true\ncharset = utf-16le\n");
+                    this.Updated = true;
+                }
+            }
         }
     }
 }

@@ -30,6 +30,18 @@ namespace PNFmt
         public IFormatterLog Log { get; }
 
         public bool WriteChanges { get; }
+
+        internal FileFormattingConfiguration Configuration { get; private set; }
+
+        internal FileFormatRequest ResolveConfiguration()
+        {
+            // Leave caller-owned requests reusable: the resolved copy belongs only
+            // to this execution and can be shared by dispatch and formatting.
+            return this.Configuration is not null ? this : new FileFormatRequest(this.FilePath, this.WriteChanges, this.Lint, this.Log)
+            {
+                Configuration = FileFormattingConfiguration.Load(this.FilePath, this.Log),
+            };
+        }
     }
 }
 

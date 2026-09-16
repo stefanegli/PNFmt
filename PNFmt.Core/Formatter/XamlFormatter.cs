@@ -15,7 +15,7 @@ namespace PNFmt
 
         public FileFormatResult Format(FileFormatRequest request)
         {
-            return XmlFileFormatting.Format(request, EditorConfigSettingNames.XamlFormat, true);
+            return XmlFileFormatting.Format(request, true);
         }
     }
 }

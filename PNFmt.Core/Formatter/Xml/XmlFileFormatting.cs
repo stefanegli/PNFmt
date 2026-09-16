@@ -7,21 +7,20 @@ namespace PNFmt
 {
     internal static class XmlFileFormatting
     {
-        public static FileFormatResult Format(FileFormatRequest request, string activationSetting, bool xaml)
+        public static FileFormatResult Format(FileFormatRequest request, bool xaml)
         {
             if (request is null)
             {
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = EditorConfigSettings.Load(request.FilePath);
+            request = request.ResolveConfiguration();
+            var settings = request.Configuration.Properties;
             return TextFileFormatPipeline.Format(request,
-                EditorConfigFormatterActivation.IsEnabled(
-                    settings, request.FilePath, xaml ? "xaml" : "xml",
-                    EditorConfigSettings.IsEnabled(settings, activationSetting), request.Log),
+                request.Configuration.IsActive(xaml ? "xaml" : "xml"),
                 (text, _) =>
                 {
-                    if (!EditorConfigFormatterOptions.Format(settings, xaml ? "xaml" : "xml"))
+                    if (!request.Configuration.FormatLayout(xaml ? "xaml" : "xml"))
                     {
                         return DocumentFormatResult.FromText(text);
                     }

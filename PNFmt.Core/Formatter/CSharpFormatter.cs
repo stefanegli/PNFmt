@@ -21,12 +21,11 @@ namespace PNFmt
                 throw new ArgumentNullException(nameof(request));
             }
 
-            var settings = EditorConfigSettings.Load(request.FilePath);
+            request = request.ResolveConfiguration();
+            var settings = request.Configuration.Properties;
             return TextFileFormatPipeline.Format(
                 request,
-                EditorConfigFormatterActivation.IsEnabled(
-                    settings, request.FilePath, this.Name,
-                    EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpFormat), request.Log),
+                request.Configuration.IsActive(this.Name),
                 (text, _) =>
                 {
                     if (CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings))
