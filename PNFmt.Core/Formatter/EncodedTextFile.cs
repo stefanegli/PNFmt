@@ -79,6 +79,11 @@ namespace PNFmt
 
         public bool HasSameBytes(byte[] bytes) => this.originalBytes.SequenceEqual(bytes);
 
+        public void Write(string path, byte[] bytes)
+        {
+            FileReplacement.Write(path, this.originalBytes, output => output.Write(bytes, 0, bytes.Length));
+        }
+
         public byte[] GetBytes(string text)
         {
             // Encode completely before opening the destination, so encoding failures

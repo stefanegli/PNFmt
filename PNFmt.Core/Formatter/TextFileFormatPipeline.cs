@@ -1,7 +1,6 @@
 // Copyright (c) 2026 by Stefan Egli. All rights reserved.
 
 using System;
-using System.IO;
 using System.Text;
 
 namespace PNFmt
@@ -86,7 +85,7 @@ namespace PNFmt
                 : new UTF8Encoding(false, true).GetBytes(formatted);
             if (request.WriteChanges)
             {
-                File.WriteAllBytes(request.FilePath, bytes);
+                file.Write(request.FilePath, bytes);
             }
 
             request.Log.Progress(

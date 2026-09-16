@@ -8,6 +8,10 @@ PNFmt processes files independently. `IFileFormatter` is the shared interface fo
 
 Document formatting returns `DocumentFormatResult`: formatted text, bytes from a format-specific serializer, or a skipped result with diagnostics. A skipped result prevents encoding changes as well as content changes. Encoding completes before writing, including during preview, so failures leave the original file intact.
 
+`FileReplacement` stages output in a unique sibling file, retains copied file permissions, and flushes it before replacement. Immediately before replacing, it compares the source against the bytes that were formatted and refuses intervening edits. It requires source write permission and rejects symbolic links/reparse points; format their targets directly. Preview and unchanged files need no write access or temporary files.
+
+Replacement uses a backup for recovery if the file system fails partway through; normal completion removes staging and backup files. Abrupt process termination can leave `.pnfmt-*.tmp` or `.tmp.bak` siblings. This is an optimistic edit check, not a transaction with external editors: path replacement can still race the final check, and durability depends on the file system. Replacing a path gives it a new file identity, so other hard links retain the previous contents. Windows replacement preserves destination security metadata; Unix permission bits are copied, but ownership and extended metadata depend on the runtime/file system.
+
 Project, resource, solution, XML, and XAML implementations retain their own parsing, preservation, and serialization rules. In particular, legacy resource settings can leave an otherwise unchanged document untouched; each formatter retains its documented BOM and final-newline behavior.
 
 ## Configuration
