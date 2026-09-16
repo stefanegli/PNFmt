@@ -34,6 +34,34 @@ namespace PNFmt.Tests.Formatter
             from outputCharset in new[] { null, "utf-8" }
             select new object[] { extension, inputEncoding, outputCharset };
 
+        public static IEnumerable<object[]> EncodingOnlyXmlCases =>
+            from extension in new[] { "csproj", "resx", "xml", "xaml", "slnx" }
+            from inputEncoding in new[] { "iso-8859-1", "utf-16", "utf-16BE", "utf-32", "utf-32BE" }
+            select new object[] { extension, inputEncoding };
+
+        [Theory]
+        [MemberData(nameof(EncodingOnlyXmlCases))]
+        public void Encoding_only_xml_changes_preserve_declared_input_text(string extension, string inputEncoding)
+        {
+            var settings = "pnfmt_enabled = true\npnfmt_formatter = " + extension + "\npnfmt_format = false\n";
+            using (var file = new TemporaryFile(extension, "utf-8", settings, enable: false))
+            {
+                var encoding = Encoding.GetEncoding(inputEncoding, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback);
+                var source = FileEncoding.UpdateXmlDeclaration(File.ReadAllText(file.Path), encoding);
+                var original = encoding.GetBytes(source);
+                File.WriteAllBytes(file.Path, original);
+                var expected = new UTF8Encoding(false, true).GetBytes(source.Replace(encoding.WebName, "utf-8"));
+
+                Assert.Equal(FileFormatStatus.Updated, file.Run(false).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
+                Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
+                Assert.Equal(expected, File.ReadAllBytes(file.Path));
+                Assert.Contains("caf\u00e9 \u00c3\u00a9", XDocument.Load(file.Path).ToString());
+                Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
+                Assert.Equal(expected, File.ReadAllBytes(file.Path));
+            }
+        }
+
         [Theory]
         [MemberData(nameof(BomlessXmlCases))]
         public void Bomless_unicode_xml_is_decoded_before_output_charset_is_applied(string extension, string inputEncoding, string outputCharset)

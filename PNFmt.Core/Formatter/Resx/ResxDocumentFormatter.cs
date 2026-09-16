@@ -4,6 +4,7 @@ namespace PNFmt
     using System.Collections.Generic;
     using System.IO;
     using System.Linq;
+    using System.Text;
     using System.Xml;
     using System.Xml.Linq;
 
@@ -58,10 +59,12 @@ namespace PNFmt
         public void Run(string resxPath, bool writeChanges, bool formatLayout = true, bool hasExplicitLayout = false)
         {
             this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
-            this.Result = this.FormatResx(resxPath, writeChanges, formatLayout, hasExplicitLayout);
+            var request = new FileFormatRequest(resxPath, writeChanges, false, this.Log ?? SilentLog.Instance);
+            this.Result = TextFileFormatPipeline.Format(request, true,
+                (text, encoding) => this.FormatResx(text, encoding, formatLayout, hasExplicitLayout), xml: true);
         }
 
-        private FileFormatResult FormatResx(string resxPath, bool writeChanges, bool formatLayout, bool hasExplicitLayout)
+        private DocumentFormatResult FormatResx(string originalText, Encoding encoding, bool formatLayout, bool hasExplicitLayout)
         {
             var hasSchemaRemoved = false;
             var hasCommentRemoved = false;
@@ -76,7 +79,8 @@ namespace PNFmt
                 XmlResolver = null
             };
 
-            using (var reader = XmlReader.Create(resxPath, readerSettings))
+            using (var textReader = new StringReader(originalText))
+            using (var reader = XmlReader.Create(textReader, readerSettings))
             {
                 document = XDocument.Load(reader, LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
             }
@@ -87,11 +91,9 @@ namespace PNFmt
                 var reason = !IsResx(root) ? "The document is not a RESX resource file."
                     : "Resource data and metadata entries must have a name attribute.";
                 var lineInfo = (IXmlLineInfo)root;
-                return new FileFormatResult(FileFormatStatus.Skipped, new[]
-                {
+                return DocumentFormatResult.Skipped(
                     new FormatterDiagnostic("RESX001", "Formatting skipped: " + reason,
-                        lineInfo?.HasLineInfo() == true ? (int?)lineInfo.LineNumber : null),
-                });
+                        lineInfo?.HasLineInfo() == true ? (int?)lineInfo.LineNumber : null));
             }
 
             if (formatLayout)
@@ -177,40 +179,26 @@ namespace PNFmt
                 document.Root.ReplaceNodes(toSave);
             }
 
-            byte[] formattedBytes = null;
-            var hasChanges = hasContentChanges;
-            var encoding = FileEncoding.Load(resxPath, this.Log);
             if (hasContentChanges || (formatLayout && (hasExplicitLayout || this.Settings.Layout?.HasOverrides == true)) || encoding is not null)
             {
                 var layout = this.Settings.Layout ?? new ResxLayoutSettings(new Dictionary<string, string>());
                 if (!formatLayout && !hasContentChanges && encoding is not null)
                 {
-                    var original = EncodedTextFile.Read(resxPath, encoding, xml: true).Text;
-                    formattedBytes = FileEncoding.GetBytes(FileEncoding.UpdateXmlDeclaration(original, encoding), encoding);
-                }
-                else
-                {
-                    formattedBytes = layout.Serialize(document, encoding, formatLayout);
-                }
-                hasChanges = !File.ReadAllBytes(resxPath).SequenceEqual(formattedBytes);
-            }
-
-            if (hasChanges)
-            {
-                var action = writeChanges ? "Updating" : "Would update";
-                this.Log?.WriteLine($"{action} {resxPath}");
-                if (writeChanges)
-                {
-                    File.WriteAllBytes(resxPath, formattedBytes);
+                    return DocumentFormatResult.FromText(originalText);
                 }
 
-                return new FileFormatResult(FileFormatStatus.Updated);
+                return DocumentFormatResult.FromBytes(layout.Serialize(document, encoding, formatLayout));
             }
-            else
-            {
-                this.Log?.WriteLine($"Skipping {resxPath}");
-                return new FileFormatResult(FileFormatStatus.Unchanged);
-            }
+
+            // Legacy resource settings only rewrite when content actually changes.
+            return DocumentFormatResult.FromText(originalText);
+        }
+
+        private sealed class SilentLog : IFormatterLog
+        {
+            public static readonly SilentLog Instance = new SilentLog();
+            public void Write(Exception exception) { }
+            public void WriteLine(string message) { }
         }
 
         private static void RemoveLayoutWhitespace(XDocument document)

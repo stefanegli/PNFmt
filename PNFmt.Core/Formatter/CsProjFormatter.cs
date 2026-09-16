@@ -35,21 +35,10 @@ namespace PNFmt
                 || EditorConfigFormatterActivation.GetSelection(properties) is not null
                 ? settings
                 : new DefaultCsProjFormatSettings();
-            var formatter = new CsProjDocumentFormatter(effectiveSettings, request.Log);
-            var runResult = formatter.RunWithResult(
-                request.FilePath,
-                request.WriteChanges,
-                request.Lint,
+            var formatter = new CsProjDocumentFormatter(effectiveSettings);
+            return formatter.Run(
+                request,
                 EditorConfigFormatterOptions.Format(properties, this.Name));
-            if (runResult == CsProjFormatResult.SkippedNonSdkStyle)
-            {
-                return new FileFormatResult(FileFormatStatus.Skipped, formatter.Diagnostics);
-            }
-
-            var status = runResult == CsProjFormatResult.Updated
-                ? FileFormatStatus.Updated
-                : FileFormatStatus.Unchanged;
-            return new FileFormatResult(status, formatter.Diagnostics);
         }
     }
 }

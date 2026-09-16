@@ -11,9 +11,11 @@ namespace PNFmt
     {
         private readonly Encoding encoding;
         private readonly byte[] preamble;
+        private readonly byte[] originalBytes;
 
-        private EncodedTextFile(string text, Encoding encoding, byte[] preamble = null)
+        private EncodedTextFile(byte[] originalBytes, string text, Encoding encoding, byte[] preamble = null)
         {
+            this.originalBytes = originalBytes;
             this.Text = text;
             this.encoding = encoding;
             this.preamble = preamble ?? Array.Empty<byte>();
@@ -39,7 +41,7 @@ namespace PNFmt
                 if (bytes.Take(preamble.Length).SequenceEqual(preamble))
                 {
                     return new EncodedTextFile(
-                        encoding.GetString(bytes, preamble.Length, bytes.Length - preamble.Length), encoding, preamble);
+                        bytes, encoding.GetString(bytes, preamble.Length, bytes.Length - preamble.Length), encoding, preamble);
                 }
             }
 
@@ -50,7 +52,7 @@ namespace PNFmt
                 var signatureEncoding = DetectXmlUnicodeEncoding(bytes);
                 if (signatureEncoding is not null)
                 {
-                    return new EncodedTextFile(signatureEncoding.GetString(bytes), signatureEncoding);
+                    return new EncodedTextFile(bytes, signatureEncoding.GetString(bytes), signatureEncoding);
                 }
 
                 // The declaration describes the input, independently of the requested output.
@@ -58,7 +60,7 @@ namespace PNFmt
                     Encoding.ASCII.GetString(bytes));
                 if (declarationEncoding is not null)
                 {
-                    return new EncodedTextFile(declarationEncoding.GetString(bytes), declarationEncoding);
+                    return new EncodedTextFile(bytes, declarationEncoding.GetString(bytes), declarationEncoding);
                 }
             }
 
@@ -67,20 +69,21 @@ namespace PNFmt
             // Guessing UTF-8 for Latin-1 text can corrupt it on a second run.
             if (!xml && configuredEncoding?.CodePage == 28591)
             {
-                return new EncodedTextFile(configuredEncoding.GetString(bytes), configuredEncoding);
+                return new EncodedTextFile(bytes, configuredEncoding.GetString(bytes), configuredEncoding);
             }
 
             // Otherwise require valid UTF-8; never replace undecodable input bytes.
             var utf8 = new UTF8Encoding(false, true);
-            return new EncodedTextFile(utf8.GetString(bytes), utf8);
+            return new EncodedTextFile(bytes, utf8.GetString(bytes), utf8);
         }
 
-        public void Write(string path, string text)
+        public bool HasSameBytes(byte[] bytes) => this.originalBytes.SequenceEqual(bytes);
+
+        public byte[] GetBytes(string text)
         {
             // Encode completely before opening the destination, so encoding failures
             // cannot truncate it. Keep precisely the original BOM convention.
-            var bytes = this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
-            File.WriteAllBytes(path, bytes);
+            return this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
         }
 
         private static Encoding DetectXmlUnicodeEncoding(byte[] bytes)

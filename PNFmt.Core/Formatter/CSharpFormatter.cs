@@ -22,29 +22,25 @@ namespace PNFmt
             }
 
             var settings = EditorConfigSettings.Load(request.FilePath);
-            FormatterDiagnostic diagnostic = null;
-            var generated = false;
-            var result = TextFileFormatPipeline.Format(
+            return TextFileFormatPipeline.Format(
                 request,
                 EditorConfigFormatterActivation.IsEnabled(
                     settings, request.FilePath, this.Name,
                     EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpFormat), request.Log),
-                text =>
+                (text, _) =>
                 {
-                    generated = CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings);
-                    return generated ? text : CSharpDocumentFormatter.Format(text, settings, out diagnostic);
-                },
-                preserveEncoding: true,
-                shouldSkip: () => generated || diagnostic is not null);
-            if (generated)
-            {
-                request.Log.WriteLine($"Skipping generated C# file {request.FilePath}.");
-                return new FileFormatResult(FileFormatStatus.Skipped);
-            }
+                    if (CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings))
+                    {
+                        request.Log.WriteLine($"Skipping generated C# file {request.FilePath}.");
+                        return DocumentFormatResult.Skipped();
+                    }
 
-            return diagnostic is null
-                ? result
-                : new FileFormatResult(FileFormatStatus.Skipped, new[] { diagnostic });
+                    var formatted = CSharpDocumentFormatter.Format(text, settings, out var diagnostic);
+                    return diagnostic is null
+                        ? DocumentFormatResult.FromText(formatted)
+                        : DocumentFormatResult.Skipped(diagnostic);
+                },
+                preserveEncoding: true);
         }
     }
 }

@@ -15,34 +15,31 @@ namespace PNFmt
             }
 
             var settings = EditorConfigSettings.Load(request.FilePath);
-            FormatterDiagnostic diagnostic = null;
-            var result = TextFileFormatPipeline.Format(request,
+            return TextFileFormatPipeline.Format(request,
                 EditorConfigFormatterActivation.IsEnabled(
                     settings, request.FilePath, xaml ? "xaml" : "xml",
                     EditorConfigSettings.IsEnabled(settings, activationSetting), request.Log),
-                text =>
+                (text, _) =>
                 {
                     if (!EditorConfigFormatterOptions.Format(settings, xaml ? "xaml" : "xml"))
                     {
-                        return text;
+                        return DocumentFormatResult.FromText(text);
                     }
 
                     try
                     {
-                        return XmlDocumentFormatter.Format(text, settings, xaml);
+                        return DocumentFormatResult.FromText(XmlDocumentFormatter.Format(text, settings, xaml));
                     }
                     catch (XmlException exception)
                     {
-                        diagnostic = new FormatterDiagnostic(xaml ? "XAML001" : "XML001",
+                        var diagnostic = new FormatterDiagnostic(xaml ? "XAML001" : "XML001",
                             "Formatting skipped: " + exception.Message,
                             exception.LineNumber > 0 ? (int?)exception.LineNumber : null);
-                        return text;
+                        return DocumentFormatResult.Skipped(diagnostic);
                     }
                 },
                 preserveEncoding: true,
-                xml: true,
-                shouldSkip: () => diagnostic is not null);
-            return diagnostic is null ? result : new FileFormatResult(FileFormatStatus.Skipped, new[] { diagnostic });
+                xml: true);
         }
     }
 }

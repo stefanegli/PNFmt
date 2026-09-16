@@ -4,66 +4,40 @@ namespace PNFmt
 {
     using System;
     using System.Collections.Generic;
-    using System.IO;
     using System.Linq;
     using System.Text.RegularExpressions;
     using System.Xml;
     using System.Xml.Linq;
-
-    internal enum CsProjFormatResult
-    {
-        Updated,
-        Unchanged,
-        SkippedNonSdkStyle,
-    }
 
     internal sealed class CsProjDocumentFormatter
     {
         private static readonly Regex PropertyReferenceRegex =
             new Regex(@"\$\(([^)]+)\)", RegexOptions.Compiled);
 
-        public CsProjDocumentFormatter(ICsProjFormatSettings settings, IFormatterLog log)
+        public CsProjDocumentFormatter(ICsProjFormatSettings settings)
         {
-            this.Log = log;
             this.Settings = settings;
         }
 
-        private IFormatterLog Log { get; }
         private ICsProjFormatSettings Settings { get; }
 
-        public IReadOnlyList<FormatterDiagnostic> Diagnostics { get; private set; } =
-            Array.Empty<FormatterDiagnostic>();
-
-        public bool Run(String projectPath)
+        public FileFormatResult Run(FileFormatRequest request, bool formatLayout = true)
         {
-            return this.Run(projectPath, true);
+            return TextFileFormatPipeline.Format(request, true,
+                (text, _) => this.Format(text, request.FilePath, request.Lint, formatLayout), xml: true);
         }
 
-        public bool Run(String projectPath, bool writeChanges)
+        private DocumentFormatResult Format(string originalText, string projectPath, bool lint, bool formatLayout)
         {
-            return this.RunWithResult(projectPath, writeChanges, lint: false)
-                == CsProjFormatResult.Updated;
-        }
-
-        public CsProjFormatResult RunWithResult(
-            String projectPath,
-            bool writeChanges,
-            bool lint,
-            bool formatLayout = true)
-        {
-            var originalText = File.ReadAllText(projectPath);
-            var document = XDocument.Load(projectPath, LoadOptions.SetLineInfo
+            var document = XDocument.Parse(originalText, LoadOptions.SetLineInfo
                 | (formatLayout ? LoadOptions.None : LoadOptions.PreserveWhitespace));
             var originalDocument = formatLayout ? null : new XDocument(document);
             if (!IsSdkStyleProjectDocument(document))
             {
-                this.Diagnostics = Array.Empty<FormatterDiagnostic>();
-                var skipReason = "Not an SDK-style project file";
-                this.Log.WriteLine($"Update was not required: {skipReason}.");
-                return CsProjFormatResult.SkippedNonSdkStyle;
+                return DocumentFormatResult.Skipped();
             }
 
-            this.Diagnostics = lint
+            var diagnostics = lint
                 ? ProjectLinter.Analyze(document, projectPath)
                 : Array.Empty<FormatterDiagnostic>();
 
@@ -82,39 +56,7 @@ namespace PNFmt
             var formattedText = !formatLayout && XNode.DeepEquals(originalDocument, document)
                 ? originalText
                 : FormatDocument(document, this.Settings, formatLayout);
-            var encoding = FileEncoding.Load(projectPath, this.Log);
-            byte[] formattedBytes = null;
-            if (encoding is not null)
-            {
-                formattedText = FileEncoding.UpdateXmlDeclaration(formattedText, encoding);
-                formattedBytes = FileEncoding.GetBytes(formattedText, encoding);
-            }
-
-            var hasChanges = formattedBytes is not null
-                ? !File.ReadAllBytes(projectPath).SequenceEqual(formattedBytes)
-                : !string.Equals(originalText, formattedText, StringComparison.Ordinal);
-            if (hasChanges)
-            {
-                if (writeChanges)
-                {
-                    if (formattedBytes is not null)
-                    {
-                        File.WriteAllBytes(projectPath, formattedBytes);
-                    }
-                    else
-                    {
-                        File.WriteAllText(projectPath, formattedText);
-                    }
-                }
-
-                var action = writeChanges ? "Updating" : "Would update";
-                this.Log.WriteLine($"{action} {projectPath}");
-                return CsProjFormatResult.Updated;
-            }
-
-            var reason = "No modifications";
-            this.Log.WriteLine($"Update was not required: {reason}.");
-            return CsProjFormatResult.Unchanged;
+            return DocumentFormatResult.FromText(formattedText, diagnostics);
         }
 
         private static string FormatDocument(XDocument document, ICsProjFormatSettings settings, bool formatLayout)

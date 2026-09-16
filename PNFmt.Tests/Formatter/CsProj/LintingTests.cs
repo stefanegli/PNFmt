@@ -123,6 +123,8 @@ namespace PNFmt.Tests.Formatter.CsProj
             Directory.CreateDirectory(directory);
             var tempFile = Path.Combine(directory, "Test.csproj");
             File.WriteAllText(tempFile, project);
+            File.WriteAllText(Path.Combine(directory, ".editorconfig"),
+                "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = csproj\n");
             foreach (var file in files.Length == 0 ? new[] { "Program.cs" } : files)
             {
                 var path = Path.Combine(directory, file.Replace('/', Path.DirectorySeparatorChar));
@@ -132,11 +134,10 @@ namespace PNFmt.Tests.Formatter.CsProj
 
             try
             {
-                var formatter = new CsProjDocumentFormatter(
-                    new DefaultCsProjFormatSettings(),
-                    NullFormatterLog.Instance);
-                formatter.RunWithResult(tempFile, writeChanges: false, lint: lint);
-                return formatter.Diagnostics;
+                var result = new CsProjFormatter().Format(
+                    new FileFormatRequest(tempFile, writeChanges: false, lint: lint, NullFormatterLog.Instance));
+                Assert.Equal(project, File.ReadAllText(tempFile));
+                return result.Diagnostics;
             }
             finally
             {
