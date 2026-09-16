@@ -200,7 +200,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Null(outcome.Error);
             Assert.Empty(outcome.LoggedExceptions);
             Assert.Empty(outcome.Result.Diagnostics);
-            Assert.DoesNotContain(outcome.LogMessages, message => message.Contains(": warning", StringComparison.Ordinal));
+            Assert.DoesNotContain(outcome.LogMessages, message => message.Kind == FormatterLogMessageKind.Warning);
             Assert.Equal(status, outcome.Result.Status);
         }
 

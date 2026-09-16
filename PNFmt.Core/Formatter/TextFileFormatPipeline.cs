@@ -89,7 +89,7 @@ namespace PNFmt
                 File.WriteAllBytes(request.FilePath, bytes);
             }
 
-            request.Log.WriteLine(
+            request.Log.Progress(
                 $"{(request.WriteChanges ? "Updating" : "Would update")} {request.FilePath}");
             return new FileFormatResult(FileFormatStatus.Updated, result.Diagnostics);
         }

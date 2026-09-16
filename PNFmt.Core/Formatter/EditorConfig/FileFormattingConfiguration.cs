@@ -97,7 +97,7 @@ namespace PNFmt
             var active = this.Enablement == true || this.Selection is not null || implicitlyEnabled;
             if (active && (this.Enablement is null || this.Selection is null))
             {
-                this.log?.WriteLine($"{this.targetFile}: warning PNFMT004: Implicit formatter activation is deprecated. "
+                this.log.Warning(this.targetFile, "PNFMT004", "Implicit formatter activation is deprecated. "
                     + $"Set 'pnfmt_enabled = true' and 'pnfmt_formatter = {formatterName}' in the applicable "
                     + ".editorconfig section to keep processing, or 'pnfmt_enabled = false' to disable it. "
                     + "Missing enablement or formatter selection will disable processing in a future version.");

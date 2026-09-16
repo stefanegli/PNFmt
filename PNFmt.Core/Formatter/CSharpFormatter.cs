@@ -30,7 +30,7 @@ namespace PNFmt
                 {
                     if (CSharpGeneratedCode.IsGenerated(request.FilePath, text, settings))
                     {
-                        request.Log.WriteLine($"Skipping generated C# file {request.FilePath}.");
+                        request.Log.Progress($"Skipping generated C# file {request.FilePath}.");
                         return DocumentFormatResult.Skipped();
                     }
 

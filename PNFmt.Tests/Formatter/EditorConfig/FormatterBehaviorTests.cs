@@ -43,7 +43,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Equal(FileFormatStatus.Unchanged, result.Result.Status);
             Assert.Empty(result.Result.Diagnostics);
             Assert.Equal(original, File.ReadAllBytes(path));
-            Assert.DoesNotContain(result.LogMessages, message => message.Contains("PNFMT004"));
+            Assert.DoesNotContain(result.LogMessages, message => message.Code == "PNFMT004");
         }
 
         [Theory]
@@ -194,7 +194,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             Assert.Null(result.Error);
             Assert.NotEqual(FileFormatStatus.Skipped, result.Result.Status);
-            Assert.Contains("pnfmt_enabled = true", Assert.Single(result.LogMessages, message => message.Contains("PNFMT004")));
+            Assert.Contains("pnfmt_enabled = true", Assert.Single(result.LogMessages, message => message.Code == "PNFMT004").Message);
         }
 
         private static void Configure(TestDirectory directory, string name, string options)

@@ -35,7 +35,7 @@ namespace PNFmt
                         + $"'{setting.CurrentName}' is set."
                     : $"EditorConfig setting '{setting.LegacyName}' is deprecated; use "
                         + $"'{setting.CurrentName}' instead.";
-                this.log?.WriteLine($"{this.targetFile}: warning PNFMT001: {message}");
+                this.log.Warning(this.targetFile, "PNFMT001", message);
             }
 
             if (hasSetting)

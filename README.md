@@ -153,6 +153,8 @@ PNFmt reads optional tool settings from `.pnfmt` at each target's Git repository
 
 ## Contributing
 
+See the [formatter architecture](docs/architecture.md) for module responsibilities and verification.
+
 Use the [HTML snapshot viewer](tools/SnapshotViewer/README.md) to inspect test inputs, expected cleanup, and configuration by formatter.
 
 Please use the [issue tracker](https://github.com/stefanegli/PNFmt/issues) for bug reports and feature requests.

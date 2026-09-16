@@ -139,14 +139,22 @@ namespace PNFmt.Cli
             }
         }
 
-        private sealed class BufferedFormatterLog : IFormatterLog
+        private sealed class BufferedFormatterLog : IFormatterMessageLog
         {
             private readonly List<Exception> exceptions = new List<Exception>();
-            private readonly List<string> messages = new List<string>();
+            private readonly List<FormatterLogMessage> messages = new List<FormatterLogMessage>();
 
             public IReadOnlyList<Exception> Exceptions => this.exceptions;
 
-            public IReadOnlyList<string> Messages => this.messages;
+            public IReadOnlyList<FormatterLogMessage> Messages => this.messages;
+
+            public void Write(FormatterLogMessage message)
+            {
+                if (message is not null)
+                {
+                    this.messages.Add(message);
+                }
+            }
 
             public void Write(Exception exception)
             {
@@ -160,7 +168,7 @@ namespace PNFmt.Cli
             {
                 if (message is not null)
                 {
-                    this.messages.Add(message);
+                    this.messages.Add(FormatterLogMessage.Detail(message));
                 }
             }
         }
@@ -187,7 +195,7 @@ namespace PNFmt.Cli
             string file,
             FileFormatResult result,
             Exception error,
-            IReadOnlyList<string> logMessages,
+            IReadOnlyList<FormatterLogMessage> logMessages,
             IReadOnlyList<Exception> loggedExceptions)
         {
             this.File = file ?? throw new ArgumentNullException(nameof(file));
@@ -204,7 +212,7 @@ namespace PNFmt.Cli
 
         public IReadOnlyList<Exception> LoggedExceptions { get; }
 
-        public IReadOnlyList<string> LogMessages { get; }
+        public IReadOnlyList<FormatterLogMessage> LogMessages { get; }
 
         public FileFormatResult Result { get; }
     }
