@@ -32,10 +32,10 @@ namespace PNFmt.Tests.Formatter.Resx
             {
                 var settings = SortAndRemoveDefaults();
                 settings.SortEntries = sort;
-                var formatter = new ResxDocumentFormatter(settings, NullFormatterLog.Instance);
-                formatter.Run(file.Path, false);
+                var formatter = new ResxDocumentFormatter(settings);
+                formatter.Run(new FileFormatRequest(file.Path, false, false, NullFormatterLog.Instance));
                 Assert.Equal(input, File.ReadAllText(file.Path));
-                formatter.Run(file.Path);
+                formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var root = XDocument.Load(file.Path).Root;
                 Assert.Equal("file header", Assert.IsType<XComment>(root.FirstNode).Value);
                 Assert.Equal("footer", Assert.IsType<XComment>(root.LastNode).Value);
@@ -49,8 +49,7 @@ namespace PNFmt.Tests.Formatter.Resx
                 Assert.Equal("B first", Assert.IsType<XComment>(b.PreviousNode.PreviousNode).Value);
                 Assert.Equal(sort ? new[] { "a", "b" } : new[] { "b", "a" }, EntryNames(new XDocument(root)));
                 var formatted = File.ReadAllBytes(file.Path);
-                formatter.Run(file.Path);
-                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 Assert.Equal(formatted, File.ReadAllBytes(file.Path));
             }
         }
@@ -58,7 +57,7 @@ namespace PNFmt.Tests.Formatter.Resx
         [Fact]
         public void Constructor_rejects_missing_settings_at_the_boundary()
         {
-            Assert.Throws<ArgumentNullException>(() => new ResxDocumentFormatter(null, NullFormatterLog.Instance));
+            Assert.Throws<ArgumentNullException>(() => new ResxDocumentFormatter(null));
         }
 
         [Fact]
@@ -73,9 +72,9 @@ namespace PNFmt.Tests.Formatter.Resx
         {
             using (var file = TemporaryFile.Create(Resx("<!-- keep me --><data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>")))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), null);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
+                formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
                 var document = XDocument.Load(file.Path);
                 Assert.Contains(document.Root.Nodes().OfType<XComment>(), comment => comment.Value.Trim() == "keep me");
@@ -98,7 +97,7 @@ namespace PNFmt.Tests.Formatter.Resx
 
             using (var file = TemporaryFile.Create(document.ToString()))
             {
-                new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance).Run(file.Path);
+                new ResxDocumentFormatter(SortAndRemoveDefaults()).Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var formatted = XDocument.Load(file.Path);
 
                 Assert.False(ResxDocumentFormatter.HasDocumentationComment(formatted));
@@ -113,11 +112,9 @@ namespace PNFmt.Tests.Formatter.Resx
             using (var file = TemporaryFile.Create(Resx("<schema /><data name=\"a\"><value>1</value></data>")))
             {
                 var original = File.ReadAllText(file.Path);
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
-
-                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 Assert.Equal(original, File.ReadAllText(file.Path));
             }
         }
@@ -127,11 +124,9 @@ namespace PNFmt.Tests.Formatter.Resx
         {
             using (var file = TemporaryFile.Create(Resx("<schema owner=\"application\" /><data name=\"a\"><value>1</value></data>")))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
-
-                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 Assert.Equal("application", (string)XDocument.Load(file.Path).Root.Element("schema").Attribute("owner"));
             }
         }
@@ -145,10 +140,8 @@ namespace PNFmt.Tests.Formatter.Resx
 
             using (var file = TemporaryFile.Create(document.ToString()))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
-                formatter.Run(file.Path);
-
-                Assert.True(formatter.IsFileChanged);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
+                Assert.Equal(FileFormatStatus.Updated, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 var formatted = XDocument.Load(file.Path);
                 Assert.NotNull(formatted.Root.Element("schema"));
                 Assert.False(ResxDocumentFormatter.HasSchemaNode(formatted));
@@ -163,11 +156,11 @@ namespace PNFmt.Tests.Formatter.Resx
         {
             using (var file = TemporaryFile.Create(contents))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
-
-                Assert.False(formatter.IsFileChanged);
+                var result = formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal("RESX001", Assert.Single(result.Diagnostics).Code);
                 Assert.Equal(contents, File.ReadAllText(file.Path));
             }
         }
@@ -178,11 +171,11 @@ namespace PNFmt.Tests.Formatter.Resx
             var contents = Resx("<data><value>unnamed</value></data><data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>");
             using (var file = TemporaryFile.Create(contents))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
-
-                Assert.False(formatter.IsFileChanged);
+                var result = formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal("RESX001", Assert.Single(result.Diagnostics).Code);
                 Assert.Equal(contents, File.ReadAllText(file.Path));
             }
         }
@@ -195,27 +188,33 @@ namespace PNFmt.Tests.Formatter.Resx
         {
             using (var file = TemporaryFile.Create(contents))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                Assert.Throws<XmlException>(() => formatter.Run(file.Path));
-                Assert.False(formatter.IsFileChanged);
+                Assert.Throws<XmlException>(() => formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)));
                 Assert.Equal(contents, File.ReadAllText(file.Path));
             }
         }
 
         [Fact]
-        public void Failed_run_clears_change_state_from_a_previous_successful_run()
+        public void Returned_results_are_independent_of_later_operations()
         {
             using (var valid = TemporaryFile.Create(Resx("<data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>")))
             using (var malformed = TemporaryFile.Create("<root>"))
+            using (var invalid = TemporaryFile.Create("<root />"))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
-                formatter.Run(valid.Path);
-                Assert.True(formatter.IsFileChanged);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
+                var updated = formatter.Run(new FileFormatRequest(valid.Path, true, false, NullFormatterLog.Instance));
+                var skipped = formatter.Run(new FileFormatRequest(invalid.Path, true, false, NullFormatterLog.Instance));
 
-                Assert.Throws<XmlException>(() => formatter.Run(malformed.Path));
+                Assert.Throws<XmlException>(() => formatter.Run(new FileFormatRequest(malformed.Path, true, false, NullFormatterLog.Instance)));
+                var unchanged = formatter.Run(new FileFormatRequest(valid.Path, true, false, NullFormatterLog.Instance));
 
-                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Updated, updated.Status);
+                Assert.Empty(updated.Diagnostics);
+                Assert.Equal(FileFormatStatus.Skipped, skipped.Status);
+                Assert.Equal("RESX001", Assert.Single(skipped.Diagnostics).Code);
+                Assert.Equal(FileFormatStatus.Unchanged, unchanged.Status);
+                Assert.Empty(unchanged.Diagnostics);
             }
         }
 
@@ -229,7 +228,7 @@ namespace PNFmt.Tests.Formatter.Resx
                 "<data name=\"same\" marker=\"second\"><value>3</value></data>");
             using (var file = TemporaryFile.Create(contents))
             {
-                new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance).Run(file.Path);
+                new ResxDocumentFormatter(SortAndRemoveDefaults()).Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var entries = XDocument.Load(file.Path).Root.Elements()
                     .Where(element => element.Name == "data" || element.Name == "metadata")
                     .ToList();
@@ -248,7 +247,7 @@ namespace PNFmt.Tests.Formatter.Resx
                 "<data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>");
             using (var file = TemporaryFile.Create(contents))
             {
-                new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance).Run(file.Path);
+                new ResxDocumentFormatter(SortAndRemoveDefaults()).Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var document = XDocument.Load(file.Path);
 
                 Assert.Equal("keep", document.Root.Element(XName.Get("data", "urn:extension")).Value);
@@ -268,33 +267,30 @@ namespace PNFmt.Tests.Formatter.Resx
 
             using (var file = TemporaryFile.Create(Resx(entries.ToString())))
             {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
 
-                formatter.Run(file.Path);
-                Assert.True(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Updated, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 var names = EntryNames(XDocument.Load(file.Path));
                 Assert.Equal(EntryCount, names.Count);
                 Assert.Equal("key-0000", names[0]);
                 Assert.Equal("key-4095", names[names.Count - 1]);
 
-                formatter.Run(file.Path);
-                Assert.False(formatter.IsFileChanged);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
             }
         }
 
         [Fact]
-        public void Independent_formatters_can_run_concurrently_without_shared_state()
+        public void One_document_formatter_can_process_independent_files_concurrently()
         {
             var failures = new ConcurrentQueue<Exception>();
+            var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
             Parallel.For(0, 32, iteration =>
             {
                 try
                 {
                     using (var file = TemporaryFile.Create(Resx("<data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>")))
                     {
-                        var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults(), null);
-                        formatter.Run(file.Path);
-                        Assert.True(formatter.IsFileChanged);
+                        Assert.Equal(FileFormatStatus.Updated, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                         Assert.Equal(new[] { "a", "b" }, EntryNames(XDocument.Load(file.Path)));
                     }
                 }

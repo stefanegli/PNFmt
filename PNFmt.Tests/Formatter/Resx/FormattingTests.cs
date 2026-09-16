@@ -47,27 +47,27 @@ namespace PNFmt.Tests.Formatter.Resx
             var sourceFile = Path.Combine(fixtureRoot, fileName);
             using (var actualFile = TemporaryFile.Copy(sourceFile))
             {
-                var formatter = new ResxDocumentFormatter((IResxFormatSettings)settings, NullFormatterLog.Instance);
+                var formatter = new ResxDocumentFormatter((IResxFormatSettings)settings);
                 var originalCulture = Thread.CurrentThread.CurrentCulture;
                 try
                 {
                     Thread.CurrentThread.CurrentCulture = new CultureInfo(culture ?? "en-US");
 
                     var originalBytes = File.ReadAllBytes(actualFile.Path);
-                    formatter.Run(actualFile.Path, writeChanges: false);
-                    var previewChanged = formatter.IsFileChanged;
+                    var preview = formatter.Run(new FileFormatRequest(actualFile.Path, false, false, NullFormatterLog.Instance));
                     Assert.Equal(originalBytes, File.ReadAllBytes(actualFile.Path));
 
-                    formatter.Run(actualFile.Path);
+                    var result = formatter.Run(new FileFormatRequest(actualFile.Path, true, false, NullFormatterLog.Instance));
                     var formattedBytes = File.ReadAllBytes(actualFile.Path);
-                    Assert.Equal(previewChanged, formatter.IsFileChanged);
-                    Assert.Equal(!originalBytes.SequenceEqual(formattedBytes), formatter.IsFileChanged);
+                    Assert.Equal(preview.Status, result.Status);
+                    Assert.Equal(!originalBytes.SequenceEqual(formattedBytes), result.Status == FileFormatStatus.Updated);
 
-                    formatter.Run(actualFile.Path, writeChanges: false);
-                    Assert.False(formatter.IsFileChanged);
+                    var repeatedStatus = result.Status == FileFormatStatus.Skipped ? FileFormatStatus.Skipped : FileFormatStatus.Unchanged;
+                    Assert.Equal(repeatedStatus,
+                        formatter.Run(new FileFormatRequest(actualFile.Path, false, false, NullFormatterLog.Instance)).Status);
                     Assert.Equal(formattedBytes, File.ReadAllBytes(actualFile.Path));
-                    formatter.Run(actualFile.Path);
-                    Assert.False(formatter.IsFileChanged);
+                    Assert.Equal(repeatedStatus,
+                        formatter.Run(new FileFormatRequest(actualFile.Path, true, false, NullFormatterLog.Instance)).Status);
                     Assert.Equal(formattedBytes, File.ReadAllBytes(actualFile.Path));
 
                     var actual = File.ReadAllText(actualFile.Path);

@@ -10,17 +10,11 @@ namespace PNFmt
 
     internal sealed class ResxDocumentFormatter
     {
-        public ResxDocumentFormatter(IResxFormatSettings settings, IFormatterLog log)
+        public ResxDocumentFormatter(IResxFormatSettings settings)
         {
-            this.Log = log;
             this.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
         }
 
-        public FileFormatResult Result { get; private set; } = new FileFormatResult(FileFormatStatus.Unchanged);
-
-        public bool IsFileChanged => this.Result.Status == FileFormatStatus.Updated;
-
-        private IFormatterLog Log { get; }
         private IResxFormatSettings Settings { get; }
 
         public static bool HasDocumentationComment(XDocument document)
@@ -48,24 +42,9 @@ namespace PNFmt
             return document.Root?.Elements().Any(IsXsdSchema) == true;
         }
 
-        /// <summary>
-        /// Processes the file and exposes its status and diagnostics through Result.
-        /// </summary>
-        public void Run(string resxPath)
+        public FileFormatResult Run(FileFormatRequest request, bool formatLayout = true, bool hasExplicitLayout = false)
         {
-            this.Run(resxPath, true);
-        }
-
-        public void Run(string resxPath, bool writeChanges, bool formatLayout = true, bool hasExplicitLayout = false)
-        {
-            var request = new FileFormatRequest(resxPath, writeChanges, false, this.Log ?? SilentLog.Instance);
-            this.Run(request, formatLayout, hasExplicitLayout);
-        }
-
-        public void Run(FileFormatRequest request, bool formatLayout, bool hasExplicitLayout)
-        {
-            this.Result = new FileFormatResult(FileFormatStatus.Unchanged);
-            this.Result = TextFileFormatPipeline.Format(request, true,
+            return TextFileFormatPipeline.Format(request, true,
                 (text, encoding) => this.FormatResx(text, encoding, formatLayout, hasExplicitLayout), xml: true);
         }
 
@@ -197,13 +176,6 @@ namespace PNFmt
 
             // Legacy resource settings only rewrite when content actually changes.
             return DocumentFormatResult.FromText(originalText);
-        }
-
-        private sealed class SilentLog : IFormatterLog
-        {
-            public static readonly SilentLog Instance = new SilentLog();
-            public void Write(Exception exception) { }
-            public void WriteLine(string message) { }
         }
 
         private static void RemoveLayoutWhitespace(XDocument document)

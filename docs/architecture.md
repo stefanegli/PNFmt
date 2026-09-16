@@ -14,6 +14,8 @@ Replacement uses a backup for recovery if the file system fails partway through;
 
 Project, resource, solution, XML, and XAML implementations retain their own parsing, preservation, and serialization rules. In particular, legacy resource settings can leave an otherwise unchanged document untouched; each formatter retains its documented BOM and final-newline behavior.
 
+Project and resource document formatters return `FileFormatResult` directly from each call. They retain settings, but no per-run status, diagnostics, or logger; callers keep independent results and supply operation context through `FileFormatRequest`.
+
 ## Configuration
 
 `FileFormattingConfiguration` owns selection, activation, compatibility rules, layout enablement, and charset resolution. Format-specific settings are resolved from the same EditorConfig hierarchy, on demand.
