@@ -9,8 +9,8 @@ namespace PNFmt.Cli
     internal sealed class PNFmtConfiguration
     {
         private const int DefaultMaxCpuCount = 1;
-        private const int SuggestedMaxCpuCount = 4;
         private const string FileName = ".pnfmt";
+        private const int SuggestedMaxCpuCount = 4;
 
         private PNFmtConfiguration(int maxCpuCount)
         {

@@ -153,18 +153,6 @@ namespace PNFmt
                 .ToArray();
         }
 
-        private static IReadOnlyList<int> FindSectionIndexes(
-            IReadOnlyList<string> lines,
-            string header)
-        {
-            return Enumerable.Range(0, lines.Count)
-                .Where(index => string.Equals(
-                    lines[index].Trim(),
-                    header,
-                    StringComparison.Ordinal))
-                .ToArray();
-        }
-
         private static int FindSectionEnd(IReadOnlyList<string> lines, int sectionIndex)
         {
             for (var index = sectionIndex + 1; index < lines.Count; index++)
@@ -176,6 +164,18 @@ namespace PNFmt
             }
 
             return lines.Count;
+        }
+
+        private static IReadOnlyList<int> FindSectionIndexes(
+            IReadOnlyList<string> lines,
+            string header)
+        {
+            return Enumerable.Range(0, lines.Count)
+                .Where(index => string.Equals(
+                    lines[index].Trim(),
+                    header,
+                    StringComparison.Ordinal))
+                .ToArray();
         }
 
         private static int FindSortedInsertionIndex(

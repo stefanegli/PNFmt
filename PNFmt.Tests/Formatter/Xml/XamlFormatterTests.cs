@@ -2,6 +2,7 @@
 
 using System.Collections.Generic;
 using System.Linq;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Xml
@@ -9,6 +10,17 @@ namespace PNFmt.Tests.Formatter.Xml
     public sealed class XamlFormatterTests
     {
         private const string Namespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
+
+        [Fact]
+        public void Custom_containers_keep_their_own_whitespace_while_known_descendants_can_format()
+        {
+            const string Content = "<local:Inlines><local:Run/><local:Run/> <local:Run/></local:Inlines>";
+            var result = Format("<local:View xmlns:local='clr-namespace:Example' xmlns='" + Namespace + "'>"
+                + Content + "<Grid><Button/><Button/></Grid></local:View>");
+            Assert.Contains(Content, result);
+            Assert.Contains("</local:Inlines><Grid>\n    <Button/>\n    <Button/>\n  </Grid></local:View>", result);
+            Assert.Equal(result, Format(result));
+        }
 
         [Fact]
         public void Formats_layout_and_property_elements_without_loading_types()
@@ -38,32 +50,6 @@ namespace PNFmt.Tests.Formatter.Xml
         }
 
         [Fact]
-        public void Resource_order_markup_extensions_attributes_and_namespaces_are_preserved()
-        {
-            const string First = "<SolidColorBrush x:Key='Zebra' Color='Blue'/>";
-            const string Second = "<Style x:Key='Alpha' TargetType='{x:Type Button}'><Setter Property='Background' Value='{StaticResource Zebra}'/></Style>";
-            var input = "<ResourceDictionary xmlns='" + Namespace + "' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'>"
-                + First + Second + "</ResourceDictionary>";
-            var result = XmlDocumentFormatter.Format(input, new Dictionary<string, string> { ["pnfmt_sort_entries"] = "true" }, true);
-            Assert.Contains(First, result);
-            Assert.Contains("<Style x:Key='Alpha' TargetType='{x:Type Button}'>", result);
-            Assert.Contains("<Setter Property='Background' Value='{StaticResource Zebra}'/>", result);
-            Assert.True(result.IndexOf("x:Key='Zebra'") < result.IndexOf("x:Key='Alpha'"));
-            Assert.Contains("xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'", result);
-        }
-
-        [Fact]
-        public void Custom_containers_keep_their_own_whitespace_while_known_descendants_can_format()
-        {
-            const string Content = "<local:Inlines><local:Run/><local:Run/> <local:Run/></local:Inlines>";
-            var result = Format("<local:View xmlns:local='clr-namespace:Example' xmlns='" + Namespace + "'>"
-                + Content + "<Grid><Button/><Button/></Grid></local:View>");
-            Assert.Contains(Content, result);
-            Assert.Contains("</local:Inlines><Grid>\n    <Button/>\n    <Button/>\n  </Grid></local:View>", result);
-            Assert.Equal(result, Format(result));
-        }
-
-        [Fact]
         public void Mixed_text_and_xml_space_are_preserved()
         {
             const string Content = "<Grid xml:space='preserve'>\n<Button/> <Button/>\n</Grid>";
@@ -79,6 +65,21 @@ namespace PNFmt.Tests.Formatter.Xml
         public void Recognizes_other_common_xaml_layout_namespaces(string namespaceUri)
         {
             Assert.Contains("\n  <Button/>\n", Format("<Grid xmlns='" + namespaceUri + "'><Button/></Grid>"));
+        }
+
+        [Fact]
+        public void Resource_order_markup_extensions_attributes_and_namespaces_are_preserved()
+        {
+            const string First = "<SolidColorBrush x:Key='Zebra' Color='Blue'/>";
+            const string Second = "<Style x:Key='Alpha' TargetType='{x:Type Button}'><Setter Property='Background' Value='{StaticResource Zebra}'/></Style>";
+            var input = "<ResourceDictionary xmlns='" + Namespace + "' xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'>"
+                + First + Second + "</ResourceDictionary>";
+            var result = XmlDocumentFormatter.Format(input, new Dictionary<string, string> { ["pnfmt_sort_entries"] = "true" }, true);
+            Assert.Contains(First, result);
+            Assert.Contains("<Style x:Key='Alpha' TargetType='{x:Type Button}'>", result);
+            Assert.Contains("<Setter Property='Background' Value='{StaticResource Zebra}'/>", result);
+            Assert.True(result.IndexOf("x:Key='Zebra'") < result.IndexOf("x:Key='Alpha'"));
+            Assert.Contains("xmlns:x='http://schemas.microsoft.com/winfx/2006/xaml'", result);
         }
 
         private static string Format(string text)

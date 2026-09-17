@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.Text;
@@ -20,6 +21,19 @@ namespace PNFmt
         }
 
         public IReadOnlyList<TextSpan> Spans { get; }
+
+        public bool HasSameText(CSharpFormattingExclusions other)
+        {
+            return this.Spans.Select(span => this.source.ToString(span))
+                .SequenceEqual(other.Spans.Select(span => other.source.ToString(span)));
+        }
+
+        public bool Intersects(TextSpan span)
+        {
+            return this.Spans.Any(excluded => span.Length == 0
+                ? excluded.Contains(span.Start) || (span.Start == this.source.Length && excluded.End == this.source.Length)
+                : excluded.OverlapsWith(span));
+        }
 
         public static CSharpFormattingExclusions Parse(SyntaxNode root)
         {
@@ -60,19 +74,6 @@ namespace PNFmt
             }
 
             return new CSharpFormattingExclusions(source, spans);
-        }
-
-        public bool Intersects(TextSpan span)
-        {
-            return this.Spans.Any(excluded => span.Length == 0
-                ? excluded.Contains(span.Start) || (span.Start == this.source.Length && excluded.End == this.source.Length)
-                : excluded.OverlapsWith(span));
-        }
-
-        public bool HasSameText(CSharpFormattingExclusions other)
-        {
-            return this.Spans.Select(span => this.source.ToString(span))
-                .SequenceEqual(other.Spans.Select(span => other.source.ToString(span)));
         }
 
         public string Restore(string formatted)

@@ -121,6 +121,37 @@ namespace PNFmt
             }
         }
 
+        private static void AddSortedGroups(
+            List<ElementGroup> groups,
+            List<XNode> nodes,
+            Func<XElement, int> order,
+            Func<XElement, string> key)
+        {
+            foreach (var group in groups
+                .OrderBy(item => order(item.Element))
+                .ThenBy(item => key(item.Element), StringComparer.OrdinalIgnoreCase)
+                .ThenBy(item => key(item.Element), StringComparer.Ordinal))
+            {
+                nodes.AddRange(group.LeadingNodes);
+                nodes.Add(group.Element);
+            }
+
+            groups.Clear();
+        }
+
+        private static string Attribute(XElement element, string name)
+        {
+            return (string)element.Attribute(name);
+        }
+
+        private static string GetConfigurationKey(XElement element)
+        {
+            return Attribute(element, "Name")
+                ?? Attribute(element, "TypeId")
+                ?? Attribute(element, "Extension")
+                ?? element.Name.LocalName;
+        }
+
         private static int GetConfigurationOrder(XElement element)
         {
             switch (element.Name.LocalName)
@@ -132,11 +163,10 @@ namespace PNFmt
             }
         }
 
-        private static string GetConfigurationKey(XElement element)
+        private static string GetFolderKey(XElement element)
         {
-            return Attribute(element, "Name")
-                ?? Attribute(element, "TypeId")
-                ?? Attribute(element, "Extension")
+            return Attribute(element, "Path")
+                ?? Attribute(element, "Name")
                 ?? element.Name.LocalName;
         }
 
@@ -151,11 +181,13 @@ namespace PNFmt
             }
         }
 
-        private static string GetFolderKey(XElement element)
+        private static string GetProjectRuleKey(XElement element)
         {
-            return Attribute(element, "Path")
-                ?? Attribute(element, "Name")
-                ?? element.Name.LocalName;
+            return (Attribute(element, "Solution") ?? string.Empty)
+                + "\0"
+                + (Attribute(element, "Project") ?? string.Empty)
+                + "\0"
+                + (Attribute(element, "Name") ?? string.Empty);
         }
 
         private static int GetProjectRuleOrder(XElement element)
@@ -172,13 +204,11 @@ namespace PNFmt
             }
         }
 
-        private static string GetProjectRuleKey(XElement element)
+        private static string GetSolutionKey(XElement element)
         {
-            return (Attribute(element, "Solution") ?? string.Empty)
-                + "\0"
-                + (Attribute(element, "Project") ?? string.Empty)
-                + "\0"
-                + (Attribute(element, "Name") ?? string.Empty);
+            return Attribute(element, "Name")
+                ?? Attribute(element, "Path")
+                ?? element.Name.LocalName;
         }
 
         private static int GetSolutionOrder(XElement element)
@@ -193,30 +223,10 @@ namespace PNFmt
             }
         }
 
-        private static string GetSolutionKey(XElement element)
+        private static bool IsLayoutWhitespace(XNode node)
         {
-            return Attribute(element, "Name")
-                ?? Attribute(element, "Path")
-                ?? element.Name.LocalName;
-        }
-
-        private static void SortProject(XElement project, bool sortEntries, bool formatLayout)
-        {
-            SortChildren(project, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
-            SortProperties(project, sortEntries, formatLayout);
-        }
-
-        private static void SortProperties(XContainer parent, bool sortEntries, bool formatLayout)
-        {
-            foreach (var properties in parent.Elements("Properties"))
-            {
-                SortChildren(
-                    properties,
-                    element => element.Name.LocalName == "Property" ? 0 : int.MaxValue,
-                    element => Attribute(element, "Name") ?? string.Empty,
-                    sortEntries,
-                    formatLayout);
-            }
+            return node is XText text && node.NodeType == XmlNodeType.Text
+                && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n');
         }
 
         private static void SortChildren(
@@ -283,33 +293,36 @@ namespace PNFmt
             parent.ReplaceNodes(nodes);
         }
 
-        private static void AddSortedGroups(
-            List<ElementGroup> groups,
-            List<XNode> nodes,
-            Func<XElement, int> order,
-            Func<XElement, string> key)
+        private static void SortProject(XElement project, bool sortEntries, bool formatLayout)
         {
-            foreach (var group in groups
-                .OrderBy(item => order(item.Element))
-                .ThenBy(item => key(item.Element), StringComparer.OrdinalIgnoreCase)
-                .ThenBy(item => key(item.Element), StringComparer.Ordinal))
+            SortChildren(project, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
+            SortProperties(project, sortEntries, formatLayout);
+        }
+
+        private static void SortProperties(XContainer parent, bool sortEntries, bool formatLayout)
+        {
+            foreach (var properties in parent.Elements("Properties"))
             {
-                nodes.AddRange(group.LeadingNodes);
-                nodes.Add(group.Element);
+                SortChildren(
+                    properties,
+                    element => element.Name.LocalName == "Property" ? 0 : int.MaxValue,
+                    element => Attribute(element, "Name") ?? string.Empty,
+                    sortEntries,
+                    formatLayout);
+            }
+        }
+
+        private sealed class ElementGroup
+        {
+            public ElementGroup(XElement element, List<XNode> leadingNodes)
+            {
+                this.Element = element;
+                this.LeadingNodes = leadingNodes;
             }
 
-            groups.Clear();
-        }
+            public XElement Element { get; }
 
-        private static string Attribute(XElement element, string name)
-        {
-            return (string)element.Attribute(name);
-        }
-
-        private static bool IsLayoutWhitespace(XNode node)
-        {
-            return node is XText text && node.NodeType == XmlNodeType.Text
-                && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n');
+            public List<XNode> LeadingNodes { get; }
         }
 
         private sealed class LayoutContainer
@@ -326,19 +339,6 @@ namespace PNFmt
                 // CR/CRLF characters, including outside the document element.
                 writer.WriteRaw(this.Value);
             }
-        }
-
-        private sealed class ElementGroup
-        {
-            public ElementGroup(XElement element, List<XNode> leadingNodes)
-            {
-                this.Element = element;
-                this.LeadingNodes = leadingNodes;
-            }
-
-            public XElement Element { get; }
-
-            public List<XNode> LeadingNodes { get; }
         }
 
     }

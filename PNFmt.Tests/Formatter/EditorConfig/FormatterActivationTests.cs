@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.EditorConfig
@@ -58,32 +59,6 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
         [Theory]
         [MemberData(nameof(FormatterContractTests.ActivationCases), MemberType = typeof(FormatterContractTests))]
-        public void None_overrides_legacy_activation_and_lint(string name, string fileName, string input)
-        {
-            using (var directory = new TestDirectory())
-            {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = nOnE\n"
-                    + "pnfmt_sort_entries = true\npnfmt_csharp_format = true\npnfmt_xml_format = true\n"
-                    + "pnfmt_xaml_format = true\nindent_size = 4\ncharset = utf-8-bom\n");
-                var path = directory.Write(fileName, input);
-                var original = File.ReadAllBytes(path);
-                var log = new RecordingLog();
-                var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == name);
-
-                foreach (var lint in new[] { false, true })
-                {
-                    var result = formatter.Format(new FileFormatRequest(path, true, lint, log));
-                    Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                    Assert.Empty(result.Diagnostics);
-                    Assert.Equal(original, File.ReadAllBytes(path));
-                }
-
-                Assert.Empty(log.Messages);
-            }
-        }
-
-        [Theory]
-        [MemberData(nameof(FormatterContractTests.ActivationCases), MemberType = typeof(FormatterContractTests))]
         public void Missing_selection_preserves_legacy_activation_with_one_warning(string name, string fileName, string input)
         {
             using (var directory = new TestDirectory())
@@ -112,25 +87,6 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
-        public void Old_format_switch_controls_layout_without_disabling_other_behaviors()
-        {
-            using (var directory = new TestDirectory())
-            {
-                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = csharp\n"
-                    + "pnfmt_csharp_format = false\npnfmt_sort_entries = true\n");
-                var path = directory.Write("Sample.cs", "using Z;\nusing A;\nclass C{void M(){}}\n");
-                var log = new RecordingLog();
-
-                var result = new CSharpFormatter().Format(new FileFormatRequest(path, true, false, log));
-
-                Assert.Equal(FileFormatStatus.Updated, result.Status);
-                Assert.StartsWith("using A;\nusing Z;", File.ReadAllText(path));
-                Assert.Contains("class C{void M(){}}", File.ReadAllText(path));
-                Assert.DoesNotContain(log.Messages, message => message.Contains("PNFMT004"));
-            }
-        }
-
-        [Fact]
         public void Nested_selections_and_unset_follow_editorconfig_inheritance()
         {
             using (var directory = new TestDirectory())
@@ -149,6 +105,51 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 Assert.Empty(log.Messages);
                 Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(new FileFormatRequest(legacy, false, false, log)).Status);
                 Assert.Contains("PNFMT004", Assert.Single(log.Messages));
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(FormatterContractTests.ActivationCases), MemberType = typeof(FormatterContractTests))]
+        public void None_overrides_legacy_activation_and_lint(string name, string fileName, string input)
+        {
+            using (var directory = new TestDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = nOnE\n"
+                    + "pnfmt_sort_entries = true\npnfmt_csharp_format = true\npnfmt_xml_format = true\n"
+                    + "pnfmt_xaml_format = true\nindent_size = 4\ncharset = utf-8-bom\n");
+                var path = directory.Write(fileName, input);
+                var original = File.ReadAllBytes(path);
+                var log = new RecordingLog();
+                var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == name);
+
+                foreach (var lint in new[] { false, true })
+                {
+                    var result = formatter.Format(new FileFormatRequest(path, true, lint, log));
+                    Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                    Assert.Empty(result.Diagnostics);
+                    Assert.Equal(original, File.ReadAllBytes(path));
+                }
+
+                Assert.Empty(log.Messages);
+            }
+        }
+
+        [Fact]
+        public void Old_format_switch_controls_layout_without_disabling_other_behaviors()
+        {
+            using (var directory = new TestDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = csharp\n"
+                    + "pnfmt_csharp_format = false\npnfmt_sort_entries = true\n");
+                var path = directory.Write("Sample.cs", "using Z;\nusing A;\nclass C{void M(){}}\n");
+                var log = new RecordingLog();
+
+                var result = new CSharpFormatter().Format(new FileFormatRequest(path, true, false, log));
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.StartsWith("using A;\nusing Z;", File.ReadAllText(path));
+                Assert.Contains("class C{void M(){}}", File.ReadAllText(path));
+                Assert.DoesNotContain(log.Messages, message => message.Contains("PNFMT004"));
             }
         }
 

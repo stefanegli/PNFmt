@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using PNFmt;
 
 namespace PNFmt.Cli
@@ -67,41 +68,6 @@ namespace PNFmt.Cli
             return new FormattingRunResult(outcomes, stopwatch.Elapsed);
         }
 
-        private static bool IsEditorConfig(string file)
-        {
-            return string.Equals(
-                Path.GetFileName(file),
-                ".editorconfig",
-                StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static int GetDirectoryDepth(string file)
-        {
-            var depth = 0;
-            var directory = Path.GetDirectoryName(Path.GetFullPath(file));
-            while (!string.IsNullOrEmpty(directory))
-            {
-                depth++;
-                directory = Path.GetDirectoryName(directory);
-            }
-
-            return depth;
-        }
-
-        private void FormatFiles(
-            IReadOnlyList<string> files,
-            IReadOnlyList<int> indexes,
-            FileFormattingOutcome[] outcomes,
-            bool writeChanges,
-            bool lint,
-            ParallelOptions parallelOptions)
-        {
-            Parallel.ForEach(
-                indexes,
-                parallelOptions,
-                index => outcomes[index] = this.FormatFile(files[index], writeChanges, lint));
-        }
-
         private FileFormattingOutcome FormatFile(string file, bool writeChanges, bool lint)
         {
             var log = new BufferedFormatterLog();
@@ -137,6 +103,41 @@ namespace PNFmt.Cli
             {
                 return new FileFormattingOutcome(file, null, exception, log.Messages, log.Exceptions);
             }
+        }
+
+        private void FormatFiles(
+            IReadOnlyList<string> files,
+            IReadOnlyList<int> indexes,
+            FileFormattingOutcome[] outcomes,
+            bool writeChanges,
+            bool lint,
+            ParallelOptions parallelOptions)
+        {
+            Parallel.ForEach(
+                indexes,
+                parallelOptions,
+                index => outcomes[index] = this.FormatFile(files[index], writeChanges, lint));
+        }
+
+        private static int GetDirectoryDepth(string file)
+        {
+            var depth = 0;
+            var directory = Path.GetDirectoryName(Path.GetFullPath(file));
+            while (!string.IsNullOrEmpty(directory))
+            {
+                depth++;
+                directory = Path.GetDirectoryName(directory);
+            }
+
+            return depth;
+        }
+
+        private static bool IsEditorConfig(string file)
+        {
+            return string.Equals(
+                Path.GetFileName(file),
+                ".editorconfig",
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private sealed class BufferedFormatterLog : IFormatterMessageLog

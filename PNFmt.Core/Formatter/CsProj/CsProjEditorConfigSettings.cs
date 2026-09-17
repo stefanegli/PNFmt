@@ -124,11 +124,6 @@ namespace PNFmt
 
         public int EmptyLinesBetweenGroups { get; } = 1;
 
-        private static char ResolveIndentStyle(string indentStyle)
-        {
-            return string.Equals(indentStyle, "tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ' ';
-        }
-
         private static string ResolveEndOfLine(string endOfLine)
         {
             if (string.Equals(endOfLine, "lf", StringComparison.OrdinalIgnoreCase))
@@ -142,6 +137,11 @@ namespace PNFmt
             }
 
             return "\r\n";
+        }
+
+        private static char ResolveIndentStyle(string indentStyle)
+        {
+            return string.Equals(indentStyle, "tab", StringComparison.OrdinalIgnoreCase) ? '\t' : ' ';
         }
     }
 }

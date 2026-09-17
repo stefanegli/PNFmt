@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using PNFmt.Cli;
 
 namespace PNFmt.Benchmarks
@@ -62,14 +63,6 @@ namespace PNFmt.Benchmarks
             }
         }
 
-        public void ValidateDiscovery(TargetFileResolution resolution)
-        {
-            if (resolution.Errors.Count != 0 || !resolution.Files.OrderBy(path => path, StringComparer.Ordinal).SequenceEqual(this.Files))
-            {
-                throw new InvalidOperationException("Discovery did not return exactly the fixture files: " + string.Join("; ", resolution.Errors));
-            }
-        }
-
         public void Validate(FormattingRunResult result, FileFormatStatus expected, bool formatted)
         {
             if (result.Outcomes.Count != this.Files.Count)
@@ -101,6 +94,14 @@ namespace PNFmt.Benchmarks
             if (Directory.EnumerateFiles(this.DirectoryPath, ".pnfmt-*", SearchOption.AllDirectories).Any())
             {
                 throw new InvalidOperationException("Formatting left temporary files behind.");
+            }
+        }
+
+        public void ValidateDiscovery(TargetFileResolution resolution)
+        {
+            if (resolution.Errors.Count != 0 || !resolution.Files.OrderBy(path => path, StringComparer.Ordinal).SequenceEqual(this.Files))
+            {
+                throw new InvalidOperationException("Discovery did not return exactly the fixture files: " + string.Join("; ", resolution.Errors));
             }
         }
 

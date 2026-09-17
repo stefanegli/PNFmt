@@ -49,40 +49,52 @@ namespace PNFmt
             return result;
         }
 
-        private static Queue<Node> ReadElements(string text, bool xaml)
+        private static void AppendIndent(StringBuilder output, int depth, string indent)
         {
-            var elements = new Queue<Node>();
-            using (var input = new StringReader(text))
-            using (var reader = XmlReader.Create(input, new XmlReaderSettings
+            for (var index = 0; index < depth; index++)
             {
-                DtdProcessing = DtdProcessing.Prohibit,
-                XmlResolver = null,
-                IgnoreWhitespace = false,
-            }))
-            {
-                while (reader.Read())
-                {
-                    if (reader.NodeType == XmlNodeType.Element)
-                    {
-                        if (reader.Depth >= 256)
-                        {
-                            var location = (IXmlLineInfo)reader;
-                            throw new XmlException("Formatting supports XML nesting up to 256 levels.", null,
-                                location.LineNumber, location.LinePosition);
-                        }
+                output.Append(indent);
+            }
+        }
 
-                        elements.Enqueue(new Node
-                        {
-                            IsElement = true,
-                            Preserve = reader.XmlSpace == XmlSpace.Preserve
-                                || (xaml && XamlWhitespacePolicy.IsTextContainer(reader.LocalName)),
-                            IndentChildren = !xaml || XamlWhitespacePolicy.IsStructuralContainer(reader.NamespaceURI, reader.LocalName),
-                        });
+        private static int FindTagEnd(string text, int start)
+        {
+            var quote = '\0';
+            for (var index = start + 1; index < text.Length; index++)
+            {
+                var character = text[index];
+                if (quote != '\0')
+                {
+                    if (character == quote)
+                    {
+                        quote = '\0';
                     }
+                }
+                else if (character == '\'' || character == '"')
+                {
+                    quote = character;
+                }
+                else if (character == '>')
+                {
+                    return index;
                 }
             }
 
-            return elements;
+            throw new XmlException("Unterminated XML tag.");
+        }
+
+        private static bool IsXmlWhitespace(string text, int start, int end)
+        {
+            for (var index = start; index < end; index++)
+            {
+                var character = text[index];
+                if (character != ' ' && character != '\t' && character != '\r' && character != '\n')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static Node ParseLayout(string text, Queue<Node> elements)
@@ -150,30 +162,40 @@ namespace PNFmt
             return document;
         }
 
-        private static int FindTagEnd(string text, int start)
+        private static Queue<Node> ReadElements(string text, bool xaml)
         {
-            var quote = '\0';
-            for (var index = start + 1; index < text.Length; index++)
+            var elements = new Queue<Node>();
+            using (var input = new StringReader(text))
+            using (var reader = XmlReader.Create(input, new XmlReaderSettings
             {
-                var character = text[index];
-                if (quote != '\0')
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null,
+                IgnoreWhitespace = false,
+            }))
+            {
+                while (reader.Read())
                 {
-                    if (character == quote)
+                    if (reader.NodeType == XmlNodeType.Element)
                     {
-                        quote = '\0';
+                        if (reader.Depth >= 256)
+                        {
+                            var location = (IXmlLineInfo)reader;
+                            throw new XmlException("Formatting supports XML nesting up to 256 levels.", null,
+                                location.LineNumber, location.LinePosition);
+                        }
+
+                        elements.Enqueue(new Node
+                        {
+                            IsElement = true,
+                            Preserve = reader.XmlSpace == XmlSpace.Preserve
+                                || (xaml && XamlWhitespacePolicy.IsTextContainer(reader.LocalName)),
+                            IndentChildren = !xaml || XamlWhitespacePolicy.IsStructuralContainer(reader.NamespaceURI, reader.LocalName),
+                        });
                     }
-                }
-                else if (character == '\'' || character == '"')
-                {
-                    quote = character;
-                }
-                else if (character == '>')
-                {
-                    return index;
                 }
             }
 
-            throw new XmlException("Unterminated XML tag.");
+            return elements;
         }
 
         private static void Render(Node node, string text, StringBuilder output, int depth, string indent, string newLine)
@@ -209,28 +231,6 @@ namespace PNFmt
             }
 
             output.Append(text, node.CloseStart, node.End - node.CloseStart);
-        }
-
-        private static void AppendIndent(StringBuilder output, int depth, string indent)
-        {
-            for (var index = 0; index < depth; index++)
-            {
-                output.Append(indent);
-            }
-        }
-
-        private static bool IsXmlWhitespace(string text, int start, int end)
-        {
-            for (var index = start; index < end; index++)
-            {
-                var character = text[index];
-                if (character != ' ' && character != '\t' && character != '\r' && character != '\n')
-                {
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private static bool StartsWith(string text, int start, string value)

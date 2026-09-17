@@ -5,7 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+
 using LibGit2Sharp;
+
 using Xunit.Sdk;
 
 namespace PNFmt.Tests.Snapshots
@@ -46,6 +48,55 @@ namespace PNFmt.Tests.Snapshots
                     snapshotName);
                 Verify(snapshotPath, actual);
             }
+        }
+
+        internal static string BuildSnapshotPath(
+            string workingDirectory,
+            Type testClass,
+            string testName,
+            string snapshotName)
+        {
+            if (string.IsNullOrWhiteSpace(testName))
+            {
+                throw new ArgumentException("A test name is required.", nameof(testName));
+            }
+
+            if (string.IsNullOrWhiteSpace(snapshotName))
+            {
+                throw new ArgumentException("A snapshot name is required.", nameof(snapshotName));
+            }
+
+            const string TestNamespace = "PNFmt.Tests";
+            var classNamespace = testClass.Namespace ?? string.Empty;
+            if (!string.Equals(classNamespace, TestNamespace, StringComparison.Ordinal)
+                && !classNamespace.StartsWith(TestNamespace + ".", StringComparison.Ordinal))
+            {
+                throw new ArgumentException(
+                    $"Test class namespace must start with '{TestNamespace}'.",
+                    nameof(testClass));
+            }
+
+            var snapshotParts = snapshotName.Split(
+                new[] { '/', '\\' },
+                StringSplitOptions.RemoveEmptyEntries);
+            if (snapshotParts.Any(part => part == "." || part == ".."))
+            {
+                throw new ArgumentException(
+                    "Snapshot names cannot contain relative directory segments.",
+                    nameof(snapshotName));
+            }
+
+            var namespaceSuffix = classNamespace.Length == TestNamespace.Length
+                ? Array.Empty<string>()
+                : classNamespace.Substring(TestNamespace.Length + 1).Split('.');
+            var pathParts = new[] { workingDirectory, "Snapshots", "PNFmt.Tests" }
+                .Concat(namespaceSuffix)
+                .Concat(new[] { testClass.Name, testName })
+                .Concat(snapshotParts)
+                .ToArray();
+            var snapshotPath = Path.GetFullPath(Path.Combine(pathParts));
+            EnsureInsideRepository(workingDirectory, snapshotPath);
+            return snapshotPath;
         }
 
         internal static void Verify(string snapshotPath, string actual)
@@ -108,55 +159,6 @@ namespace PNFmt.Tests.Snapshots
             }
         }
 
-        internal static string BuildSnapshotPath(
-            string workingDirectory,
-            Type testClass,
-            string testName,
-            string snapshotName)
-        {
-            if (string.IsNullOrWhiteSpace(testName))
-            {
-                throw new ArgumentException("A test name is required.", nameof(testName));
-            }
-
-            if (string.IsNullOrWhiteSpace(snapshotName))
-            {
-                throw new ArgumentException("A snapshot name is required.", nameof(snapshotName));
-            }
-
-            const string TestNamespace = "PNFmt.Tests";
-            var classNamespace = testClass.Namespace ?? string.Empty;
-            if (!string.Equals(classNamespace, TestNamespace, StringComparison.Ordinal)
-                && !classNamespace.StartsWith(TestNamespace + ".", StringComparison.Ordinal))
-            {
-                throw new ArgumentException(
-                    $"Test class namespace must start with '{TestNamespace}'.",
-                    nameof(testClass));
-            }
-
-            var snapshotParts = snapshotName.Split(
-                new[] { '/', '\\' },
-                StringSplitOptions.RemoveEmptyEntries);
-            if (snapshotParts.Any(part => part == "." || part == ".."))
-            {
-                throw new ArgumentException(
-                    "Snapshot names cannot contain relative directory segments.",
-                    nameof(snapshotName));
-            }
-
-            var namespaceSuffix = classNamespace.Length == TestNamespace.Length
-                ? Array.Empty<string>()
-                : classNamespace.Substring(TestNamespace.Length + 1).Split('.');
-            var pathParts = new[] { workingDirectory, "Snapshots", "PNFmt.Tests" }
-                .Concat(namespaceSuffix)
-                .Concat(new[] { testClass.Name, testName })
-                .Concat(snapshotParts)
-                .ToArray();
-            var snapshotPath = Path.GetFullPath(Path.Combine(pathParts));
-            EnsureInsideRepository(workingDirectory, snapshotPath);
-            return snapshotPath;
-        }
-
         private static Patch CreatePatch(Repository repository, string relativePath, bool useIndex)
         {
             var paths = new[] { relativePath };
@@ -175,27 +177,6 @@ namespace PNFmt.Tests.Snapshots
             }
 
             return repository.Diff.Compare<Patch>(paths, includeUntracked: true);
-        }
-
-        private static string NormalizeLineEndings(string value)
-        {
-            return value.Replace("\r\n", "\n").Replace('\r', '\n');
-        }
-
-        private static string ReadApprovedSnapshot(
-            Repository repository,
-            string relativePath,
-            bool useIndex)
-        {
-            if (useIndex)
-            {
-                var indexEntry = repository.Index[relativePath];
-                return indexEntry is null
-                    ? null
-                    : repository.Lookup<Blob>(indexEntry.Id)?.GetContentText();
-            }
-
-            return (repository.Head.Tip?.Tree[relativePath]?.Target as Blob)?.GetContentText();
         }
 
         private static void EnsureInsideRepository(string workingDirectory, string snapshotPath)
@@ -221,6 +202,27 @@ namespace PNFmt.Tests.Snapshots
             }
 
             return candidate ?? Path.GetPathRoot(Path.GetFullPath(path));
+        }
+
+        private static string NormalizeLineEndings(string value)
+        {
+            return value.Replace("\r\n", "\n").Replace('\r', '\n');
+        }
+
+        private static string ReadApprovedSnapshot(
+            Repository repository,
+            string relativePath,
+            bool useIndex)
+        {
+            if (useIndex)
+            {
+                var indexEntry = repository.Index[relativePath];
+                return indexEntry is null
+                    ? null
+                    : repository.Lookup<Blob>(indexEntry.Id)?.GetContentText();
+            }
+
+            return (repository.Head.Tip?.Tree[relativePath]?.Target as Blob)?.GetContentText();
         }
     }
 }

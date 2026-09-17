@@ -7,6 +7,13 @@ namespace PNFmt.Tests.Formatter.CSharp
     public sealed class CSharpExclusionTests
     {
         [Fact]
+        public void Closing_marker_at_eof_keeps_its_missing_newline()
+        {
+            const string Protected = "// pnfmt: off\nclass C{ }\n// pnfmt: on";
+            Assert.Equal("using A;\nusing Z;\n" + Protected, Format("using Z;\nusing A;\n" + Protected));
+        }
+
+        [Fact]
         public void Excluded_code_and_markers_are_exact_while_surrounding_code_is_formatted()
         {
             const string Protected = " // pnfmt: off  \r\nvoid   Keep( ){   }  \r\n // pnfmt: on\r\n";
@@ -30,28 +37,21 @@ namespace PNFmt.Tests.Formatter.CSharp
         }
 
         [Fact]
-        public void Nested_exclusions_and_unclosed_exclusions_preserve_everything_to_the_end()
-        {
-            const string Protected = "// pnfmt: off\nclass C{\n// pnfmt: off\nvoid M(){ }\n// pnfmt: on\n}";
-            var result = Format("using Z;\nusing A;\n" + Protected);
-            Assert.Equal("using A;\nusing Z;\n" + Protected, result);
-            Assert.Equal(result, Format(result));
-        }
-
-        [Fact]
-        public void Closing_marker_at_eof_keeps_its_missing_newline()
-        {
-            const string Protected = "// pnfmt: off\nclass C{ }\n// pnfmt: on";
-            Assert.Equal("using A;\nusing Z;\n" + Protected, Format("using Z;\nusing A;\n" + Protected));
-        }
-
-        [Fact]
         public void Marker_text_inside_literals_or_trailing_comments_does_not_disable_formatting()
         {
             const string Input = "class C{\nstring s=\"// pnfmt: off\"; // pnfmt: off\nvoid M(){ }\n}\n";
             var result = Format(Input);
             Assert.Contains("    void M()", result);
             Assert.Contains("string s = \"// pnfmt: off\"", result);
+        }
+
+        [Fact]
+        public void Nested_exclusions_and_unclosed_exclusions_preserve_everything_to_the_end()
+        {
+            const string Protected = "// pnfmt: off\nclass C{\n// pnfmt: off\nvoid M(){ }\n// pnfmt: on\n}";
+            var result = Format("using Z;\nusing A;\n" + Protected);
+            Assert.Equal("using A;\nusing Z;\n" + Protected, result);
+            Assert.Equal(result, Format(result));
         }
 
         [Fact]

@@ -26,97 +26,6 @@ namespace PNFmt
             return diagnostics;
         }
 
-        private static void AnalyzeTopLevelElements(
-            XElement project,
-            List<FormatterDiagnostic> diagnostics)
-        {
-            foreach (var element in project.Elements())
-            {
-                if (!ProjectStructure.KnownTopLevelElements.Contains(element.Name.LocalName))
-                {
-                    diagnostics.Add(Create(
-                        "CSPROJ006",
-                        $"Unexpected top-level element '{element.Name.LocalName}'.",
-                        element));
-                }
-            }
-        }
-
-        private static void AnalyzePropertyGroups(
-            XElement project,
-            List<FormatterDiagnostic> diagnostics)
-        {
-            foreach (var propertyGroup in project.Elements().Where(e => e.Name.LocalName == "PropertyGroup"))
-            {
-                if (!propertyGroup.Elements().Any())
-                {
-                    diagnostics.Add(Create(
-                        "CSPROJ001",
-                        "Empty PropertyGroup can be removed.",
-                        propertyGroup));
-                    continue;
-                }
-
-                var names = new HashSet<string>(
-                    propertyGroup.Elements().Select(e => e.Name.LocalName),
-                    StringComparer.OrdinalIgnoreCase);
-                if (names.Contains("TargetFramework") && names.Contains("TargetFrameworks"))
-                {
-                    diagnostics.Add(Create(
-                        "CSPROJ004",
-                        "PropertyGroup defines both TargetFramework and TargetFrameworks.",
-                        propertyGroup));
-                }
-            }
-        }
-
-        private static void AnalyzeItemGroups(
-            XElement project,
-            List<FormatterDiagnostic> diagnostics)
-        {
-            foreach (var itemGroup in project.Elements().Where(e => e.Name.LocalName == "ItemGroup"))
-            {
-                var items = itemGroup.Elements().ToList();
-                if (items.Count == 0)
-                {
-                    diagnostics.Add(Create(
-                        "CSPROJ001",
-                        "Empty ItemGroup can be removed.",
-                        itemGroup));
-                    continue;
-                }
-
-                var itemTypes = items
-                    .Select(e => e.Name.LocalName)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                if (itemTypes.Count > 1)
-                {
-                    diagnostics.Add(Create(
-                        "CSPROJ002",
-                        $"Mixed ItemGroup contains: {string.Join(", ", itemTypes)}.",
-                        itemGroup));
-                }
-
-                foreach (var duplicate in items
-                    .Select(item => new
-                    {
-                        Item = item,
-                        Key = GetDuplicateKey(item),
-                    })
-                    .Where(x => x.Key != null)
-                    .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
-                    .Where(group => group.Count() > 1))
-                {
-                    var duplicateItem = duplicate.Skip(1).First().Item;
-                    diagnostics.Add(Create(
-                        "CSPROJ003",
-                        $"Duplicate {duplicateItem.Name.LocalName} item '{GetItemIdentity(duplicateItem)}'.",
-                        duplicateItem));
-                }
-            }
-        }
-
         private static void AnalyzeDefaultItemIncludes(
             XElement project,
             string projectPath,
@@ -169,58 +78,130 @@ namespace PNFmt
             }
         }
 
-        private static bool UsesMicrosoftNetSdk(XElement project)
+        private static void AnalyzeItemGroups(
+            XElement project,
+            List<FormatterDiagnostic> diagnostics)
         {
-            var sdk = (string)project.Attribute("Sdk");
-            if (!string.IsNullOrWhiteSpace(sdk)
-                && sdk.IndexOf("Microsoft.NET.Sdk", StringComparison.OrdinalIgnoreCase) >= 0)
+            foreach (var itemGroup in project.Elements().Where(e => e.Name.LocalName == "ItemGroup"))
             {
-                return true;
-            }
+                var items = itemGroup.Elements().ToList();
+                if (items.Count == 0)
+                {
+                    diagnostics.Add(Create(
+                        "CSPROJ001",
+                        "Empty ItemGroup can be removed.",
+                        itemGroup));
+                    continue;
+                }
 
-            return project.Elements()
-                .Where(e => e.Name.LocalName == "Sdk" || e.Name.LocalName == "Import")
-                .Select(e => (string)e.Attribute("Name") ?? (string)e.Attribute("Sdk"))
-                .Any(value => !string.IsNullOrWhiteSpace(value)
-                    && value.IndexOf("Microsoft.NET.Sdk", StringComparison.OrdinalIgnoreCase) >= 0);
+                var itemTypes = items
+                    .Select(e => e.Name.LocalName)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (itemTypes.Count > 1)
+                {
+                    diagnostics.Add(Create(
+                        "CSPROJ002",
+                        $"Mixed ItemGroup contains: {string.Join(", ", itemTypes)}.",
+                        itemGroup));
+                }
+
+                foreach (var duplicate in items
+                    .Select(item => new
+                    {
+                        Item = item,
+                        Key = GetDuplicateKey(item),
+                    })
+                    .Where(x => x.Key != null)
+                    .GroupBy(x => x.Key, StringComparer.OrdinalIgnoreCase)
+                    .Where(group => group.Count() > 1))
+                {
+                    var duplicateItem = duplicate.Skip(1).First().Item;
+                    diagnostics.Add(Create(
+                        "CSPROJ003",
+                        $"Duplicate {duplicateItem.Name.LocalName} item '{GetItemIdentity(duplicateItem)}'.",
+                        duplicateItem));
+                }
+            }
         }
 
-        private static bool IsPropertyDisabled(XElement project, string propertyName)
+        private static void AnalyzePropertyGroups(
+            XElement project,
+            List<FormatterDiagnostic> diagnostics)
         {
-            return project
-                .Elements()
-                .Where(e => e.Name.LocalName == "PropertyGroup")
-                .Elements()
-                .Any(property => string.Equals(
-                        property.Name.LocalName,
-                        propertyName,
-                        StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(property.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase));
+            foreach (var propertyGroup in project.Elements().Where(e => e.Name.LocalName == "PropertyGroup"))
+            {
+                if (!propertyGroup.Elements().Any())
+                {
+                    diagnostics.Add(Create(
+                        "CSPROJ001",
+                        "Empty PropertyGroup can be removed.",
+                        propertyGroup));
+                    continue;
+                }
+
+                var names = new HashSet<string>(
+                    propertyGroup.Elements().Select(e => e.Name.LocalName),
+                    StringComparer.OrdinalIgnoreCase);
+                if (names.Contains("TargetFramework") && names.Contains("TargetFrameworks"))
+                {
+                    diagnostics.Add(Create(
+                        "CSPROJ004",
+                        "PropertyGroup defines both TargetFramework and TargetFrameworks.",
+                        propertyGroup));
+                }
+            }
         }
 
-        private static bool IsLocalDefaultItemInclude(string include, string expectedExtension)
+        private static void AnalyzeTopLevelElements(
+            XElement project,
+            List<FormatterDiagnostic> diagnostics)
         {
-            if (string.IsNullOrWhiteSpace(include)
-                || include.IndexOf("$(", StringComparison.Ordinal) >= 0
-                || include.IndexOf("@(", StringComparison.Ordinal) >= 0
-                || include.IndexOf("%(", StringComparison.Ordinal) >= 0
-                || include.IndexOf(';') >= 0
-                || Path.IsPathRooted(include)
-                || include.Equals("..", StringComparison.Ordinal)
-                || include.StartsWith("../", StringComparison.Ordinal)
-                || include.StartsWith(@"..\", StringComparison.Ordinal))
+            foreach (var element in project.Elements())
             {
-                return false;
+                if (!ProjectStructure.KnownTopLevelElements.Contains(element.Name.LocalName))
+                {
+                    diagnostics.Add(Create(
+                        "CSPROJ006",
+                        $"Unexpected top-level element '{element.Name.LocalName}'.",
+                        element));
+                }
+            }
+        }
+
+        private static FormatterDiagnostic Create(string code, string message, XObject source)
+        {
+            var lineInfo = source as IXmlLineInfo;
+            var lineNumber = lineInfo != null && lineInfo.HasLineInfo()
+                ? (int?)lineInfo.LineNumber
+                : null;
+            return new FormatterDiagnostic(code, message, lineNumber);
+        }
+
+        private static string GetDuplicateKey(XElement item)
+        {
+            var identity = GetItemIdentity(item);
+            if (string.IsNullOrWhiteSpace(identity))
+            {
+                return null;
             }
 
-            if (expectedExtension != null)
-            {
-                return include.EndsWith(expectedExtension, StringComparison.OrdinalIgnoreCase);
-            }
+            var operation = item.Attribute("Include") != null
+                ? "Include"
+                : item.Attribute("Update") != null
+                    ? "Update"
+                    : item.Attribute("Remove") != null
+                        ? "Remove"
+                        : string.Empty;
+            var condition = (string)item.Attribute("Condition") ?? string.Empty;
+            return item.Name.LocalName + "\0" + operation + "\0" + identity + "\0" + condition;
+        }
 
-            return include.IndexOfAny(new[] { '*', '?' }) < 0
-                && !include.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
-                && !include.EndsWith(".resx", StringComparison.OrdinalIgnoreCase);
+        private static string GetItemIdentity(XElement item)
+        {
+            return (string)item.Attribute("Include")
+                ?? (string)item.Attribute("Update")
+                ?? (string)item.Attribute("Remove");
         }
 
         private static bool HasMatchingDefaultItem(
@@ -295,6 +276,44 @@ namespace PNFmt
             return false;
         }
 
+        private static bool IsLocalDefaultItemInclude(string include, string expectedExtension)
+        {
+            if (string.IsNullOrWhiteSpace(include)
+                || include.IndexOf("$(", StringComparison.Ordinal) >= 0
+                || include.IndexOf("@(", StringComparison.Ordinal) >= 0
+                || include.IndexOf("%(", StringComparison.Ordinal) >= 0
+                || include.IndexOf(';') >= 0
+                || Path.IsPathRooted(include)
+                || include.Equals("..", StringComparison.Ordinal)
+                || include.StartsWith("../", StringComparison.Ordinal)
+                || include.StartsWith(@"..\", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (expectedExtension != null)
+            {
+                return include.EndsWith(expectedExtension, StringComparison.OrdinalIgnoreCase);
+            }
+
+            return include.IndexOfAny(new[] { '*', '?' }) < 0
+                && !include.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+                && !include.EndsWith(".resx", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsPropertyDisabled(XElement project, string propertyName)
+        {
+            return project
+                .Elements()
+                .Where(e => e.Name.LocalName == "PropertyGroup")
+                .Elements()
+                .Any(property => string.Equals(
+                        property.Name.LocalName,
+                        propertyName,
+                        StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(property.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase));
+        }
+
         private static bool MatchesSegment(string name, string pattern)
         {
             // Dynamic programming bounds wildcard matching to O(name * pattern),
@@ -325,39 +344,20 @@ namespace PNFmt
             return matches[name.Length];
         }
 
-        private static string GetDuplicateKey(XElement item)
+        private static bool UsesMicrosoftNetSdk(XElement project)
         {
-            var identity = GetItemIdentity(item);
-            if (string.IsNullOrWhiteSpace(identity))
+            var sdk = (string)project.Attribute("Sdk");
+            if (!string.IsNullOrWhiteSpace(sdk)
+                && sdk.IndexOf("Microsoft.NET.Sdk", StringComparison.OrdinalIgnoreCase) >= 0)
             {
-                return null;
+                return true;
             }
 
-            var operation = item.Attribute("Include") != null
-                ? "Include"
-                : item.Attribute("Update") != null
-                    ? "Update"
-                    : item.Attribute("Remove") != null
-                        ? "Remove"
-                        : string.Empty;
-            var condition = (string)item.Attribute("Condition") ?? string.Empty;
-            return item.Name.LocalName + "\0" + operation + "\0" + identity + "\0" + condition;
-        }
-
-        private static string GetItemIdentity(XElement item)
-        {
-            return (string)item.Attribute("Include")
-                ?? (string)item.Attribute("Update")
-                ?? (string)item.Attribute("Remove");
-        }
-
-        private static FormatterDiagnostic Create(string code, string message, XObject source)
-        {
-            var lineInfo = source as IXmlLineInfo;
-            var lineNumber = lineInfo != null && lineInfo.HasLineInfo()
-                ? (int?)lineInfo.LineNumber
-                : null;
-            return new FormatterDiagnostic(code, message, lineNumber);
+            return project.Elements()
+                .Where(e => e.Name.LocalName == "Sdk" || e.Name.LocalName == "Import")
+                .Select(e => (string)e.Attribute("Name") ?? (string)e.Attribute("Sdk"))
+                .Any(value => !string.IsNullOrWhiteSpace(value)
+                    && value.IndexOf("Microsoft.NET.Sdk", StringComparison.OrdinalIgnoreCase) >= 0);
         }
     }
 }

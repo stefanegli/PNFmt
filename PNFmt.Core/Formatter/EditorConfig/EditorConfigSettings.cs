@@ -11,6 +11,19 @@ namespace PNFmt
         private static readonly EditorConfig.Core.EditorConfigFileCache FileCache =
             new EditorConfig.Core.EditorConfigFileCache();
 
+        public static bool IsEnabled(
+            IReadOnlyDictionary<string, string> settings,
+            string settingName)
+        {
+            return settings.TryGetValue(settingName, out var value)
+                && IsEnabled(value);
+        }
+
+        public static bool IsEnabled(string value)
+        {
+            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+        }
+
         public static IReadOnlyDictionary<string, string> Load(string targetFile)
         {
             try
@@ -25,19 +38,6 @@ namespace PNFmt
                 throw new InvalidDataException(
                     $"Unable to read EditorConfig settings for '{targetFile}': {ex.Message}", ex);
             }
-        }
-
-        public static bool IsEnabled(
-            IReadOnlyDictionary<string, string> settings,
-            string settingName)
-        {
-            return settings.TryGetValue(settingName, out var value)
-                && IsEnabled(value);
-        }
-
-        public static bool IsEnabled(string value)
-        {
-            return string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

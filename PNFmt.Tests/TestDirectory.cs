@@ -15,16 +15,6 @@ namespace PNFmt.Tests
 
         public string Path { get; }
 
-        public string GetPath(string relativePath) => System.IO.Path.Combine(this.Path, relativePath);
-
-        public string Write(string relativePath, string contents)
-        {
-            var path = this.GetPath(relativePath);
-            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
-            File.WriteAllText(path, contents);
-            return path;
-        }
-
         public static TestDirectory CopyFrom(string sourcePath)
         {
             if (!Directory.Exists(sourcePath))
@@ -66,6 +56,16 @@ namespace PNFmt.Tests
 
                 Directory.Delete(this.Path, true);
             }
+        }
+
+        public string GetPath(string relativePath) => System.IO.Path.Combine(this.Path, relativePath);
+
+        public string Write(string relativePath, string contents)
+        {
+            var path = this.GetPath(relativePath);
+            Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
+            File.WriteAllText(path, contents);
+            return path;
         }
     }
 }

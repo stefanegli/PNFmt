@@ -4,6 +4,7 @@ using System;
 using System.IO;
 using System.Security.AccessControl;
 using System.Text;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter
@@ -21,34 +22,26 @@ namespace PNFmt.Tests.Formatter
             File.WriteAllBytes(this.path, this.original);
         }
 
-        [Theory]
-        [InlineData(0)]
-        [InlineData(3)]
-        [InlineData(20000)]
-        public void Replacement_writes_complete_output_and_removes_temporary_files(int length)
-        {
-            var formatted = Encoding.UTF8.GetBytes(new string('x', length));
-            FileReplacement.Write(this.path, this.original, output => output.Write(formatted));
-
-            Assert.Equal(formatted, File.ReadAllBytes(this.path));
-            this.AssertNoTemporaryFiles();
-        }
-
         [Fact]
-        public void Interrupted_output_leaves_original_intact_and_cleans_up()
+        public void Deleted_source_is_not_recreated()
         {
-            var failure = new IOException("Simulated interrupted write");
-            var actual = Assert.Throws<IOException>(() => FileReplacement.Write(this.path, this.original, output =>
+            Assert.Throws<FileNotFoundException>(() => FileReplacement.Write(this.path, this.original, output =>
             {
                 output.WriteByte(1);
-                output.Flush();
-                Assert.Equal(this.original, File.ReadAllBytes(this.path));
-                throw failure;
+                File.Delete(this.path);
             }));
 
-            Assert.Same(failure, actual);
-            Assert.Equal(this.original, File.ReadAllBytes(this.path));
-            this.AssertNoTemporaryFiles();
+            Assert.Empty(Directory.GetFiles(this.directory));
+        }
+
+        public void Dispose()
+        {
+            if (File.Exists(this.path))
+            {
+                File.SetAttributes(this.path, FileAttributes.Normal);
+            }
+
+            Directory.Delete(this.directory, recursive: true);
         }
 
         [Theory]
@@ -71,15 +64,45 @@ namespace PNFmt.Tests.Formatter
         }
 
         [Fact]
-        public void Deleted_source_is_not_recreated()
+        public void Interrupted_output_leaves_original_intact_and_cleans_up()
         {
-            Assert.Throws<FileNotFoundException>(() => FileReplacement.Write(this.path, this.original, output =>
+            var failure = new IOException("Simulated interrupted write");
+            var actual = Assert.Throws<IOException>(() => FileReplacement.Write(this.path, this.original, output =>
             {
                 output.WriteByte(1);
-                File.Delete(this.path);
+                output.Flush();
+                Assert.Equal(this.original, File.ReadAllBytes(this.path));
+                throw failure;
             }));
 
-            Assert.Empty(Directory.GetFiles(this.directory));
+            Assert.Same(failure, actual);
+            Assert.Equal(this.original, File.ReadAllBytes(this.path));
+            this.AssertNoTemporaryFiles();
+        }
+
+        [Fact]
+        public void Pipeline_compares_against_the_bytes_used_for_formatting()
+        {
+            var request = new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance);
+            Assert.Throws<IOException>(() => TextFileFormatPipeline.Format(request, true, text =>
+            {
+                File.WriteAllText(this.path, "external edit");
+                return text.ToUpperInvariant();
+            }));
+
+            Assert.Equal("external edit", File.ReadAllText(this.path));
+            this.AssertNoTemporaryFiles();
+        }
+
+        [Fact]
+        public void Preview_does_not_require_write_permission_or_create_temporary_files()
+        {
+            File.SetAttributes(this.path, File.GetAttributes(this.path) | FileAttributes.ReadOnly);
+            var request = new FileFormatRequest(this.path, false, false, NullFormatterLog.Instance);
+            Assert.Equal(FileFormatStatus.Updated, TextFileFormatPipeline.Format(request, true, text => text.ToUpperInvariant()).Status);
+
+            Assert.Equal(this.original, File.ReadAllBytes(this.path));
+            this.AssertNoTemporaryFiles();
         }
 
         [Fact]
@@ -89,6 +112,19 @@ namespace PNFmt.Tests.Formatter
             Assert.Throws<UnauthorizedAccessException>(() => FileReplacement.Write(this.path, this.original, output => output.WriteByte(1)));
 
             Assert.Equal(this.original, File.ReadAllBytes(this.path));
+            this.AssertNoTemporaryFiles();
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(3)]
+        [InlineData(20000)]
+        public void Replacement_writes_complete_output_and_removes_temporary_files(int length)
+        {
+            var formatted = Encoding.UTF8.GetBytes(new string('x', length));
+            FileReplacement.Write(this.path, this.original, output => output.Write(formatted));
+
+            Assert.Equal(formatted, File.ReadAllBytes(this.path));
             this.AssertNoTemporaryFiles();
         }
 
@@ -106,6 +142,27 @@ namespace PNFmt.Tests.Formatter
             }
 
             Assert.Equal(this.original, File.ReadAllBytes(this.path));
+            this.AssertNoTemporaryFiles();
+        }
+
+        [Fact]
+        public void Symbolic_link_is_not_replaced_or_followed_for_writing()
+        {
+            var link = Path.Combine(this.directory, "link.txt");
+            try
+            {
+                File.CreateSymbolicLink(link, this.path);
+            }
+            catch (IOException linkError) when (OperatingSystem.IsWindows() && (linkError.HResult & 0xFFFF) == 1314)
+            {
+                return; // Some Windows agents do not permit symbolic link creation.
+            }
+
+            var exception = Assert.Throws<IOException>(() => FileReplacement.Write(link, this.original, output => output.WriteByte(1)));
+            Assert.Contains("Format its target directly", exception.Message);
+            Assert.NotNull(new FileInfo(link).LinkTarget);
+            Assert.Equal(this.original, File.ReadAllBytes(this.path));
+            File.Delete(link);
             this.AssertNoTemporaryFiles();
         }
 
@@ -143,62 +200,6 @@ namespace PNFmt.Tests.Formatter
 
             Assert.Equal(originalRules, new FileInfo(this.path).GetAccessControl(AccessControlSections.Access).GetSecurityDescriptorSddlForm(AccessControlSections.Access));
             this.AssertNoTemporaryFiles();
-        }
-
-        [Fact]
-        public void Symbolic_link_is_not_replaced_or_followed_for_writing()
-        {
-            var link = Path.Combine(this.directory, "link.txt");
-            try
-            {
-                File.CreateSymbolicLink(link, this.path);
-            }
-            catch (IOException linkError) when (OperatingSystem.IsWindows() && (linkError.HResult & 0xFFFF) == 1314)
-            {
-                return; // Some Windows agents do not permit symbolic link creation.
-            }
-
-            var exception = Assert.Throws<IOException>(() => FileReplacement.Write(link, this.original, output => output.WriteByte(1)));
-            Assert.Contains("Format its target directly", exception.Message);
-            Assert.NotNull(new FileInfo(link).LinkTarget);
-            Assert.Equal(this.original, File.ReadAllBytes(this.path));
-            File.Delete(link);
-            this.AssertNoTemporaryFiles();
-        }
-
-        [Fact]
-        public void Pipeline_compares_against_the_bytes_used_for_formatting()
-        {
-            var request = new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance);
-            Assert.Throws<IOException>(() => TextFileFormatPipeline.Format(request, true, text =>
-            {
-                File.WriteAllText(this.path, "external edit");
-                return text.ToUpperInvariant();
-            }));
-
-            Assert.Equal("external edit", File.ReadAllText(this.path));
-            this.AssertNoTemporaryFiles();
-        }
-
-        [Fact]
-        public void Preview_does_not_require_write_permission_or_create_temporary_files()
-        {
-            File.SetAttributes(this.path, File.GetAttributes(this.path) | FileAttributes.ReadOnly);
-            var request = new FileFormatRequest(this.path, false, false, NullFormatterLog.Instance);
-            Assert.Equal(FileFormatStatus.Updated, TextFileFormatPipeline.Format(request, true, text => text.ToUpperInvariant()).Status);
-
-            Assert.Equal(this.original, File.ReadAllBytes(this.path));
-            this.AssertNoTemporaryFiles();
-        }
-
-        public void Dispose()
-        {
-            if (File.Exists(this.path))
-            {
-                File.SetAttributes(this.path, FileAttributes.Normal);
-            }
-
-            Directory.Delete(this.directory, recursive: true);
         }
 
         private void AssertNoTemporaryFiles() => Assert.Equal(new[] { this.path }, Directory.GetFiles(this.directory));

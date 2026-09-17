@@ -2,8 +2,10 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using PNFmt.Cli;
 using PNFmt.Tests.Snapshots;
+
 using Xunit;
 
 namespace PNFmt.Tests

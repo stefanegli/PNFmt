@@ -38,40 +38,27 @@ namespace PNFmt
         private bool? Enablement { get; }
         private string Selection { get; }
 
+        public IniEditorConfigSettings IniSettings => this.ini.Value;
         public ICsProjFormatSettings ProjectSettings => this.project.Value.IsActive || this.Selection is not null
             ? this.project.Value : new DefaultCsProjFormatSettings();
-        public IniEditorConfigSettings IniSettings => this.ini.Value;
         public ResxEditorConfigSettings ResourceSettings => this.resource.Value;
-
-        public static FileFormattingConfiguration Load(string targetFile, IFormatterLog log = null)
-            => new FileFormattingConfiguration(targetFile, log);
 
         public EditorConfigSettingResolver CreateSettingResolver()
             => new EditorConfigSettingResolver(this.Properties, this.targetFile, this.log);
 
-        public bool TryGetFormatter(FormatterRegistry registry, out IFileFormatter formatter)
+        public bool FormatLayout(string formatterName) => FormatLayout(this.Properties, formatterName);
+
+        public static bool FormatLayout(IReadOnlyDictionary<string, string> settings, string formatterName)
         {
-            formatter = null;
-            if (this.Enablement == false || string.Equals(this.Selection, "None", StringComparison.OrdinalIgnoreCase))
+            if (TryGet(settings, EditorConfigSettingNames.Format, out var format))
             {
-                return true;
+                return EditorConfigSettings.IsEnabled(format);
             }
 
-            if (this.Selection is null)
-            {
-                return registry.TryGetFormatter(this.targetFile, out formatter);
-            }
-
-            formatter = registry.Formatters.FirstOrDefault(
-                item => string.Equals(item.Name, this.Selection, StringComparison.OrdinalIgnoreCase));
-            if (formatter is null)
-            {
-                throw new InvalidDataException(
-                    $"Unknown formatter '{this.Selection}' in EditorConfig setting '{EditorConfigSettingNames.Formatter}'. "
-                    + $"Available formatters: {string.Join(", ", registry.Formatters.Select(item => item.Name))}, None.");
-            }
-
-            return true;
+            var legacyName = formatterName == "csharp" ? EditorConfigSettingNames.CSharpFormat
+                : formatterName == "xml" ? EditorConfigSettingNames.XmlFormat
+                : formatterName == "xaml" ? EditorConfigSettingNames.XamlFormat : null;
+            return legacyName is null || !TryGet(settings, legacyName, out format) || EditorConfigSettings.IsEnabled(format);
         }
 
         public bool IsActive(string formatterName, bool lint = false)
@@ -106,19 +93,32 @@ namespace PNFmt
             return active;
         }
 
-        public bool FormatLayout(string formatterName) => FormatLayout(this.Properties, formatterName);
+        public static FileFormattingConfiguration Load(string targetFile, IFormatterLog log = null)
+            => new FileFormattingConfiguration(targetFile, log);
 
-        public static bool FormatLayout(IReadOnlyDictionary<string, string> settings, string formatterName)
+        public bool TryGetFormatter(FormatterRegistry registry, out IFileFormatter formatter)
         {
-            if (TryGet(settings, EditorConfigSettingNames.Format, out var format))
+            formatter = null;
+            if (this.Enablement == false || string.Equals(this.Selection, "None", StringComparison.OrdinalIgnoreCase))
             {
-                return EditorConfigSettings.IsEnabled(format);
+                return true;
             }
 
-            var legacyName = formatterName == "csharp" ? EditorConfigSettingNames.CSharpFormat
-                : formatterName == "xml" ? EditorConfigSettingNames.XmlFormat
-                : formatterName == "xaml" ? EditorConfigSettingNames.XamlFormat : null;
-            return legacyName is null || !TryGet(settings, legacyName, out format) || EditorConfigSettings.IsEnabled(format);
+            if (this.Selection is null)
+            {
+                return registry.TryGetFormatter(this.targetFile, out formatter);
+            }
+
+            formatter = registry.Formatters.FirstOrDefault(
+                item => string.Equals(item.Name, this.Selection, StringComparison.OrdinalIgnoreCase));
+            if (formatter is null)
+            {
+                throw new InvalidDataException(
+                    $"Unknown formatter '{this.Selection}' in EditorConfig setting '{EditorConfigSettingNames.Formatter}'. "
+                    + $"Available formatters: {string.Join(", ", registry.Formatters.Select(item => item.Name))}, None.");
+            }
+
+            return true;
         }
 
         private static Encoding ResolveEncoding(IReadOnlyDictionary<string, string> settings)

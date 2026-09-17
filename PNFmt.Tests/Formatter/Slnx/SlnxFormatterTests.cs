@@ -4,30 +4,55 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Slnx
 {
     public sealed class SlnxFormatterTests
     {
-        [Theory]
-        [InlineData("\n")]
-        [InlineData("\r\n")]
-        [InlineData("\r")]
-        public void Layout_uses_literal_newlines_while_extension_carriage_returns_stay_escaped(string newline)
+        [Fact]
+        public void Dry_run_detects_changes_and_a_second_run_is_unchanged()
         {
-            var input = string.Join(newline, "<?xml version='1.0'?>", "<Solution>", "<Folder Name='/Source/'>",
-                "<Project Path='Z' />", "<Project Path='A' />", "</Folder>",
-                "<Extension>first&#xD;second</Extension>", "</Solution>") + newline;
-            var expected = string.Join(newline, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<Solution>", "  <Folder Name=\"/Source/\">",
-                "    <Project Path=\"A\" />", "    <Project Path=\"Z\" />", "  </Folder>",
-                "  <Extension>first&#xD;second</Extension>", "</Solution>") + newline;
+            using (var file = TemporaryFile.Create(
+                "<Solution><Project Path=\"Z.csproj\" /><Project Path=\"A.csproj\" /></Solution>"))
+            {
+                var formatter = new SlnxFormatter();
+                var log = NullFormatterLog.Instance;
+                var original = File.ReadAllText(file.Path);
 
-            var actual = SlnxDocumentFormatter.Format(input);
+                var dryRun = formatter.Format(new FileFormatRequest(file.Path, false, false, log));
 
-            Assert.Equal(expected, actual);
-            Assert.Equal("first\rsecond", XDocument.Parse(actual).Root.Element("Extension").Value);
-            Assert.Equal(actual, SlnxDocumentFormatter.Format(actual));
+                Assert.Equal(FileFormatStatus.Updated, dryRun.Status);
+                Assert.Equal(original, File.ReadAllText(file.Path));
+
+                var update = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
+                var secondRun = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
+
+                Assert.Equal(FileFormatStatus.Updated, update.Status);
+                Assert.Equal(FileFormatStatus.Unchanged, secondRun.Status);
+            }
+        }
+
+        [Theory]
+        [InlineData(null)]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Explicit_true_setting_is_required(string settingValue)
+        {
+            using (var file = TemporaryFile.Create(
+                "<Solution><Project Path=\"Z.csproj\" />"
+                + "<Project Path=\"A.csproj\" /></Solution>",
+                settingValue))
+            {
+                var formatter = new SlnxFormatter();
+                var original = File.ReadAllText(file.Path);
+                var result = formatter.Format(
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(original, File.ReadAllText(file.Path));
+            }
         }
 
         [Theory]
@@ -54,6 +79,66 @@ namespace PNFmt.Tests.Formatter.Slnx
                 Assert.Equal(FileFormatStatus.Unchanged,
                     formatter.Format(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
             }
+        }
+
+        [Fact]
+        public void Invalid_solution_root_is_rejected_without_writing()
+        {
+            using (var file = TemporaryFile.Create("<Project />"))
+            {
+                var formatter = new SlnxFormatter();
+                var request = new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance);
+
+                Assert.Throws<InvalidDataException>(() => formatter.Format(request));
+                Assert.Equal("<Project />", File.ReadAllText(file.Path));
+            }
+        }
+
+        [Theory]
+        [InlineData("\n")]
+        [InlineData("\r\n")]
+        [InlineData("\r")]
+        public void Layout_uses_literal_newlines_while_extension_carriage_returns_stay_escaped(string newline)
+        {
+            var input = string.Join(newline, "<?xml version='1.0'?>", "<Solution>", "<Folder Name='/Source/'>",
+                "<Project Path='Z' />", "<Project Path='A' />", "</Folder>",
+                "<Extension>first&#xD;second</Extension>", "</Solution>") + newline;
+            var expected = string.Join(newline, "<?xml version=\"1.0\" encoding=\"utf-8\"?>", "<Solution>", "  <Folder Name=\"/Source/\">",
+                "    <Project Path=\"A\" />", "    <Project Path=\"Z\" />", "  </Folder>",
+                "  <Extension>first&#xD;second</Extension>", "</Solution>") + newline;
+
+            var actual = SlnxDocumentFormatter.Format(input);
+
+            Assert.Equal(expected, actual);
+            Assert.Equal("first\rsecond", XDocument.Parse(actual).Root.Element("Extension").Value);
+            Assert.Equal(actual, SlnxDocumentFormatter.Format(actual));
+        }
+
+        [Theory]
+        [InlineData("", "", "Project", "Path")]
+        [InlineData("<Folder Name='/'>", "</Folder>", "Project", "Path")]
+        [InlineData("<Configurations>", "</Configurations>", "Platform", "Name")]
+        [InlineData("<Configurations><ProjectType Extension='.csproj'>", "</ProjectType></Configurations>", "BuildType", "Solution")]
+        [InlineData("<Project Path='App.csproj'>", "</Project>", "BuildType", "Solution")]
+        [InlineData("<Properties Name='Settings'>", "</Properties>", "Property", "Name")]
+        public void Namespaced_elements_with_known_local_names_remain_sort_barriers(string prefix, string suffix, string elementName, string attribute)
+        {
+            var input = "<Solution xmlns:e='urn:extension'>" + prefix
+                + "<" + elementName + " " + attribute + "='Z' />"
+                + "<e:" + elementName + " " + attribute + "='M'><Project Path='Z' /><Project Path='A' /></e:" + elementName + ">"
+                + "<" + elementName + " " + attribute + "='B' />"
+                + "<" + elementName + " " + attribute + "='A' />"
+                + suffix + "</Solution>";
+            var extensionName = XName.Get(elementName, "urn:extension");
+            var originalExtension = XDocument.Parse(input).Descendants(extensionName).Single();
+
+            var formatted = SlnxDocumentFormatter.Format(input);
+            var extension = XDocument.Parse(formatted).Descendants(extensionName).Single();
+
+            Assert.Equal(new[] { "Z", "M", "A", "B" },
+                extension.Parent.Elements().Select(element => (string)element.Attribute(attribute)));
+            Assert.True(XNode.DeepEquals(originalExtension, extension));
+            Assert.Equal(formatted, SlnxDocumentFormatter.Format(formatted));
         }
 
         [Fact]
@@ -129,90 +214,6 @@ namespace PNFmt.Tests.Formatter.Slnx
                 new[] { "Project:Z.csproj", "Extension:keep", "Project:A.csproj", "Project:B.csproj" },
                 root.Elements().Select(element =>
                     $"{element.Name.LocalName}:{(string)(element.Attribute("Path") ?? element.Attribute("Value"))}"));
-        }
-
-        [Theory]
-        [InlineData("", "", "Project", "Path")]
-        [InlineData("<Folder Name='/'>", "</Folder>", "Project", "Path")]
-        [InlineData("<Configurations>", "</Configurations>", "Platform", "Name")]
-        [InlineData("<Configurations><ProjectType Extension='.csproj'>", "</ProjectType></Configurations>", "BuildType", "Solution")]
-        [InlineData("<Project Path='App.csproj'>", "</Project>", "BuildType", "Solution")]
-        [InlineData("<Properties Name='Settings'>", "</Properties>", "Property", "Name")]
-        public void Namespaced_elements_with_known_local_names_remain_sort_barriers(string prefix, string suffix, string elementName, string attribute)
-        {
-            var input = "<Solution xmlns:e='urn:extension'>" + prefix
-                + "<" + elementName + " " + attribute + "='Z' />"
-                + "<e:" + elementName + " " + attribute + "='M'><Project Path='Z' /><Project Path='A' /></e:" + elementName + ">"
-                + "<" + elementName + " " + attribute + "='B' />"
-                + "<" + elementName + " " + attribute + "='A' />"
-                + suffix + "</Solution>";
-            var extensionName = XName.Get(elementName, "urn:extension");
-            var originalExtension = XDocument.Parse(input).Descendants(extensionName).Single();
-
-            var formatted = SlnxDocumentFormatter.Format(input);
-            var extension = XDocument.Parse(formatted).Descendants(extensionName).Single();
-
-            Assert.Equal(new[] { "Z", "M", "A", "B" },
-                extension.Parent.Elements().Select(element => (string)element.Attribute(attribute)));
-            Assert.True(XNode.DeepEquals(originalExtension, extension));
-            Assert.Equal(formatted, SlnxDocumentFormatter.Format(formatted));
-        }
-
-        [Fact]
-        public void Dry_run_detects_changes_and_a_second_run_is_unchanged()
-        {
-            using (var file = TemporaryFile.Create(
-                "<Solution><Project Path=\"Z.csproj\" /><Project Path=\"A.csproj\" /></Solution>"))
-            {
-                var formatter = new SlnxFormatter();
-                var log = NullFormatterLog.Instance;
-                var original = File.ReadAllText(file.Path);
-
-                var dryRun = formatter.Format(new FileFormatRequest(file.Path, false, false, log));
-
-                Assert.Equal(FileFormatStatus.Updated, dryRun.Status);
-                Assert.Equal(original, File.ReadAllText(file.Path));
-
-                var update = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
-                var secondRun = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
-
-                Assert.Equal(FileFormatStatus.Updated, update.Status);
-                Assert.Equal(FileFormatStatus.Unchanged, secondRun.Status);
-            }
-        }
-
-        [Fact]
-        public void Invalid_solution_root_is_rejected_without_writing()
-        {
-            using (var file = TemporaryFile.Create("<Project />"))
-            {
-                var formatter = new SlnxFormatter();
-                var request = new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance);
-
-                Assert.Throws<InvalidDataException>(() => formatter.Format(request));
-                Assert.Equal("<Project />", File.ReadAllText(file.Path));
-            }
-        }
-
-        [Theory]
-        [InlineData(null)]
-        [InlineData("false")]
-        [InlineData("invalid")]
-        public void Explicit_true_setting_is_required(string settingValue)
-        {
-            using (var file = TemporaryFile.Create(
-                "<Solution><Project Path=\"Z.csproj\" />"
-                + "<Project Path=\"A.csproj\" /></Solution>",
-                settingValue))
-            {
-                var formatter = new SlnxFormatter();
-                var original = File.ReadAllText(file.Path);
-                var result = formatter.Format(
-                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
-
-                Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                Assert.Equal(original, File.ReadAllText(file.Path));
-            }
         }
 
         private sealed class TemporaryFile : IDisposable

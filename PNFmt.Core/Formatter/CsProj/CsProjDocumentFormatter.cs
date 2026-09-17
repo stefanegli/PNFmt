@@ -27,6 +27,68 @@ namespace PNFmt
                 (text, _) => this.Format(text, request.FilePath, request.Lint, formatLayout), xml: true);
         }
 
+        private static string ApplyTopLevelGroupSpacing(
+            string formattedText,
+            ICsProjFormatSettings settings,
+            string newLineChars,
+            string indentChars)
+        {
+            if (settings.EmptyLinesBetweenGroups <= 0 || string.IsNullOrEmpty(formattedText))
+            {
+                return formattedText;
+            }
+
+            var lines = formattedText.Split(new[] { newLineChars }, StringSplitOptions.None);
+            if (lines.Length < 3)
+            {
+                return formattedText;
+            }
+
+            var outputLines = new List<string>(lines.Length + 16);
+            for (var i = 0; i < lines.Length; i++)
+            {
+                outputLines.Add(lines[i]);
+                if (i >= lines.Length - 1)
+                {
+                    continue;
+                }
+
+                if (ShouldSeparateTopLevelGroups(lines[i], lines[i + 1], indentChars))
+                {
+                    for (var j = 0; j < settings.EmptyLinesBetweenGroups; j++)
+                    {
+                        outputLines.Add(string.Empty);
+                    }
+                }
+            }
+
+            return string.Join(newLineChars, outputLines);
+        }
+
+        private static bool CanSafelySortItemGroup(XElement itemGroup, string elementName)
+        {
+            var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var element in itemGroup.Elements().Where(e => e.Name.LocalName == elementName))
+            {
+                var include = (string)element.Attribute("Include");
+                if (string.IsNullOrWhiteSpace(include)
+                    // Expressions, globs, lists, and escapes can expand to duplicate
+                    // identities even when the Include strings differ.
+                    || include.IndexOf("$(", StringComparison.Ordinal) >= 0
+                    || include.IndexOfAny(new[] { '*', '?', ';', '%' }) >= 0
+                    || element.Attribute("Update") != null
+                    || element.Attribute("Remove") != null
+                    || HasItemReference(element.Value)
+                    || element.DescendantsAndSelf().Attributes().Any(attribute => HasItemReference(attribute.Value))
+                    || !identities.Add(include))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private DocumentFormatResult Format(string originalText, string projectPath, bool lint, bool formatLayout)
         {
             var document = XDocument.Parse(originalText, LoadOptions.SetLineInfo
@@ -93,94 +155,65 @@ namespace PNFmt
             }
         }
 
-        private static string ApplyTopLevelGroupSpacing(
-            string formattedText,
-            ICsProjFormatSettings settings,
-            string newLineChars,
-            string indentChars)
+        private static int GetPackageGroupOrder(XElement element)
         {
-            if (settings.EmptyLinesBetweenGroups <= 0 || string.IsNullOrEmpty(formattedText))
+            if (HasCondition(element))
             {
-                return formattedText;
+                return 3;
             }
 
-            var lines = formattedText.Split(new[] { newLineChars }, StringSplitOptions.None);
-            if (lines.Length < 3)
+            if (HasMetadata(element, "PrivateAssets"))
             {
-                return formattedText;
+                return 2;
             }
 
-            var outputLines = new List<string>(lines.Length + 16);
-            for (var i = 0; i < lines.Length; i++)
+            if (HasMetadata(element, "IncludeAssets"))
             {
-                outputLines.Add(lines[i]);
-                if (i >= lines.Length - 1)
-                {
-                    continue;
-                }
-
-                if (ShouldSeparateTopLevelGroups(lines[i], lines[i + 1], indentChars))
-                {
-                    for (var j = 0; j < settings.EmptyLinesBetweenGroups; j++)
-                    {
-                        outputLines.Add(string.Empty);
-                    }
-                }
+                return 1;
             }
 
-            return string.Join(newLineChars, outputLines);
+            return 0;
         }
 
-        private static bool ShouldSeparateTopLevelGroups(string currentLine, string nextLine, string indentChars)
+        private static string GetPackageSortKey(XElement element)
         {
-            if (!TryGetTopLevelTagText(currentLine, indentChars, out var currentTagText))
-            {
-                return false;
-            }
-
-            if (!TryGetTopLevelTagText(nextLine, indentChars, out var nextTagText))
-            {
-                return false;
-            }
-
-            if (!(currentTagText.StartsWith("</", StringComparison.Ordinal) || currentTagText.EndsWith("/>", StringComparison.Ordinal)))
-            {
-                return false;
-            }
-
-            if (!nextTagText.StartsWith("<", StringComparison.Ordinal) || nextTagText.StartsWith("</", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            if (nextTagText.StartsWith("<?", StringComparison.Ordinal) || nextTagText.StartsWith("<!--", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            return true;
+            return (string)element.Attribute("Include")
+                ?? (string)element.Attribute("Update")
+                ?? element.Name.LocalName
+                ?? string.Empty;
         }
 
-        private static bool TryGetTopLevelTagText(string line, string indentChars, out string tagText)
+        private static bool HasAttributeValue(XElement element, string attributeLocalName)
         {
-            tagText = null;
-            if (string.IsNullOrWhiteSpace(line))
+            var attribute = element.Attributes()
+                .FirstOrDefault(a => a.Name.LocalName == attributeLocalName);
+            return attribute != null && !string.IsNullOrWhiteSpace(attribute.Value);
+        }
+
+        private static bool HasCondition(XElement element)
+        {
+            var condition = element.Attribute("Condition");
+            return condition != null && !string.IsNullOrWhiteSpace(condition.Value);
+        }
+
+        private static bool HasItemReference(string text)
+        {
+            // Conditions, metadata values, and Exclude can depend on items defined
+            // earlier in the group just as Include can.
+            return text.IndexOf("@(", StringComparison.Ordinal) >= 0
+                || text.IndexOf("%(", StringComparison.Ordinal) >= 0;
+        }
+
+        private static bool HasMetadata(XElement element, string name)
+        {
+            var attribute = element.Attribute(name);
+            if (attribute != null && !string.IsNullOrWhiteSpace(attribute.Value))
             {
-                return false;
+                return true;
             }
 
-            if (!line.StartsWith(indentChars, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            if (line.StartsWith(indentChars + indentChars, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            tagText = line.Substring(indentChars.Length).Trim();
-            return tagText.Length > 0;
+            var child = element.Elements().FirstOrDefault(e => e.Name.LocalName == name);
+            return child != null && !string.IsNullOrWhiteSpace(child.Value);
         }
 
         private static bool IsProjectDocument(XDocument document)
@@ -211,11 +244,85 @@ namespace PNFmt
                 .Any(e => HasAttributeValue(e, "Sdk"));
         }
 
-        private static bool HasAttributeValue(XElement element, string attributeLocalName)
+        private static void MoveUnexpectedProjectElementsToEnd(XDocument document)
         {
-            var attribute = element.Attributes()
-                .FirstOrDefault(a => a.Name.LocalName == attributeLocalName);
-            return attribute != null && !string.IsNullOrWhiteSpace(attribute.Value);
+            if (document.Root is null)
+            {
+                return;
+            }
+
+            var keptNodes = new List<XNode>();
+            var unexpectedElements = new List<XElement>();
+
+            foreach (var node in document.Root.Nodes())
+            {
+                if (node is XElement element)
+                {
+                    if (ProjectStructure.KnownTopLevelElements.Contains(element.Name.LocalName))
+                    {
+                        keptNodes.Add(element);
+                    }
+                    else
+                    {
+                        unexpectedElements.Add(element);
+                    }
+                }
+                else
+                {
+                    keptNodes.Add(node);
+                }
+            }
+
+            if (unexpectedElements.Count == 0)
+            {
+                return;
+            }
+
+            keptNodes.AddRange(unexpectedElements);
+            document.Root.ReplaceNodes(keptNodes);
+        }
+
+        private static void ReplaceNodes(XElement parent, List<ElementGroup> sortedGroups, List<XNode> trailingNodes)
+        {
+            var newNodes = new List<XNode>();
+            foreach (var group in sortedGroups)
+            {
+                newNodes.AddRange(group.LeadingNodes);
+                newNodes.Add(group.Element);
+            }
+
+            newNodes.AddRange(trailingNodes);
+            parent.ReplaceNodes(newNodes);
+        }
+
+        private static bool ShouldSeparateTopLevelGroups(string currentLine, string nextLine, string indentChars)
+        {
+            if (!TryGetTopLevelTagText(currentLine, indentChars, out var currentTagText))
+            {
+                return false;
+            }
+
+            if (!TryGetTopLevelTagText(nextLine, indentChars, out var nextTagText))
+            {
+                return false;
+            }
+
+            if (!(currentTagText.StartsWith("</", StringComparison.Ordinal) || currentTagText.EndsWith("/>", StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
+            if (!nextTagText.StartsWith("<", StringComparison.Ordinal) || nextTagText.StartsWith("</", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (nextTagText.StartsWith("<?", StringComparison.Ordinal) || nextTagText.StartsWith("<!--", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         private static List<ElementGroup> SortElementGroupsWithDependencies(List<ElementGroup> groups)
@@ -268,6 +375,81 @@ namespace PNFmt
                 .Select(index => groups[index]).ToList();
         }
 
+        private static void SortItemGroupElements(XElement itemGroup, string elementName)
+        {
+            if (!TryCollectElementGroups(itemGroup, e => e.Name.LocalName == elementName, out var groups, out var trailingNodes))
+            {
+                return;
+            }
+
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var sortedGroups = groups
+                .Select((group, index) => new { group, index })
+                .OrderBy(x => GetPackageSortKey(x.group.Element), comparer)
+                .ThenBy(x => x.index)
+                .Select(x => x.group)
+                .ToList();
+
+            ReplaceNodes(itemGroup, sortedGroups, trailingNodes);
+        }
+
+        private static void SortItemGroups(XDocument document, HashSet<string> sortableItemTypes)
+        {
+            foreach (var itemGroup in document.Root.Elements().Where(e => e.Name.LocalName == "ItemGroup"))
+            {
+                var elementNames = itemGroup.Elements()
+                    .Select(e => e.Name.LocalName)
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+                if (elementNames.Count != 1)
+                {
+                    continue;
+                }
+
+                var elementName = elementNames[0];
+                if (!sortableItemTypes.Contains("*") && !sortableItemTypes.Contains(elementName))
+                {
+                    continue;
+                }
+
+                if (!CanSafelySortItemGroup(itemGroup, elementName))
+                {
+                    continue;
+                }
+
+                switch (elementName)
+                {
+                    case "PackageReference":
+                        SortPackageReferencesInGroup(itemGroup);
+                        break;
+                    case "ProjectReference":
+                    case "Reference":
+                    default:
+                        SortItemGroupElements(itemGroup, elementName);
+                        break;
+                }
+            }
+        }
+
+        private static void SortPackageReferencesInGroup(XElement itemGroup)
+        {
+            if (!TryCollectElementGroups(itemGroup, e => e.Name.LocalName == "PackageReference", out var groups, out var trailingNodes))
+            {
+                return;
+            }
+
+            var comparer = StringComparer.OrdinalIgnoreCase;
+            var sortedGroups = groups
+                .Select((group, index) => new { group, index })
+                .OrderBy(x => GetPackageGroupOrder(x.group.Element))
+                .ThenBy(x => GetPackageSortKey(x.group.Element), comparer)
+                .ThenBy(x => x.index)
+                .Select(x => x.group)
+                .ToList();
+
+            ReplaceNodes(itemGroup, sortedGroups, trailingNodes);
+        }
+
         private static void SortPropertyGroups(XDocument document)
         {
             foreach (var propertyGroup in document.Root.Elements().Where(e => e.Name.LocalName == "PropertyGroup"))
@@ -309,197 +491,6 @@ namespace PNFmt
             }
         }
 
-        private static void MoveUnexpectedProjectElementsToEnd(XDocument document)
-        {
-            if (document.Root is null)
-            {
-                return;
-            }
-
-            var keptNodes = new List<XNode>();
-            var unexpectedElements = new List<XElement>();
-
-            foreach (var node in document.Root.Nodes())
-            {
-                if (node is XElement element)
-                {
-                    if (ProjectStructure.KnownTopLevelElements.Contains(element.Name.LocalName))
-                    {
-                        keptNodes.Add(element);
-                    }
-                    else
-                    {
-                        unexpectedElements.Add(element);
-                    }
-                }
-                else
-                {
-                    keptNodes.Add(node);
-                }
-            }
-
-            if (unexpectedElements.Count == 0)
-            {
-                return;
-            }
-
-            keptNodes.AddRange(unexpectedElements);
-            document.Root.ReplaceNodes(keptNodes);
-        }
-
-        private static void SortItemGroups(XDocument document, HashSet<string> sortableItemTypes)
-        {
-            foreach (var itemGroup in document.Root.Elements().Where(e => e.Name.LocalName == "ItemGroup"))
-            {
-                var elementNames = itemGroup.Elements()
-                    .Select(e => e.Name.LocalName)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .ToList();
-                if (elementNames.Count != 1)
-                {
-                    continue;
-                }
-
-                var elementName = elementNames[0];
-                if (!sortableItemTypes.Contains("*") && !sortableItemTypes.Contains(elementName))
-                {
-                    continue;
-                }
-
-                if (!CanSafelySortItemGroup(itemGroup, elementName))
-                {
-                    continue;
-                }
-
-                switch (elementName)
-                {
-                    case "PackageReference":
-                        SortPackageReferencesInGroup(itemGroup);
-                        break;
-                    case "ProjectReference":
-                    case "Reference":
-                    default:
-                        SortItemGroupElements(itemGroup, elementName);
-                        break;
-                }
-            }
-        }
-
-        private static bool CanSafelySortItemGroup(XElement itemGroup, string elementName)
-        {
-            var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var element in itemGroup.Elements().Where(e => e.Name.LocalName == elementName))
-            {
-                var include = (string)element.Attribute("Include");
-                if (string.IsNullOrWhiteSpace(include)
-                    // Expressions, globs, lists, and escapes can expand to duplicate
-                    // identities even when the Include strings differ.
-                    || include.IndexOf("$(", StringComparison.Ordinal) >= 0
-                    || include.IndexOfAny(new[] { '*', '?', ';', '%' }) >= 0
-                    || element.Attribute("Update") != null
-                    || element.Attribute("Remove") != null
-                    || HasItemReference(element.Value)
-                    || element.DescendantsAndSelf().Attributes().Any(attribute => HasItemReference(attribute.Value))
-                    || !identities.Add(include))
-                {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        private static bool HasItemReference(string text)
-        {
-            // Conditions, metadata values, and Exclude can depend on items defined
-            // earlier in the group just as Include can.
-            return text.IndexOf("@(", StringComparison.Ordinal) >= 0
-                || text.IndexOf("%(", StringComparison.Ordinal) >= 0;
-        }
-
-        private static void SortPackageReferencesInGroup(XElement itemGroup)
-        {
-            if (!TryCollectElementGroups(itemGroup, e => e.Name.LocalName == "PackageReference", out var groups, out var trailingNodes))
-            {
-                return;
-            }
-
-            var comparer = StringComparer.OrdinalIgnoreCase;
-            var sortedGroups = groups
-                .Select((group, index) => new { group, index })
-                .OrderBy(x => GetPackageGroupOrder(x.group.Element))
-                .ThenBy(x => GetPackageSortKey(x.group.Element), comparer)
-                .ThenBy(x => x.index)
-                .Select(x => x.group)
-                .ToList();
-
-            ReplaceNodes(itemGroup, sortedGroups, trailingNodes);
-        }
-
-        private static void SortItemGroupElements(XElement itemGroup, string elementName)
-        {
-            if (!TryCollectElementGroups(itemGroup, e => e.Name.LocalName == elementName, out var groups, out var trailingNodes))
-            {
-                return;
-            }
-
-            var comparer = StringComparer.OrdinalIgnoreCase;
-            var sortedGroups = groups
-                .Select((group, index) => new { group, index })
-                .OrderBy(x => GetPackageSortKey(x.group.Element), comparer)
-                .ThenBy(x => x.index)
-                .Select(x => x.group)
-                .ToList();
-
-            ReplaceNodes(itemGroup, sortedGroups, trailingNodes);
-        }
-
-        private static string GetPackageSortKey(XElement element)
-        {
-            return (string)element.Attribute("Include")
-                ?? (string)element.Attribute("Update")
-                ?? element.Name.LocalName
-                ?? string.Empty;
-        }
-
-        private static int GetPackageGroupOrder(XElement element)
-        {
-            if (HasCondition(element))
-            {
-                return 3;
-            }
-
-            if (HasMetadata(element, "PrivateAssets"))
-            {
-                return 2;
-            }
-
-            if (HasMetadata(element, "IncludeAssets"))
-            {
-                return 1;
-            }
-
-            return 0;
-        }
-
-        private static bool HasCondition(XElement element)
-        {
-            var condition = element.Attribute("Condition");
-            return condition != null && !string.IsNullOrWhiteSpace(condition.Value);
-        }
-
-        private static bool HasMetadata(XElement element, string name)
-        {
-            var attribute = element.Attribute(name);
-            if (attribute != null && !string.IsNullOrWhiteSpace(attribute.Value))
-            {
-                return true;
-            }
-
-            var child = element.Elements().FirstOrDefault(e => e.Name.LocalName == name);
-            return child != null && !string.IsNullOrWhiteSpace(child.Value);
-        }
-
         private static bool TryCollectElementGroups(
             XElement parent,
             Func<XElement, bool> isTargetElement,
@@ -527,17 +518,26 @@ namespace PNFmt
             return groups.Count > 0;
         }
 
-        private static void ReplaceNodes(XElement parent, List<ElementGroup> sortedGroups, List<XNode> trailingNodes)
+        private static bool TryGetTopLevelTagText(string line, string indentChars, out string tagText)
         {
-            var newNodes = new List<XNode>();
-            foreach (var group in sortedGroups)
+            tagText = null;
+            if (string.IsNullOrWhiteSpace(line))
             {
-                newNodes.AddRange(group.LeadingNodes);
-                newNodes.Add(group.Element);
+                return false;
             }
 
-            newNodes.AddRange(trailingNodes);
-            parent.ReplaceNodes(newNodes);
+            if (!line.StartsWith(indentChars, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            if (line.StartsWith(indentChars + indentChars, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            tagText = line.Substring(indentChars.Length).Trim();
+            return tagText.Length > 0;
         }
 
         private sealed class ElementGroup

@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using LibGit2Sharp;
 
 namespace PNFmt.Cli
@@ -21,6 +22,16 @@ namespace PNFmt.Cli
         }
 
         public string RootPath { get; }
+
+        public bool Contains(string path)
+        {
+            var relativePath = Path.GetRelativePath(this.RootPath, Path.GetFullPath(path));
+            return !Path.IsPathRooted(relativePath)
+                && !string.Equals(relativePath, "..", StringComparison.Ordinal)
+                && !relativePath.StartsWith(
+                    ".." + Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal);
+        }
 
         public static GitRepositoryContext Discover(
             string startPath,
@@ -62,16 +73,6 @@ namespace PNFmt.Cli
             }
         }
 
-        public bool Contains(string path)
-        {
-            var relativePath = Path.GetRelativePath(this.RootPath, Path.GetFullPath(path));
-            return !Path.IsPathRooted(relativePath)
-                && !string.Equals(relativePath, "..", StringComparison.Ordinal)
-                && !relativePath.StartsWith(
-                    ".." + Path.DirectorySeparatorChar,
-                    StringComparison.Ordinal);
-        }
-
         public IReadOnlyCollection<string> GetChangedFiles(string directory, bool recursive)
         {
             var fullDirectory = Path.GetFullPath(directory);
@@ -84,21 +85,6 @@ namespace PNFmt.Cli
         public bool IsChanged(string file)
         {
             return this.changedFiles.Contains(Path.GetFullPath(file));
-        }
-
-        private static bool IsWithinDirectory(string file, string directory, bool recursive)
-        {
-            var relativePath = Path.GetRelativePath(directory, file);
-            if (Path.IsPathRooted(relativePath)
-                || string.Equals(relativePath, "..", StringComparison.Ordinal)
-                || relativePath.StartsWith(
-                    ".." + Path.DirectorySeparatorChar,
-                    StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            return recursive || string.IsNullOrEmpty(Path.GetDirectoryName(relativePath));
         }
 
         private static IReadOnlyCollection<string> GetChangedFiles(
@@ -116,6 +102,21 @@ namespace PNFmt.Cli
                     && (entry.State & FileStatus.Ignored) == 0)
                 .Select(entry => Path.Combine(rootPath, NormalizeGitPath(entry.FilePath)))
                 .ToArray();
+        }
+
+        private static bool IsWithinDirectory(string file, string directory, bool recursive)
+        {
+            var relativePath = Path.GetRelativePath(directory, file);
+            if (Path.IsPathRooted(relativePath)
+                || string.Equals(relativePath, "..", StringComparison.Ordinal)
+                || relativePath.StartsWith(
+                    ".." + Path.DirectorySeparatorChar,
+                    StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return recursive || string.IsNullOrEmpty(Path.GetDirectoryName(relativePath));
         }
 
         private static string NormalizeGitPath(string path)

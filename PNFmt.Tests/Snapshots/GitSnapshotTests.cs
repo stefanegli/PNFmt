@@ -2,7 +2,9 @@
 
 using System;
 using System.IO;
+
 using LibGit2Sharp;
+
 using Xunit;
 using Xunit.Sdk;
 
@@ -11,27 +13,36 @@ namespace PNFmt.Tests.Snapshots
     public sealed class GitSnapshotTests
     {
         [Fact]
-        public void Snapshot_path_mirrors_namespace_class_method_and_case()
+        public void Changed_snapshot_is_overwritten_and_reports_branch_diff()
         {
-            var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "repository"));
+            using (var repository = TemporaryGitRepository.Create("approved\n"))
+            {
+                var exception = Assert.Throws<XunitException>(
+                    () => GitSnapshot.Verify(repository.SnapshotPath, "current\n"));
 
-            var path = GitSnapshot.BuildSnapshotPath(
-                root,
-                typeof(GitSnapshotTests),
-                "Example_test",
-                "folder/example.txt");
+                Assert.Equal("current\n", File.ReadAllText(repository.SnapshotPath));
+                Assert.Contains("differs from the current branch", exception.Message);
+                Assert.Contains("-approved", exception.Message);
+                Assert.Contains("+current", exception.Message);
+            }
+        }
 
-            Assert.Equal(
-                Path.Combine(
-                    root,
-                    "Snapshots",
-                    "PNFmt.Tests",
-                    "Snapshots",
-                    nameof(GitSnapshotTests),
-                    "Example_test",
-                    "folder",
-                    "example.txt"),
-                path);
+        [Fact]
+        public void Changes_after_staging_are_compared_with_the_index()
+        {
+            using (var repository = TemporaryGitRepository.Create("committed\n"))
+            {
+                File.WriteAllText(repository.SnapshotPath, "staged\n");
+                repository.StageSnapshot();
+
+                var exception = Assert.Throws<XunitException>(
+                    () => GitSnapshot.Verify(repository.SnapshotPath, "current\n"));
+
+                Assert.Contains("differs from the staged snapshot", exception.Message);
+                Assert.Contains("-staged", exception.Message);
+                Assert.Contains("+current", exception.Message);
+                Assert.DoesNotContain("committed", exception.Message);
+            }
         }
 
         [Fact]
@@ -57,34 +68,40 @@ namespace PNFmt.Tests.Snapshots
         }
 
         [Fact]
-        public void Changed_snapshot_is_overwritten_and_reports_branch_diff()
+        public void New_snapshot_fails_until_it_is_staged()
         {
-            using (var repository = TemporaryGitRepository.Create("approved\n"))
+            using (var repository = TemporaryGitRepository.CreateWithoutSnapshot())
             {
-                var exception = Assert.Throws<XunitException>(
-                    () => GitSnapshot.Verify(repository.SnapshotPath, "current\n"));
+                Assert.Throws<XunitException>(
+                    () => GitSnapshot.Verify(repository.SnapshotPath, "created\n"));
 
-                Assert.Equal("current\n", File.ReadAllText(repository.SnapshotPath));
-                Assert.Contains("differs from the current branch", exception.Message);
-                Assert.Contains("-approved", exception.Message);
-                Assert.Contains("+current", exception.Message);
+                repository.StageSnapshot();
+                GitSnapshot.Verify(repository.SnapshotPath, "created\n");
             }
         }
 
         [Fact]
-        public void Unstaged_edits_are_not_used_as_the_approval_baseline()
+        public void Snapshot_path_mirrors_namespace_class_method_and_case()
         {
-            using (var repository = TemporaryGitRepository.Create("committed\n"))
-            {
-                File.WriteAllText(repository.SnapshotPath, "unstaged\n");
+            var root = Path.GetFullPath(Path.Combine(Path.GetTempPath(), "repository"));
 
-                var exception = Assert.Throws<XunitException>(
-                    () => GitSnapshot.Verify(repository.SnapshotPath, "current\n"));
+            var path = GitSnapshot.BuildSnapshotPath(
+                root,
+                typeof(GitSnapshotTests),
+                "Example_test",
+                "folder/example.txt");
 
-                Assert.Contains("-committed", exception.Message);
-                Assert.Contains("+current", exception.Message);
-                Assert.DoesNotContain("unstaged", exception.Message);
-            }
+            Assert.Equal(
+                Path.Combine(
+                    root,
+                    "Snapshots",
+                    "PNFmt.Tests",
+                    "Snapshots",
+                    nameof(GitSnapshotTests),
+                    "Example_test",
+                    "folder",
+                    "example.txt"),
+                path);
         }
 
         [Fact]
@@ -103,33 +120,18 @@ namespace PNFmt.Tests.Snapshots
         }
 
         [Fact]
-        public void Changes_after_staging_are_compared_with_the_index()
+        public void Unstaged_edits_are_not_used_as_the_approval_baseline()
         {
             using (var repository = TemporaryGitRepository.Create("committed\n"))
             {
-                File.WriteAllText(repository.SnapshotPath, "staged\n");
-                repository.StageSnapshot();
+                File.WriteAllText(repository.SnapshotPath, "unstaged\n");
 
                 var exception = Assert.Throws<XunitException>(
                     () => GitSnapshot.Verify(repository.SnapshotPath, "current\n"));
 
-                Assert.Contains("differs from the staged snapshot", exception.Message);
-                Assert.Contains("-staged", exception.Message);
+                Assert.Contains("-committed", exception.Message);
                 Assert.Contains("+current", exception.Message);
-                Assert.DoesNotContain("committed", exception.Message);
-            }
-        }
-
-        [Fact]
-        public void New_snapshot_fails_until_it_is_staged()
-        {
-            using (var repository = TemporaryGitRepository.CreateWithoutSnapshot())
-            {
-                Assert.Throws<XunitException>(
-                    () => GitSnapshot.Verify(repository.SnapshotPath, "created\n"));
-
-                repository.StageSnapshot();
-                GitSnapshot.Verify(repository.SnapshotPath, "created\n");
+                Assert.DoesNotContain("unstaged", exception.Message);
             }
         }
 

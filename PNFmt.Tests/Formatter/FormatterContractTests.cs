@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter
@@ -32,26 +33,6 @@ namespace PNFmt.Tests.Formatter
         public static IEnumerable<object[]> ActivationCases => FinalNewlineCases.Select(row => row.Take(3).ToArray());
 
         [Theory]
-        [MemberData(nameof(ActivationCases))]
-        public void Shared_settings_follow_the_documented_activation_rules(string name, string fileName, string input)
-        {
-            using (var directory = new TestDirectory())
-            {
-                var path = directory.Write(fileName, input);
-                var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == name);
-                foreach (var setting in new[] { "indent_size = 2", "end_of_line = lf", "insert_final_newline = true", "pnfmt_sort_entries = false" })
-                {
-                    directory.Write(".editorconfig", "root = true\n[*]\n" + setting + "\n");
-                    var active = name == "csproj" || (name == "resx" && setting == "pnfmt_sort_entries = false");
-                    var result = formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance));
-                    Assert.Equal(!active, result.Status == FileFormatStatus.Skipped);
-                    Assert.Empty(result.Diagnostics);
-                    Assert.Equal(input, File.ReadAllText(path));
-                }
-            }
-        }
-
-        [Theory]
         [MemberData(nameof(FinalNewlineCases))]
         public void Final_newline_behavior_remains_compatible(
             string name, string fileName, string input, string activation, bool? whenFalse, bool? whenMissing)
@@ -78,6 +59,26 @@ namespace PNFmt.Tests.Formatter
                         Assert.Equal(FileFormatStatus.Unchanged,
                             formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance)).Status);
                     }
+                }
+            }
+        }
+
+        [Theory]
+        [MemberData(nameof(ActivationCases))]
+        public void Shared_settings_follow_the_documented_activation_rules(string name, string fileName, string input)
+        {
+            using (var directory = new TestDirectory())
+            {
+                var path = directory.Write(fileName, input);
+                var formatter = FormatterCatalog.CreateDefault().Formatters.Single(item => item.Name == name);
+                foreach (var setting in new[] { "indent_size = 2", "end_of_line = lf", "insert_final_newline = true", "pnfmt_sort_entries = false" })
+                {
+                    directory.Write(".editorconfig", "root = true\n[*]\n" + setting + "\n");
+                    var active = name == "csproj" || (name == "resx" && setting == "pnfmt_sort_entries = false");
+                    var result = formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance));
+                    Assert.Equal(!active, result.Status == FileFormatStatus.Skipped);
+                    Assert.Empty(result.Diagnostics);
+                    Assert.Equal(input, File.ReadAllText(path));
                 }
             }
         }

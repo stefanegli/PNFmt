@@ -4,21 +4,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using PNFmt.Tests.Snapshots;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Xml
 {
     public sealed class XmlSnapshotTests
     {
-        public static IEnumerable<object[]> Snapshots => GetCases(rejected: false);
-
         public static IEnumerable<object[]> RejectedSnapshots => GetCases(rejected: true);
 
-        private static IEnumerable<object[]> GetCases(bool rejected) => new[] { ".xml", ".xaml" }
-            .SelectMany(extension => FileSnapshotCaseSource.Create(GetFixtureRoot(), extension))
-            .Where(testCase => testCase.RelativePath.StartsWith("Rejected" + Path.DirectorySeparatorChar, StringComparison.Ordinal) == rejected)
-            .Select(testCase => new object[] { testCase.RelativePath, testCase.InputFile, testCase.CaseName });
+        public static IEnumerable<object[]> Snapshots => GetCases(rejected: false);
 
         [Theory]
         [MemberData(nameof(Snapshots))]
@@ -51,6 +48,11 @@ namespace PNFmt.Tests.Formatter.Xml
                 GitSnapshot.Match(File.ReadAllText(path), typeof(XmlSnapshotTests), caseName);
             }
         }
+
+        private static IEnumerable<object[]> GetCases(bool rejected) => new[] { ".xml", ".xaml" }
+            .SelectMany(extension => FileSnapshotCaseSource.Create(GetFixtureRoot(), extension))
+            .Where(testCase => testCase.RelativePath.StartsWith("Rejected" + Path.DirectorySeparatorChar, StringComparison.Ordinal) == rejected)
+            .Select(testCase => new object[] { testCase.RelativePath, testCase.InputFile, testCase.CaseName });
 
         private static string GetFixtureRoot()
         {

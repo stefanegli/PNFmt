@@ -3,18 +3,20 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
+
 using PNFmt.Tests.Formatter.Resx.TestFoundation;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Resx
 {
     public sealed class ResxLayoutTests
     {
-        private const string Header = "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>";
         private const string EnableFormatting =
             "pnfmt_sort_entries = true\n"
             + "pnfmt_resx_remove_xsd_schema = true\n"
             + "pnfmt_resx_remove_documentation_comment = true\n";
+        private const string Header = "<resheader name=\"resmimetype\"><value>text/microsoft-resx</value></resheader>";
 
         [Theory]
         [InlineData("end_of_line = lf\n")]
@@ -37,6 +39,63 @@ namespace PNFmt.Tests.Formatter.Resx
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
                 Assert.Equal(formatted, File.ReadAllBytes(file.Path));
+            }
+        }
+
+        [Fact]
+        public void Final_newline_can_be_configured_without_other_layout_options()
+        {
+            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
+            {
+                Configure(file, EnableFormatting + "insert_final_newline = true\n");
+                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
+                Assert.EndsWith("</root>" + Environment.NewLine, File.ReadAllText(file.Path));
+
+                Configure(file, EnableFormatting + "insert_final_newline = false\n");
+                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
+                Assert.EndsWith("</root>", File.ReadAllText(file.Path));
+                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
+            }
+        }
+
+        [Theory]
+        [InlineData("indent_style = tab\nindent_size = tab\ntab_width = 8\n", "\t")]
+        [InlineData("tab_width = 3\n", "   ")]
+        [InlineData("indent_size = 5\n", "     ")]
+        public void Indentation_is_applied_alongside_sorting(string layout, string indent)
+        {
+            using (var file = TemporaryFile.Create("<root>" + Header
+                + "<data name=\"z\"><value>2</value></data><data name=\"a\"><value>1</value></data></root>"))
+            {
+                Configure(file, EnableFormatting + layout + "end_of_line = lf\n");
+                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
+                var text = File.ReadAllText(file.Path);
+                Assert.Contains("\n" + indent + "<resheader", text);
+                Assert.Contains("\n" + indent + indent + "<value>1</value>", text);
+                Assert.Equal(new[] { "a", "z" }, XDocument.Load(file.Path).Root.Elements("data").Select(e => (string)e.Attribute("name")));
+                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
+            }
+        }
+
+        [Fact]
+        public void Layout_inherits_parent_settings_and_child_final_newline_override()
+        {
+            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
+            {
+                Configure(file, EnableFormatting + "end_of_line = lf\nindent_size = 3\ninsert_final_newline = true\n");
+                var child = Path.Combine(file.DirectoryPath, "child");
+                Directory.CreateDirectory(child);
+                var path = Path.Combine(child, "Child.resx");
+                File.Copy(file.Path, path);
+                File.WriteAllText(Path.Combine(child, ".editorconfig"), "[*.resx]\ninsert_final_newline = false\n");
+                var formatter = new ResxFormatter();
+
+                Assert.Equal(FileFormatStatus.Updated, formatter.Format(new FileFormatRequest(path, true, false, NullFormatterLog.Instance)).Status);
+                var formatted = File.ReadAllText(path);
+                Assert.Contains("\n   <resheader", formatted);
+                Assert.DoesNotContain("\r", formatted);
+                Assert.EndsWith("</root>", formatted);
+                Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance)).Status);
             }
         }
 
@@ -79,22 +138,29 @@ namespace PNFmt.Tests.Formatter.Resx
             }
         }
 
-        [Theory]
-        [InlineData("indent_style = tab\nindent_size = tab\ntab_width = 8\n", "\t")]
-        [InlineData("tab_width = 3\n", "   ")]
-        [InlineData("indent_size = 5\n", "     ")]
-        public void Indentation_is_applied_alongside_sorting(string layout, string indent)
+        [Fact]
+        public void Layout_preserves_declared_utf16_encoding_and_remains_readable()
         {
-            using (var file = TemporaryFile.Create("<root>" + Header
-                + "<data name=\"z\"><value>2</value></data><data name=\"a\"><value>1</value></data></root>"))
+            using (var file = TemporaryFile.Create(string.Empty))
             {
-                Configure(file, EnableFormatting + layout + "end_of_line = lf\n");
+                File.WriteAllText(file.Path, "<?xml version=\"1.0\" encoding=\"utf-16\"?><root>" + Header + "</root>", Encoding.Unicode);
+                Configure(file, EnableFormatting + "end_of_line = lf\ninsert_final_newline = true\n");
                 Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-                var text = File.ReadAllText(file.Path);
-                Assert.Contains("\n" + indent + "<resheader", text);
-                Assert.Contains("\n" + indent + indent + "<value>1</value>", text);
-                Assert.Equal(new[] { "a", "z" }, XDocument.Load(file.Path).Root.Elements("data").Select(e => (string)e.Attribute("name")));
+                Assert.Equal("utf-16", XDocument.Load(file.Path).Declaration.Encoding);
+                Assert.True(File.ReadAllBytes(file.Path).Take(2).SequenceEqual(Encoding.Unicode.GetPreamble()));
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
+            }
+        }
+
+        [Fact]
+        public void Layout_settings_alone_do_not_enable_resource_cleanup()
+        {
+            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
+            {
+                Configure(file, "indent_size = 4\nend_of_line = lf\ninsert_final_newline = true\n");
+                var original = File.ReadAllBytes(file.Path);
+                Assert.Equal(FileFormatStatus.Skipped, Format(file, true).Status);
+                Assert.Equal(original, File.ReadAllBytes(file.Path));
             }
         }
 
@@ -155,70 +221,6 @@ namespace PNFmt.Tests.Formatter.Resx
             }
         }
 
-        [Fact]
-        public void Final_newline_can_be_configured_without_other_layout_options()
-        {
-            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
-            {
-                Configure(file, EnableFormatting + "insert_final_newline = true\n");
-                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-                Assert.EndsWith("</root>" + Environment.NewLine, File.ReadAllText(file.Path));
-
-                Configure(file, EnableFormatting + "insert_final_newline = false\n");
-                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-                Assert.EndsWith("</root>", File.ReadAllText(file.Path));
-                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
-            }
-        }
-
-        [Fact]
-        public void Layout_settings_alone_do_not_enable_resource_cleanup()
-        {
-            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
-            {
-                Configure(file, "indent_size = 4\nend_of_line = lf\ninsert_final_newline = true\n");
-                var original = File.ReadAllBytes(file.Path);
-                Assert.Equal(FileFormatStatus.Skipped, Format(file, true).Status);
-                Assert.Equal(original, File.ReadAllBytes(file.Path));
-            }
-        }
-
-        [Fact]
-        public void Layout_preserves_declared_utf16_encoding_and_remains_readable()
-        {
-            using (var file = TemporaryFile.Create(string.Empty))
-            {
-                File.WriteAllText(file.Path, "<?xml version=\"1.0\" encoding=\"utf-16\"?><root>" + Header + "</root>", Encoding.Unicode);
-                Configure(file, EnableFormatting + "end_of_line = lf\ninsert_final_newline = true\n");
-                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-                Assert.Equal("utf-16", XDocument.Load(file.Path).Declaration.Encoding);
-                Assert.True(File.ReadAllBytes(file.Path).Take(2).SequenceEqual(Encoding.Unicode.GetPreamble()));
-                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
-            }
-        }
-
-        [Fact]
-        public void Layout_inherits_parent_settings_and_child_final_newline_override()
-        {
-            using (var file = TemporaryFile.Create("<root>" + Header + "</root>"))
-            {
-                Configure(file, EnableFormatting + "end_of_line = lf\nindent_size = 3\ninsert_final_newline = true\n");
-                var child = Path.Combine(file.DirectoryPath, "child");
-                Directory.CreateDirectory(child);
-                var path = Path.Combine(child, "Child.resx");
-                File.Copy(file.Path, path);
-                File.WriteAllText(Path.Combine(child, ".editorconfig"), "[*.resx]\ninsert_final_newline = false\n");
-                var formatter = new ResxFormatter();
-
-                Assert.Equal(FileFormatStatus.Updated, formatter.Format(new FileFormatRequest(path, true, false, NullFormatterLog.Instance)).Status);
-                var formatted = File.ReadAllText(path);
-                Assert.Contains("\n   <resheader", formatted);
-                Assert.DoesNotContain("\r", formatted);
-                Assert.EndsWith("</root>", formatted);
-                Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance)).Status);
-            }
-        }
-
         private static void AssertPreviewWriteAndStable(TemporaryFile file, string expected)
         {
             var original = File.ReadAllBytes(file.Path);
@@ -232,14 +234,14 @@ namespace PNFmt.Tests.Formatter.Resx
             Assert.Equal(expectedBytes, File.ReadAllBytes(file.Path));
         }
 
-        private static FileFormatResult Format(TemporaryFile file, bool write)
-        {
-            return new ResxFormatter().Format(new FileFormatRequest(file.Path, write, false, NullFormatterLog.Instance));
-        }
-
         private static void Configure(TemporaryFile file, string properties)
         {
             File.WriteAllText(Path.Combine(file.DirectoryPath, ".editorconfig"), "root = true\n\n[*.resx]\n" + properties);
+        }
+
+        private static FileFormatResult Format(TemporaryFile file, bool write)
+        {
+            return new ResxFormatter().Format(new FileFormatRequest(file.Path, write, false, NullFormatterLog.Instance));
         }
     }
 }

@@ -2,41 +2,13 @@
 
 using System;
 using System.IO;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Ini
 {
     public sealed class IniFormatterTests
     {
-        [Fact]
-        public void Sorts_contiguous_properties_and_normalizes_spacing()
-        {
-            const string Input =
-                "z=last\n"
-                + "root=true\n"
-                + "\n"
-                + "[*]\n"
-                + "tab_width=4\n"
-                + "indent_style = space\n"
-                + "# Language settings\n"
-                + "dotnet_style_var_elsewhere=true:suggestion\n"
-                + "csharp_style_var_elsewhere = false:suggestion\n"
-                + "value_with_hash = text # this is part of the value\n\n";
-            const string Expected =
-                "root = true\n"
-                + "z = last\n"
-                + "\n"
-                + "[*]\n"
-                + "indent_style = space\n"
-                + "tab_width = 4\n"
-                + "# Language settings\n"
-                + "csharp_style_var_elsewhere = false:suggestion\n"
-                + "dotnet_style_var_elsewhere = true:suggestion\n"
-                + "value_with_hash = text # this is part of the value\n";
-
-            Assert.Equal(Expected, IniDocumentFormatter.Format(Input));
-        }
-
         [Fact]
         public void Comments_unknown_lines_and_sections_are_sort_barriers()
         {
@@ -111,67 +83,62 @@ namespace PNFmt.Tests.Formatter.Ini
         }
 
         [Fact]
-        public void Sorts_groups_without_sorting_entries_when_only_group_sorting_is_enabled()
+        public void Group_merging_activates_formatting()
         {
-            const string Input =
-                "root=z\n"
-                + "mode=a\n"
-                + "\n"
-                + "[second]\n"
-                + "z=2\n"
-                + "a=1\n"
-                + "\n"
-                + "[first]\n"
-                + "d=4\n"
-                + "c=3\n";
-            const string Expected =
-                "root = z\n"
-                + "mode = a\n"
-                + "\n"
-                + "[first]\n"
-                + "d = 4\n"
-                + "c = 3\n"
-                + "\n"
-                + "[second]\n"
-                + "z = 2\n"
-                + "a = 1\n";
-
+            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
             using (var file = TemporaryFile.Create(
                 "settings.ini",
                 Input,
                 settingValue: null,
-                groupSettingValue: "true"))
+                mergeSettingValue: "true"))
+            {
+                var result = new IniFormatter().Format(
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.Equal("[shared]\nz = 2\na = 1\n", File.ReadAllText(file.Path));
+            }
+        }
+
+        [Theory]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Group_merging_requires_true(string settingValue)
+        {
+            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                mergeSettingValue: settingValue))
+            {
+                var result = new IniFormatter().Format(
+                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Input, File.ReadAllText(file.Path));
+            }
+        }
+
+        [Theory]
+        [InlineData("false")]
+        [InlineData("invalid")]
+        public void Group_sorting_requires_true(string settingValue)
+        {
+            const string Input = "[second]\nz=2\n[first]\na=1\n";
+            using (var file = TemporaryFile.Create(
+                "settings.ini",
+                Input,
+                settingValue: null,
+                groupSettingValue: settingValue))
             {
                 var formatter = new IniFormatter();
                 var result = formatter.Format(
                     new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
-                Assert.Equal(FileFormatStatus.Updated, result.Status);
-                Assert.Equal(Expected, File.ReadAllText(file.Path));
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Input, File.ReadAllText(file.Path));
             }
-        }
-
-        [Fact]
-        public void Sorts_group_contents_with_their_section_header()
-        {
-            const string Input =
-                "[zeta]\n"
-                + "; Zeta comment\n"
-                + "value=z\n"
-                + "[alpha]\n"
-                + "# Alpha comment\n"
-                + "value=a\n";
-            const string Expected =
-                "[alpha]\n"
-                + "# Alpha comment\n"
-                + "value = a\n"
-                + "[zeta]\n"
-                + "; Zeta comment\n"
-                + "value = z\n";
-
-            Assert.Equal(
-                Expected,
-                IniDocumentFormatter.Format(Input, sortEntries: true, sortGroups: true));
         }
 
         [Fact]
@@ -232,62 +199,96 @@ namespace PNFmt.Tests.Formatter.Ini
             }
         }
 
-        [Theory]
-        [InlineData("false")]
-        [InlineData("invalid")]
-        public void Group_sorting_requires_true(string settingValue)
+        [Fact]
+        public void Sorts_contiguous_properties_and_normalizes_spacing()
         {
-            const string Input = "[second]\nz=2\n[first]\na=1\n";
+            const string Input =
+                "z=last\n"
+                + "root=true\n"
+                + "\n"
+                + "[*]\n"
+                + "tab_width=4\n"
+                + "indent_style = space\n"
+                + "# Language settings\n"
+                + "dotnet_style_var_elsewhere=true:suggestion\n"
+                + "csharp_style_var_elsewhere = false:suggestion\n"
+                + "value_with_hash = text # this is part of the value\n\n";
+            const string Expected =
+                "root = true\n"
+                + "z = last\n"
+                + "\n"
+                + "[*]\n"
+                + "indent_style = space\n"
+                + "tab_width = 4\n"
+                + "# Language settings\n"
+                + "csharp_style_var_elsewhere = false:suggestion\n"
+                + "dotnet_style_var_elsewhere = true:suggestion\n"
+                + "value_with_hash = text # this is part of the value\n";
+
+            Assert.Equal(Expected, IniDocumentFormatter.Format(Input));
+        }
+
+        [Fact]
+        public void Sorts_group_contents_with_their_section_header()
+        {
+            const string Input =
+                "[zeta]\n"
+                + "; Zeta comment\n"
+                + "value=z\n"
+                + "[alpha]\n"
+                + "# Alpha comment\n"
+                + "value=a\n";
+            const string Expected =
+                "[alpha]\n"
+                + "# Alpha comment\n"
+                + "value = a\n"
+                + "[zeta]\n"
+                + "; Zeta comment\n"
+                + "value = z\n";
+
+            Assert.Equal(
+                Expected,
+                IniDocumentFormatter.Format(Input, sortEntries: true, sortGroups: true));
+        }
+
+        [Fact]
+        public void Sorts_groups_without_sorting_entries_when_only_group_sorting_is_enabled()
+        {
+            const string Input =
+                "root=z\n"
+                + "mode=a\n"
+                + "\n"
+                + "[second]\n"
+                + "z=2\n"
+                + "a=1\n"
+                + "\n"
+                + "[first]\n"
+                + "d=4\n"
+                + "c=3\n";
+            const string Expected =
+                "root = z\n"
+                + "mode = a\n"
+                + "\n"
+                + "[first]\n"
+                + "d = 4\n"
+                + "c = 3\n"
+                + "\n"
+                + "[second]\n"
+                + "z = 2\n"
+                + "a = 1\n";
+
             using (var file = TemporaryFile.Create(
                 "settings.ini",
                 Input,
                 settingValue: null,
-                groupSettingValue: settingValue))
+                groupSettingValue: "true"))
             {
                 var formatter = new IniFormatter();
                 var result = formatter.Format(
                     new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
 
-                Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                Assert.Equal(Input, File.ReadAllText(file.Path));
-            }
-        }
-
-        [Theory]
-        [InlineData("false")]
-        [InlineData("invalid")]
-        public void Group_merging_requires_true(string settingValue)
-        {
-            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
-            using (var file = TemporaryFile.Create(
-                "settings.ini",
-                Input,
-                settingValue: null,
-                mergeSettingValue: settingValue))
-            {
-                var result = new IniFormatter().Format(
-                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
-
-                Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                Assert.Equal(Input, File.ReadAllText(file.Path));
-            }
-        }
-
-        [Fact]
-        public void Group_merging_activates_formatting()
-        {
-            const string Input = "[shared]\nz=2\n[shared]\na=1\n";
-            using (var file = TemporaryFile.Create(
-                "settings.ini",
-                Input,
-                settingValue: null,
-                mergeSettingValue: "true"))
-            {
-                var result = new IniFormatter().Format(
-                    new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
-
                 Assert.Equal(FileFormatStatus.Updated, result.Status);
-                Assert.Equal("[shared]\nz = 2\na = 1\n", File.ReadAllText(file.Path));
+                Assert.Equal(Expected, File.ReadAllText(file.Path));
             }
         }
 

@@ -6,9 +6,12 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+
 using PNFmt.Cli;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.EditorConfig
@@ -29,30 +32,14 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             ["xaml"] = new Sample("Sample.xaml", "<Grid xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\"><Button Name=\"Z\"/><Button Name=\"A\"/></Grid>", "Name=\"Z\"", "Name=\"A\"", "\n  <Button", supportsSorting: false),
         };
 
+        public static IEnumerable<object[]> CSharpCombinations => Combinations(8);
+
         public static IEnumerable<object[]> CommonCombinations => Samples.Keys.SelectMany(
             name => Combinations(3).Select(options => new object[] { name }.Concat(options).ToArray()));
-
-        public static IEnumerable<object[]> CSharpCombinations => Combinations(8);
 
         public static IEnumerable<object[]> IniCombinations => Combinations(6);
 
         public static IEnumerable<object[]> ResxCombinations => Combinations(9);
-
-        [Theory]
-        [MemberData(nameof(CommonCombinations))]
-        public void Enablement_layout_and_sorting_follow_the_full_matrix(
-            string name, bool enabled, bool format, bool sort)
-        {
-            var sample = Samples[name];
-            var output = Exercise(name, sample.FileName, sample.Input,
-                Settings(("pnfmt_enabled", enabled), ("pnfmt_format", format), ("pnfmt_sort_entries", sort)),
-                enabled, enabled && (format || (sort && sample.SupportsSorting)));
-
-            var first = enabled && sort && sample.SupportsSorting ? sample.Second : sample.First;
-            var second = enabled && sort && sample.SupportsSorting ? sample.First : sample.Second;
-            AssertOrder(output, first, second);
-            Assert.Equal(enabled && format, output.Contains(sample.LayoutMarker, StringComparison.Ordinal));
-        }
 
         [Theory]
         [MemberData(nameof(CSharpCombinations))]
@@ -93,6 +80,22 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Equal(enabled && collapseBlankLines ? 2 : 4, Regex.Matches(gap, "\r\n|\r|\n").Count);
             Assert.Equal(enabled && format, output.Contains("class C\n{", StringComparison.Ordinal));
             Assert.Equal("1", type.Members.OfType<PropertyDeclarationSyntax>().Single().ExpressionBody.Expression.ToString());
+        }
+
+        [Theory]
+        [MemberData(nameof(CommonCombinations))]
+        public void Enablement_layout_and_sorting_follow_the_full_matrix(
+            string name, bool enabled, bool format, bool sort)
+        {
+            var sample = Samples[name];
+            var output = Exercise(name, sample.FileName, sample.Input,
+                Settings(("pnfmt_enabled", enabled), ("pnfmt_format", format), ("pnfmt_sort_entries", sort)),
+                enabled, enabled && (format || (sort && sample.SupportsSorting)));
+
+            var first = enabled && sort && sample.SupportsSorting ? sample.Second : sample.First;
+            var second = enabled && sort && sample.SupportsSorting ? sample.First : sample.Second;
+            AssertOrder(output, first, second);
+            Assert.Equal(enabled && format, output.Contains(sample.LayoutMarker, StringComparison.Ordinal));
         }
 
         [Theory]
@@ -161,17 +164,34 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Equal(enabled && format, preceding?.Value.Contains("\n  ", StringComparison.Ordinal) == true);
         }
 
+        private static void AssertOrder(string text, string first, string second)
+        {
+            var firstIndex = text.IndexOf(first, StringComparison.Ordinal);
+            var secondIndex = text.IndexOf(second, StringComparison.Ordinal);
+            Assert.True(firstIndex >= 0 && secondIndex > firstIndex, $"Expected '{first}' before '{second}' in:\n{text}");
+        }
+
+        private static void AssertOutcome(FileFormattingOutcome outcome, FileFormatStatus status)
+        {
+            Assert.Null(outcome.Error);
+            Assert.Empty(outcome.LoggedExceptions);
+            Assert.Empty(outcome.Result.Diagnostics);
+            Assert.DoesNotContain(outcome.LogMessages, message => message.Kind == FormatterLogMessageKind.Warning);
+            Assert.Equal(status, outcome.Result.Status);
+        }
+
+        private static IEnumerable<KeyValuePair<string, string>> Assignments(string text)
+        {
+            return Regex.Matches(text, @"(?m)^([^\[\]\r\n=]+?)\s*=\s*([^\r\n]*)").Cast<Match>()
+                .Select(match => new KeyValuePair<string, string>(match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim()));
+        }
+
         private static IEnumerable<object[]> Combinations(int switchCount)
         {
             for (var mask = 0; mask < (1 << switchCount); mask++)
             {
                 yield return Enumerable.Range(0, switchCount).Select(bit => (object)((mask & (1 << bit)) != 0)).ToArray();
             }
-        }
-
-        private static string Settings(params (string Name, bool Value)[] settings)
-        {
-            return string.Concat(settings.Select(setting => setting.Name + " = " + (setting.Value ? "true" : "false") + "\n"));
         }
 
         private static string Exercise(string name, string fileName, string input, string options, bool enabled, bool changed)
@@ -195,26 +215,9 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             return File.ReadAllText(path);
         }
 
-        private static void AssertOutcome(FileFormattingOutcome outcome, FileFormatStatus status)
+        private static string Settings(params (string Name, bool Value)[] settings)
         {
-            Assert.Null(outcome.Error);
-            Assert.Empty(outcome.LoggedExceptions);
-            Assert.Empty(outcome.Result.Diagnostics);
-            Assert.DoesNotContain(outcome.LogMessages, message => message.Kind == FormatterLogMessageKind.Warning);
-            Assert.Equal(status, outcome.Result.Status);
-        }
-
-        private static void AssertOrder(string text, string first, string second)
-        {
-            var firstIndex = text.IndexOf(first, StringComparison.Ordinal);
-            var secondIndex = text.IndexOf(second, StringComparison.Ordinal);
-            Assert.True(firstIndex >= 0 && secondIndex > firstIndex, $"Expected '{first}' before '{second}' in:\n{text}");
-        }
-
-        private static IEnumerable<KeyValuePair<string, string>> Assignments(string text)
-        {
-            return Regex.Matches(text, @"(?m)^([^\[\]\r\n=]+?)\s*=\s*([^\r\n]*)").Cast<Match>()
-                .Select(match => new KeyValuePair<string, string>(match.Groups[1].Value.Trim(), match.Groups[2].Value.Trim()));
+            return string.Concat(settings.Select(setting => setting.Name + " = " + (setting.Value ? "true" : "false") + "\n"));
         }
 
         private sealed class Sample

@@ -20,6 +20,15 @@ namespace PNFmt
             return encoding.GetPreamble().Concat(encoding.GetBytes(text)).ToArray();
         }
 
+        public static Encoding ReadXmlDeclaration(string text)
+        {
+            var declaration = Declaration.Match(text);
+            var attribute = EncodingAttribute.Match(declaration.Value);
+            return attribute.Success
+                ? Encoding.GetEncoding(attribute.Groups["name"].Value, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)
+                : null;
+        }
+
         public static string UpdateXmlDeclaration(string text, Encoding encoding)
         {
             var declaration = Declaration.Match(text);
@@ -40,15 +49,6 @@ namespace PNFmt
             // Encoding must precede standalone in an XML declaration.
             var version = VersionAttribute.Match(declaration.Value);
             return text.Insert(version.Index + version.Length, " encoding=\"" + encoding.WebName + "\"");
-        }
-
-        public static Encoding ReadXmlDeclaration(string text)
-        {
-            var declaration = Declaration.Match(text);
-            var attribute = EncodingAttribute.Match(declaration.Value);
-            return attribute.Success
-                ? Encoding.GetEncoding(attribute.Groups["name"].Value, EncoderFallback.ExceptionFallback, DecoderFallback.ExceptionFallback)
-                : null;
         }
     }
 }

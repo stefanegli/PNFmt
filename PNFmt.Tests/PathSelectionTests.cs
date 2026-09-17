@@ -1,34 +1,17 @@
 using System;
 using System.IO;
 using System.Linq;
+
 using LibGit2Sharp;
+
 using PNFmt.Cli;
+
 using Xunit;
 
 namespace PNFmt.Tests
 {
     public sealed class PathSelectionTests
     {
-        [Fact]
-        public void Resolution_retains_case_distinct_files_and_deduplicates_repeated_targets()
-        {
-            using (var directory = new CaseDirectory())
-            {
-                File.WriteAllText(directory.Lower, "lower");
-                var registry = new FormatterRegistry(new[] { new IniFormatter() });
-                var resolver = new TargetFileResolver(registry, registry, new FilePatternMatcher(Array.Empty<string>()));
-                var result = resolver.Resolve(new[] { directory.Path, directory.Upper, directory.Lower }, recursive: true);
-
-                Assert.Empty(result.Errors);
-                Assert.Equal(directory.IsCaseSensitive ? 2 : 1, result.Files.Count);
-                if (directory.IsCaseSensitive)
-                {
-                    Assert.Contains(directory.Upper, result.Files);
-                    Assert.Contains(directory.Lower, result.Files);
-                }
-            }
-        }
-
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -102,6 +85,26 @@ namespace PNFmt.Tests
                 Assert.True(result.GitFiltered);
                 Assert.Equal(changed, result.Files);
                 Assert.Equal(2, result.MaxCpuCount);
+            }
+        }
+
+        [Fact]
+        public void Resolution_retains_case_distinct_files_and_deduplicates_repeated_targets()
+        {
+            using (var directory = new CaseDirectory())
+            {
+                File.WriteAllText(directory.Lower, "lower");
+                var registry = new FormatterRegistry(new[] { new IniFormatter() });
+                var resolver = new TargetFileResolver(registry, registry, new FilePatternMatcher(Array.Empty<string>()));
+                var result = resolver.Resolve(new[] { directory.Path, directory.Upper, directory.Lower }, recursive: true);
+
+                Assert.Empty(result.Errors);
+                Assert.Equal(directory.IsCaseSensitive ? 2 : 1, result.Files.Count);
+                if (directory.IsCaseSensitive)
+                {
+                    Assert.Contains(directory.Upper, result.Files);
+                    Assert.Contains(directory.Lower, result.Files);
+                }
             }
         }
 

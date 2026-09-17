@@ -155,6 +155,8 @@ PNFmt reads optional tool settings from `.pnfmt` at each target's Git repository
 
 See the [formatter architecture](docs/architecture.md) for module responsibilities and verification.
 
+Run `./scripts/Format-Repository.cmd` on Windows, or `./scripts/Format-Repository.ps1` in PowerShell 7, to format the repository with PNFmt. Add `-Check` to verify without writing. The command includes C# test code but excludes fixture data (`_files`, `_editor`), expected snapshots (`Snapshots/`), and build output. Use this command for repository-wide formatting: fixture `.editorconfig` files deliberately enable transformations and can override exclusions during a direct recursive PNFmt run.
+
 Run `./scripts/Test-Coverage.ps1` in PowerShell to test with coverage and generate an HTML report. See [test coverage](docs/test-coverage.md) for reports, minimum thresholds, and CI enforcement.
 
 Use the [HTML snapshot viewer](tools/SnapshotViewer/README.md) to inspect test inputs, expected cleanup, and configuration by formatter.

@@ -2,12 +2,11 @@
 
 namespace PNFmt.Tests.Formatter.CsProj
 {
-    using PNFmt;
-
-    using PNFmt.Tests.Snapshots;
-
     using System;
     using System.IO;
+
+    using PNFmt;
+    using PNFmt.Tests.Snapshots;
 
     using Xunit;
 
@@ -28,6 +27,11 @@ namespace PNFmt.Tests.Formatter.CsProj
             GitSnapshot.Match(actual, typeof(CsProjSnapshotTests), caseName);
         }
 
+        private static string GetFixtureRoot()
+        {
+            return Path.Combine(AppContext.BaseDirectory, "Formatter", "CsProj", "_files");
+        }
+
         internal class CsProjSnapshotData : TheoryData<string, string, string>
         {
             public CsProjSnapshotData()
@@ -37,11 +41,6 @@ namespace PNFmt.Tests.Formatter.CsProj
                     this.Add(testCase.InputFile, testCase.RelativePath, testCase.CaseName);
                 }
             }
-        }
-
-        private static string GetFixtureRoot()
-        {
-            return Path.Combine(AppContext.BaseDirectory, "Formatter", "CsProj", "_files");
         }
     }
 }

@@ -4,8 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using EditorConfig.Core;
+
 using PNFmt.Tests.Snapshots;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Ini
@@ -63,6 +66,37 @@ namespace PNFmt.Tests.Formatter.Ini
         };
 
         [Theory]
+        [InlineData(".editorconfig")]
+        [InlineData("settings.editorconfig")]
+        [InlineData("settings.EDITORCONFIG")]
+        public void File_formatter_applies_EditorConfig_precedence_rules(string fileName)
+        {
+            const string Input = "root=true\n\n[*.{editorconfig,EDITORCONFIG}]\n"
+                + "pnfmt_ini_sort_groups=true\npnfmt_ini_merge_groups=true\n"
+                + "pnfmt_ini_group_by_prefix=true\npnfmt_sort_entries=true\n\n"
+                + "[*.resx]\npnfmt_sort_entries=true\n[*]\nindent_size=4\n"
+                + "[*.resx]\nindent_size=2\n[*.resx]\nINDENT_SIZE=unset\n";
+            using (var configuration = new TemporaryConfiguration())
+            {
+                var before = configuration.Parse(Input, "Resources.resx");
+                var path = Path.Combine(configuration.DirectoryPath, fileName);
+                File.WriteAllText(path, Input);
+                var formatter = new IniFormatter();
+                var result = formatter.Format(new FileFormatRequest(path, true, false, configuration));
+                var actual = File.ReadAllText(path);
+
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
+                Assert.Equal(
+                    before.OrderBy(pair => pair.Key),
+                    configuration.Parse(actual, "Resources.resx").OrderBy(pair => pair.Key));
+                Assert.Equal(2, actual.Split("[*.resx]").Length - 1);
+                Assert.Equal(
+                    FileFormatStatus.Unchanged,
+                    formatter.Format(new FileFormatRequest(path, true, false, configuration)).Status);
+            }
+        }
+
+        [Theory]
         [MemberData(nameof(Cases))]
         public void Formatting_preserves_effective_properties(
             string caseName,
@@ -106,37 +140,6 @@ namespace PNFmt.Tests.Formatter.Ini
             }
         }
 
-        [Theory]
-        [InlineData(".editorconfig")]
-        [InlineData("settings.editorconfig")]
-        [InlineData("settings.EDITORCONFIG")]
-        public void File_formatter_applies_EditorConfig_precedence_rules(string fileName)
-        {
-            const string Input = "root=true\n\n[*.{editorconfig,EDITORCONFIG}]\n"
-                + "pnfmt_ini_sort_groups=true\npnfmt_ini_merge_groups=true\n"
-                + "pnfmt_ini_group_by_prefix=true\npnfmt_sort_entries=true\n\n"
-                + "[*.resx]\npnfmt_sort_entries=true\n[*]\nindent_size=4\n"
-                + "[*.resx]\nindent_size=2\n[*.resx]\nINDENT_SIZE=unset\n";
-            using (var configuration = new TemporaryConfiguration())
-            {
-                var before = configuration.Parse(Input, "Resources.resx");
-                var path = Path.Combine(configuration.DirectoryPath, fileName);
-                File.WriteAllText(path, Input);
-                var formatter = new IniFormatter();
-                var result = formatter.Format(new FileFormatRequest(path, true, false, configuration));
-                var actual = File.ReadAllText(path);
-
-                Assert.Equal(FileFormatStatus.Updated, result.Status);
-                Assert.Equal(
-                    before.OrderBy(pair => pair.Key),
-                    configuration.Parse(actual, "Resources.resx").OrderBy(pair => pair.Key));
-                Assert.Equal(2, actual.Split("[*.resx]").Length - 1);
-                Assert.Equal(
-                    FileFormatStatus.Unchanged,
-                    formatter.Format(new FileFormatRequest(path, true, false, configuration)).Status);
-            }
-        }
-
         [Fact]
         public void Generated_defaults_preserve_section_order_and_existing_values()
         {
@@ -171,17 +174,17 @@ namespace PNFmt.Tests.Formatter.Ini
 
             public string DirectoryPath => this.directory.Path;
 
+            public void Dispose()
+            {
+                this.directory.Dispose();
+            }
+
             public IReadOnlyDictionary<string, string> Parse(string text, string target)
             {
                 File.WriteAllText(Path.Combine(this.DirectoryPath, ".editorconfig"), text);
                 // Bypass the shared file cache so each comparison parses the new contents.
                 var parser = new EditorConfigParser(path => EditorConfigFile.Parse(path), null, null);
                 return parser.Parse(Path.Combine(this.DirectoryPath, target)).Properties;
-            }
-
-            public void Dispose()
-            {
-                this.directory.Dispose();
             }
 
             public void Write(Exception exception)

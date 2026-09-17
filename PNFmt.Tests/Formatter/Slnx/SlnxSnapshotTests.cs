@@ -5,28 +5,20 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml;
+
 using PNFmt.Tests.Snapshots;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Slnx
 {
     public sealed class SlnxSnapshotTests
     {
-        public static IEnumerable<object[]> Snapshots =>
-            GetCases(rejected: false);
-
         public static IEnumerable<object[]> RejectedSnapshots =>
             GetCases(rejected: true);
 
-        private static IEnumerable<object[]> GetCases(bool rejected) =>
-            FileSnapshotCaseSource.Create(GetFixtureRoot(), ".slnx")
-                .Where(testCase => testCase.RelativePath.StartsWith("Rejected" + Path.DirectorySeparatorChar, StringComparison.Ordinal) == rejected)
-                .Select(testCase => new object[]
-                {
-                    testCase.RelativePath,
-                    testCase.InputFile,
-                    testCase.CaseName,
-                });
+        public static IEnumerable<object[]> Snapshots =>
+            GetCases(rejected: false);
 
         [Theory]
         [MemberData(nameof(Snapshots))]
@@ -62,6 +54,16 @@ namespace PNFmt.Tests.Formatter.Slnx
                 GitSnapshot.Match(File.ReadAllText(path), typeof(SlnxSnapshotTests), caseName);
             }
         }
+
+        private static IEnumerable<object[]> GetCases(bool rejected) =>
+            FileSnapshotCaseSource.Create(GetFixtureRoot(), ".slnx")
+                .Where(testCase => testCase.RelativePath.StartsWith("Rejected" + Path.DirectorySeparatorChar, StringComparison.Ordinal) == rejected)
+                .Select(testCase => new object[]
+                {
+                    testCase.RelativePath,
+                    testCase.InputFile,
+                    testCase.CaseName,
+                });
 
         private static string GetFixtureRoot()
         {

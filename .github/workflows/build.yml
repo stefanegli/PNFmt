@@ -55,12 +55,9 @@ jobs:
       - name: Build
         run: dotnet build PNFmt.slnx --configuration Release --no-restore
 
-      - name: Verify PNFmt project and configuration formatting
+      - name: Verify PNFmt source and configuration formatting
         shell: pwsh
-        run: |
-          [xml]$solution = Get-Content -Raw PNFmt.slnx
-          $projectPaths = @($solution.SelectNodes('//Project') | ForEach-Object { $_.Path })
-          dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release --no-build -- --all --check --verbose .editorconfig PNFmt.slnx @projectPaths
+        run: ./scripts/Format-Repository.ps1 -Check -Configuration Release -NoBuild
 
       - name: Verify coverage gate
         shell: pwsh

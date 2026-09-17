@@ -1,10 +1,34 @@
 root = true
 
 [*]
+charset = utf-8
 end_of_line = crlf
+
 indent_size = 4
 indent_style = space
+
+insert_final_newline = true
 tab_width = 4
+trim_trailing_whitespace = true
+
+[*.cs]
+csharp_new_line_before_open_brace = all
+csharp_preferred_modifier_order = public,private,protected,internal,file,static,extern,new,virtual,abstract,sealed,override,readonly,unsafe,required,volatile,async
+
+dotnet_separate_import_directive_groups = true
+dotnet_sort_system_directives_first = true
+
+pnfmt_csharp_collapse_blank_lines = true
+pnfmt_csharp_member_accessibility_order = public,internal,protected_internal,protected,private_protected,private
+pnfmt_csharp_member_order = constant,constructor,destructor,property,indexer,event,method,operator,conversion_operator,type
+pnfmt_csharp_remove_regions = true
+pnfmt_csharp_sort_members = true
+pnfmt_csharp_sort_members_by_name = true
+pnfmt_csharp_sort_modifiers = true
+pnfmt_enabled = true
+pnfmt_format = true
+pnfmt_formatter = csharp
+pnfmt_sort_entries = true
 
 [*.csproj]
 pnfmt_csproj_empty_lines_between_groups = 1
@@ -17,12 +41,36 @@ pnfmt_sort_entries = true
 pnfmt_enabled = true
 pnfmt_format = true
 pnfmt_formatter = ini
+pnfmt_ini_group_by_prefix = true
+pnfmt_ini_merge_groups = true
+pnfmt_ini_sort_groups = true
 pnfmt_sort_entries = true
 
 [*.ini]
 pnfmt_enabled = true
 pnfmt_format = true
 pnfmt_formatter = ini
+pnfmt_ini_group_by_prefix = true
+pnfmt_ini_merge_groups = true
+pnfmt_ini_sort_groups = true
+pnfmt_sort_entries = true
+
+[*.resx]
+pnfmt_enabled = true
+pnfmt_format = true
+pnfmt_formatter = resx
+# Removing generated boilerplate is the alternative to inserting it.
+pnfmt_resx_insert_documentation_comment = false
+pnfmt_resx_insert_xsd_schema = false
+pnfmt_resx_remove_documentation_comment = true
+pnfmt_resx_remove_xsd_schema = true
+pnfmt_resx_sort_comparer = OrdinalIgnoreCase
+pnfmt_sort_entries = true
+
+[*.rsp]
+pnfmt_enabled = true
+pnfmt_format = true
+pnfmt_formatter = rsp
 pnfmt_sort_entries = true
 
 [*.slnx]
@@ -30,3 +78,28 @@ pnfmt_enabled = true
 pnfmt_format = true
 pnfmt_formatter = slnx
 pnfmt_sort_entries = true
+
+[*.xaml]
+pnfmt_enabled = true
+pnfmt_format = true
+pnfmt_formatter = xaml
+
+[*.{xml,props,targets,config,runsettings}]
+pnfmt_enabled = true
+pnfmt_format = true
+pnfmt_formatter = xml
+
+# Fixture configs may use root=true or re-enable formatting. Use the repository
+# formatting script, which excludes these paths before invoking PNFmt.
+[{Snapshots/**,**/_files/**,**/_editor/**}]
+charset = unset
+end_of_line = unset
+generated_code = true
+
+indent_size = unset
+indent_style = unset
+
+insert_final_newline = unset
+pnfmt_enabled = false
+tab_width = unset
+trim_trailing_whitespace = unset

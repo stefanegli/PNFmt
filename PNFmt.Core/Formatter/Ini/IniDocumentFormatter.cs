@@ -98,6 +98,57 @@ namespace PNFmt
             }
         }
 
+        private static void AddPrefixGroups(
+            IReadOnlyList<PropertyLine> properties,
+            List<string> output)
+        {
+            var prefixCounts = properties
+                .Where(property => property.Prefix is not null)
+                .GroupBy(property => property.Prefix, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
+            string previousGroup = null;
+            for (var index = 0; index < properties.Count; index++)
+            {
+                var property = properties[index];
+                var group = property.Prefix is not null && prefixCounts[property.Prefix] > 1
+                    ? property.Prefix
+                    : null;
+                if (index > 0
+                    && !string.Equals(previousGroup, group, StringComparison.OrdinalIgnoreCase)
+                    && (previousGroup is not null || group is not null))
+                {
+                    AddBlankLine(output);
+                }
+
+                output.Add(property.Formatted);
+                previousGroup = group;
+            }
+        }
+
+        private static void FlushProperties(
+            List<PropertyLine> properties,
+            List<string> output,
+            bool sortEntries,
+            bool groupByPrefix)
+        {
+            // OrderBy is stable: duplicate keys (including casing variants) must
+            // retain their assignment order, also after merging adjacent sections.
+            IEnumerable<PropertyLine> orderedProperties = sortEntries
+                ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
+                : properties;
+
+            if (groupByPrefix)
+            {
+                AddPrefixGroups(GroupPrefixes(orderedProperties).ToArray(), output);
+            }
+            else
+            {
+                output.AddRange(orderedProperties.Select(property => property.Formatted));
+            }
+
+            properties.Clear();
+        }
+
         private static string FormatWithoutLayout(
             string text, bool sortEntries, bool sortGroups, bool groupByPrefix, bool mergeGroups, bool isEditorConfig)
         {
@@ -172,30 +223,6 @@ namespace PNFmt
             }
         }
 
-        private static void FlushProperties(
-            List<PropertyLine> properties,
-            List<string> output,
-            bool sortEntries,
-            bool groupByPrefix)
-        {
-            // OrderBy is stable: duplicate keys (including casing variants) must
-            // retain their assignment order, also after merging adjacent sections.
-            IEnumerable<PropertyLine> orderedProperties = sortEntries
-                ? properties.OrderBy(property => property.Key, StringComparer.OrdinalIgnoreCase)
-                : properties;
-
-            if (groupByPrefix)
-            {
-                AddPrefixGroups(GroupPrefixes(orderedProperties).ToArray(), output);
-            }
-            else
-            {
-                output.AddRange(orderedProperties.Select(property => property.Formatted));
-            }
-
-            properties.Clear();
-        }
-
         private static IEnumerable<PropertyLine> GroupPrefixes(IEnumerable<PropertyLine> properties)
         {
             var items = properties.ToArray();
@@ -220,105 +247,9 @@ namespace PNFmt
             }
         }
 
-        private static void AddPrefixGroups(
-            IReadOnlyList<PropertyLine> properties,
-            List<string> output)
-        {
-            var prefixCounts = properties
-                .Where(property => property.Prefix is not null)
-                .GroupBy(property => property.Prefix, StringComparer.OrdinalIgnoreCase)
-                .ToDictionary(group => group.Key, group => group.Count(), StringComparer.OrdinalIgnoreCase);
-            string previousGroup = null;
-            for (var index = 0; index < properties.Count; index++)
-            {
-                var property = properties[index];
-                var group = property.Prefix is not null && prefixCounts[property.Prefix] > 1
-                    ? property.Prefix
-                    : null;
-                if (index > 0
-                    && !string.Equals(previousGroup, group, StringComparison.OrdinalIgnoreCase)
-                    && (previousGroup is not null || group is not null))
-                {
-                    AddBlankLine(output);
-                }
-
-                output.Add(property.Formatted);
-                previousGroup = group;
-            }
-        }
-
-        private static List<string> SortGroups(IReadOnlyList<string> lines)
-        {
-            var sectionStarts = Enumerable.Range(0, lines.Count)
-                .Where(index => IsSectionHeader(lines[index]))
-                .ToArray();
-            if (sectionStarts.Length < 2)
-            {
-                return lines.ToList();
-            }
-
-            var output = lines.Take(sectionStarts[0]).ToList();
-            var groups = new List<SectionGroup>();
-            var separators = new List<IReadOnlyCollection<string>>();
-            for (var index = 0; index < sectionStarts.Length; index++)
-            {
-                var start = sectionStarts[index];
-                var end = index + 1 < sectionStarts.Length
-                    ? sectionStarts[index + 1]
-                    : lines.Count;
-                var contentEnd = end;
-                if (index + 1 < sectionStarts.Length)
-                {
-                    while (contentEnd > start + 1 && lines[contentEnd - 1].Length == 0)
-                    {
-                        contentEnd--;
-                    }
-
-                    separators.Add(lines.Skip(contentEnd).Take(end - contentEnd).ToArray());
-                }
-
-                groups.Add(new SectionGroup(
-                    lines[start],
-                    lines.Skip(start).Take(contentEnd - start).ToArray()));
-            }
-
-            var orderedGroups = groups.OrderBy(
-                group => group.Name,
-                StringComparer.OrdinalIgnoreCase).ToArray();
-            for (var index = 0; index < orderedGroups.Length; index++)
-            {
-                output.AddRange(orderedGroups[index].Lines);
-                if (index < separators.Count)
-                {
-                    output.AddRange(separators[index]);
-                }
-            }
-
-            return output;
-        }
-
         private static bool IsSectionHeader(string line)
         {
             return IniSyntax.IsSectionHeader(line);
-        }
-
-        private static bool TryParseProperty(string line, bool isEditorConfig, out PropertyLine property)
-        {
-            if (!IniSyntax.TryParseProperty(line, out var parsedProperty, allowColon: isEditorConfig))
-            {
-                property = null;
-                return false;
-            }
-
-            var prefixSeparator = parsedProperty.Key.IndexOf('_');
-            var prefix = prefixSeparator > 0
-                ? parsedProperty.Key.Substring(0, prefixSeparator)
-                : null;
-            property = new PropertyLine(
-                parsedProperty.Key,
-                prefix,
-                parsedProperty.Formatted);
-            return true;
         }
 
         private static IReadOnlyList<string> MergeAdjacentGroups(IReadOnlyList<string> lines)
@@ -394,6 +325,56 @@ namespace PNFmt
             return output;
         }
 
+        private static List<string> SortGroups(IReadOnlyList<string> lines)
+        {
+            var sectionStarts = Enumerable.Range(0, lines.Count)
+                .Where(index => IsSectionHeader(lines[index]))
+                .ToArray();
+            if (sectionStarts.Length < 2)
+            {
+                return lines.ToList();
+            }
+
+            var output = lines.Take(sectionStarts[0]).ToList();
+            var groups = new List<SectionGroup>();
+            var separators = new List<IReadOnlyCollection<string>>();
+            for (var index = 0; index < sectionStarts.Length; index++)
+            {
+                var start = sectionStarts[index];
+                var end = index + 1 < sectionStarts.Length
+                    ? sectionStarts[index + 1]
+                    : lines.Count;
+                var contentEnd = end;
+                if (index + 1 < sectionStarts.Length)
+                {
+                    while (contentEnd > start + 1 && lines[contentEnd - 1].Length == 0)
+                    {
+                        contentEnd--;
+                    }
+
+                    separators.Add(lines.Skip(contentEnd).Take(end - contentEnd).ToArray());
+                }
+
+                groups.Add(new SectionGroup(
+                    lines[start],
+                    lines.Skip(start).Take(contentEnd - start).ToArray()));
+            }
+
+            var orderedGroups = groups.OrderBy(
+                group => group.Name,
+                StringComparer.OrdinalIgnoreCase).ToArray();
+            for (var index = 0; index < orderedGroups.Length; index++)
+            {
+                output.AddRange(orderedGroups[index].Lines);
+                if (index < separators.Count)
+                {
+                    output.AddRange(separators[index]);
+                }
+            }
+
+            return output;
+        }
+
         private static void TrimBoundaryBlankLines(List<string> lines)
         {
             while (lines.Count > 0 && string.IsNullOrWhiteSpace(lines[0]))
@@ -405,6 +386,25 @@ namespace PNFmt
             {
                 lines.RemoveAt(lines.Count - 1);
             }
+        }
+
+        private static bool TryParseProperty(string line, bool isEditorConfig, out PropertyLine property)
+        {
+            if (!IniSyntax.TryParseProperty(line, out var parsedProperty, allowColon: isEditorConfig))
+            {
+                property = null;
+                return false;
+            }
+
+            var prefixSeparator = parsedProperty.Key.IndexOf('_');
+            var prefix = prefixSeparator > 0
+                ? parsedProperty.Key.Substring(0, prefixSeparator)
+                : null;
+            property = new PropertyLine(
+                parsedProperty.Key,
+                prefix,
+                parsedProperty.Formatted);
+            return true;
         }
 
         private sealed class PropertyLine

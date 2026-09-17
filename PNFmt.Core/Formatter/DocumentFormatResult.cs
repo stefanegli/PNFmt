@@ -21,11 +21,11 @@ namespace PNFmt
         public IReadOnlyList<FormatterDiagnostic> Diagnostics { get; }
         public bool IsSkipped => this.Text is null && this.Bytes is null;
 
-        public static DocumentFormatResult FromText(string text, IReadOnlyList<FormatterDiagnostic> diagnostics = null)
-            => new DocumentFormatResult(text ?? throw new ArgumentNullException(nameof(text)), null, diagnostics);
-
         public static DocumentFormatResult FromBytes(byte[] bytes)
             => new DocumentFormatResult(null, bytes ?? throw new ArgumentNullException(nameof(bytes)), null);
+
+        public static DocumentFormatResult FromText(string text, IReadOnlyList<FormatterDiagnostic> diagnostics = null)
+            => new DocumentFormatResult(text ?? throw new ArgumentNullException(nameof(text)), null, diagnostics);
 
         public static DocumentFormatResult Skipped(params FormatterDiagnostic[] diagnostics)
             => new DocumentFormatResult(null, null, diagnostics);

@@ -28,11 +28,6 @@ namespace PNFmt
             "Setters", "Triggers", "Conditions", "EnterActions", "ExitActions", "Template", "VisualStateGroups",
         };
 
-        public static bool IsTextContainer(string localName)
-        {
-            return TextContainers.Contains(localName) || localName.EndsWith(".Inlines", StringComparison.Ordinal);
-        }
-
         public static bool IsStructuralContainer(string namespaceUri, string localName)
         {
             if (namespaceUri != "http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -46,6 +41,11 @@ namespace PNFmt
             return separator < 0 ? StructuralContainers.Contains(localName)
                 : StructuralContainers.Contains(localName.Substring(0, separator))
                     && StructuralProperties.Contains(localName.Substring(separator + 1));
+        }
+
+        public static bool IsTextContainer(string localName)
+        {
+            return TextContainers.Contains(localName) || localName.EndsWith(".Inlines", StringComparison.Ordinal);
         }
     }
 }

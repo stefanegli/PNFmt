@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Formatting;
@@ -122,6 +123,25 @@ namespace PNFmt
             return result;
         }
 
+        private static string CreateConfiguration(string text, IReadOnlyDictionary<string, string> settings)
+        {
+            var configuration = new StringBuilder("is_global = true\n");
+            configuration.AppendLine("indent_style = space");
+            configuration.AppendLine("indent_size = 4");
+            configuration.AppendLine("tab_width = 4");
+            var newLine = TextFileFormatting.DetectNewLine(text);
+            configuration.AppendLine("end_of_line = " + (newLine == "\r\n" ? "crlf" : newLine == "\r" ? "cr" : "lf"));
+            foreach (var setting in settings.OrderBy(item => item.Key, StringComparer.Ordinal))
+            {
+                if (!string.Equals(setting.Value, "unset", StringComparison.OrdinalIgnoreCase))
+                {
+                    configuration.Append(setting.Key).Append(" = ").AppendLine(setting.Value);
+                }
+            }
+
+            return configuration.ToString();
+        }
+
         private static string FormatWhitespace(
             SyntaxNode sourceRoot,
             SyntaxTree tree,
@@ -152,25 +172,6 @@ namespace PNFmt
             return root.DescendantTrivia().Where(trivia =>
                     trivia.IsKind(SyntaxKind.DisabledTextTrivia) || trivia.IsDirective)
                 .Select(trivia => trivia.ToFullString());
-        }
-
-        private static string CreateConfiguration(string text, IReadOnlyDictionary<string, string> settings)
-        {
-            var configuration = new StringBuilder("is_global = true\n");
-            configuration.AppendLine("indent_style = space");
-            configuration.AppendLine("indent_size = 4");
-            configuration.AppendLine("tab_width = 4");
-            var newLine = TextFileFormatting.DetectNewLine(text);
-            configuration.AppendLine("end_of_line = " + (newLine == "\r\n" ? "crlf" : newLine == "\r" ? "cr" : "lf"));
-            foreach (var setting in settings.OrderBy(item => item.Key, StringComparer.Ordinal))
-            {
-                if (!string.Equals(setting.Value, "unset", StringComparison.OrdinalIgnoreCase))
-                {
-                    configuration.Append(setting.Key).Append(" = ").AppendLine(setting.Value);
-                }
-            }
-
-            return configuration.ToString();
         }
     }
 }

@@ -178,36 +178,6 @@ namespace PNFmt
             return DocumentFormatResult.FromText(originalText);
         }
 
-        private static void RemoveLayoutWhitespace(XDocument document)
-        {
-            // Whitespace in resource values and comments is application data even
-            // without xml:space. Remove only surrounding XML layout, retaining the
-            // reader's existing xml:space behavior elsewhere in the document.
-            var layout = document.DescendantNodes().OfType<XText>()
-                .Where(text => text.NodeType == XmlNodeType.Text
-                    && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n')
-                    && !text.Ancestors().Any(element => element.Parent is not null
-                        && IsResourceEntry(element.Parent))
-                    && (string)text.Ancestors().Attributes(XNamespace.Xml + "space").FirstOrDefault() != "preserve")
-                .ToList();
-            foreach (var text in layout)
-            {
-                text.Remove();
-            }
-        }
-
-        private sealed class ResourceEntry
-        {
-            public ResourceEntry(XElement element, IReadOnlyList<XNode> leadingComments)
-            {
-                this.Element = element;
-                this.LeadingComments = leadingComments;
-            }
-
-            public XElement Element { get; }
-            public IReadOnlyList<XNode> LeadingComments { get; }
-        }
-
         private static bool HasUnnamedResourceEntry(XElement root)
         {
             return root.Elements().Any(element =>
@@ -217,11 +187,6 @@ namespace PNFmt
         private static bool IsDocumentationComment(XComment comment)
         {
             return RemoveWhiteSpace(comment.ToString()) == RemoveWhiteSpace(ResxSchemaDefaults.OriginalComment);
-        }
-
-        private static bool IsXsdSchema(XElement element)
-        {
-            return element.Name == XName.Get("schema", "http://www.w3.org/2001/XMLSchema");
         }
 
         private static bool IsResourceEntry(XElement element)
@@ -242,9 +207,44 @@ namespace PNFmt
                 && (string)element.Element("value") == "text/microsoft-resx");
         }
 
+        private static bool IsXsdSchema(XElement element)
+        {
+            return element.Name == XName.Get("schema", "http://www.w3.org/2001/XMLSchema");
+        }
+
+        private static void RemoveLayoutWhitespace(XDocument document)
+        {
+            // Whitespace in resource values and comments is application data even
+            // without xml:space. Remove only surrounding XML layout, retaining the
+            // reader's existing xml:space behavior elsewhere in the document.
+            var layout = document.DescendantNodes().OfType<XText>()
+                .Where(text => text.NodeType == XmlNodeType.Text
+                    && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n')
+                    && !text.Ancestors().Any(element => element.Parent is not null
+                        && IsResourceEntry(element.Parent))
+                    && (string)text.Ancestors().Attributes(XNamespace.Xml + "space").FirstOrDefault() != "preserve")
+                .ToList();
+            foreach (var text in layout)
+            {
+                text.Remove();
+            }
+        }
+
         private static string RemoveWhiteSpace(string text)
         {
             return string.Join("", text.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private sealed class ResourceEntry
+        {
+            public ResourceEntry(XElement element, IReadOnlyList<XNode> leadingComments)
+            {
+                this.Element = element;
+                this.LeadingComments = leadingComments;
+            }
+
+            public XElement Element { get; }
+            public IReadOnlyList<XNode> LeadingComments { get; }
         }
     }
 }

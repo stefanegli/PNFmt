@@ -14,11 +14,6 @@ namespace PNFmt
                 alias => alias.LegacyName,
                 StringComparer.OrdinalIgnoreCase);
 
-        public static int Count(IReadOnlyList<string> lines)
-        {
-            return lines.Count(line => TryGetAlias(line, out _, out _));
-        }
-
         public static IReadOnlyList<string> Apply(
             IReadOnlyList<string> lines,
             bool migrate,
@@ -44,6 +39,11 @@ namespace PNFmt
 
             AddBlock(block, output, migrate, removeLegacy);
             return output;
+        }
+
+        public static int Count(IReadOnlyList<string> lines)
+        {
+            return lines.Count(line => TryGetAlias(line, out _, out _));
         }
 
         private static void AddBlock(

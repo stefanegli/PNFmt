@@ -2,7 +2,9 @@
 
 using System;
 using System.IO;
+
 using LibGit2Sharp;
+
 using PNFmt.Tests.Snapshots;
 
 using var repository = new Repository(Repository.Discover(AppContext.BaseDirectory)

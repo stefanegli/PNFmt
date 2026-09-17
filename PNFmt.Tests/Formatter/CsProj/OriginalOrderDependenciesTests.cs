@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.CsProj

@@ -1,14 +1,14 @@
 namespace PNFmt.Tests.Formatter.Resx
 {
-    using NFluent;
-
-    using PNFmt;
-    using PNFmt.Tests.Snapshots;
-
     using System;
     using System.Collections.Generic;
     using System.IO;
     using System.Threading;
+
+    using NFluent;
+
+    using PNFmt;
+    using PNFmt.Tests.Snapshots;
 
     using Xunit;
 
@@ -54,6 +54,34 @@ namespace PNFmt.Tests.Formatter.Resx
                 "Sort.abc");
         }
 
+        public void Dispose()
+        {
+            foreach (var file in this.temporaryFiles)
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
+        public void Dry_run_detects_changes_without_writing_the_file()
+        {
+            // Arrange
+            var actualFile = this.PrepareFile("sort", "Sort");
+            var formatter = new ResxFormatter();
+            var original = File.ReadAllText(actualFile);
+
+            // Act
+            var result = formatter.Format(CreateRequest(actualFile, writeChanges: false));
+
+            // Assert
+            Check.WithCustomMessage("dry-run should not write changes to disk")
+                .That(File.ReadAllText(actualFile))
+                .Equals(original);
+            Check.WithCustomMessage("dry-run should still detect pending updates")
+                .That(result.Status)
+                .IsEqualTo(FileFormatStatus.Updated);
+        }
+
         [Fact]
         public void EditorConfig_files_can_be_specified_per_folder()
         {
@@ -77,6 +105,26 @@ namespace PNFmt.Tests.Formatter.Resx
                 File.ReadAllText(actualFile2),
                 typeof(ResxEditorConfigSnapshotTests),
                 "config2/Sort.resx");
+        }
+
+        [Fact]
+        public void Formatter_reports_inactive_if_EditorConfig_does_not_enable_it()
+        {
+            // Arrange
+            var actualFile = this.PrepareFile("inactive", "Sort");
+            var formatter = new ResxFormatter();
+
+            // Act
+            var result = formatter.Format(CreateRequest(actualFile));
+
+            // Assert
+            GitSnapshot.Match(
+                File.ReadAllText(actualFile),
+                typeof(ResxEditorConfigSnapshotTests),
+                "Sort.resx");
+            Check.WithCustomMessage("formatter should report inactive")
+                .That(result.Status)
+                .IsEqualTo(FileFormatStatus.Skipped);
         }
 
         [Fact]
@@ -133,54 +181,6 @@ namespace PNFmt.Tests.Formatter.Resx
                 File.ReadAllText(actualFile),
                 typeof(ResxEditorConfigSnapshotTests),
                 "Schema.resx");
-        }
-
-        [Fact]
-        public void Formatter_reports_inactive_if_EditorConfig_does_not_enable_it()
-        {
-            // Arrange
-            var actualFile = this.PrepareFile("inactive", "Sort");
-            var formatter = new ResxFormatter();
-
-            // Act
-            var result = formatter.Format(CreateRequest(actualFile));
-
-            // Assert
-            GitSnapshot.Match(
-                File.ReadAllText(actualFile),
-                typeof(ResxEditorConfigSnapshotTests),
-                "Sort.resx");
-            Check.WithCustomMessage("formatter should report inactive")
-                .That(result.Status)
-                .IsEqualTo(FileFormatStatus.Skipped);
-        }
-
-        [Fact]
-        public void Dry_run_detects_changes_without_writing_the_file()
-        {
-            // Arrange
-            var actualFile = this.PrepareFile("sort", "Sort");
-            var formatter = new ResxFormatter();
-            var original = File.ReadAllText(actualFile);
-
-            // Act
-            var result = formatter.Format(CreateRequest(actualFile, writeChanges: false));
-
-            // Assert
-            Check.WithCustomMessage("dry-run should not write changes to disk")
-                .That(File.ReadAllText(actualFile))
-                .Equals(original);
-            Check.WithCustomMessage("dry-run should still detect pending updates")
-                .That(result.Status)
-                .IsEqualTo(FileFormatStatus.Updated);
-        }
-
-        public void Dispose()
-        {
-            foreach (var file in this.temporaryFiles)
-            {
-                File.Delete(file);
-            }
         }
 
         private static FileFormatRequest CreateRequest(string filePath, bool writeChanges = true)

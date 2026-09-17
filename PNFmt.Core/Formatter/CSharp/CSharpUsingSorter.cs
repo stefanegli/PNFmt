@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -32,6 +33,13 @@ namespace PNFmt
             return visited.WithUsings(usings);
         }
 
+        public override SyntaxNode VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
+        {
+            var usings = this.Sort(node.Usings);
+            var visited = (FileScopedNamespaceDeclarationSyntax)base.VisitFileScopedNamespaceDeclaration(node);
+            return visited.WithUsings(usings);
+        }
+
         public override SyntaxNode VisitNamespaceDeclaration(NamespaceDeclarationSyntax node)
         {
             var usings = this.Sort(node.Usings);
@@ -39,11 +47,38 @@ namespace PNFmt
             return visited.WithUsings(usings);
         }
 
-        public override SyntaxNode VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node)
+        private bool CanMove(UsingDirectiveSyntax node)
         {
-            var usings = this.Sort(node.Usings);
-            var visited = (FileScopedNamespaceDeclarationSyntax)base.VisitFileScopedNamespaceDeclaration(node);
-            return visited.WithUsings(usings);
+            return !this.exclusions.Intersects(node.FullSpan)
+                && node.DescendantTrivia().Where(trivia => node.Span.Contains(trivia.Span)).All(IsWhitespace)
+                && node.GetTrailingTrivia().All(trivia => IsWhitespace(trivia) || trivia.IsKind(SyntaxKind.SingleLineCommentTrivia));
+        }
+
+        private static int Category(UsingDirectiveSyntax node)
+        {
+            return node.Alias is not null ? 2 : node.StaticKeyword.IsKind(SyntaxKind.StaticKeyword) ? 1 : 0;
+        }
+
+        private static bool IsWhitespace(SyntaxTrivia trivia)
+        {
+            return trivia.IsKind(SyntaxKind.WhitespaceTrivia) || trivia.IsKind(SyntaxKind.EndOfLineTrivia);
+        }
+
+        private static string RootName(UsingDirectiveSyntax node)
+        {
+            if (node.Alias is not null)
+            {
+                return string.Empty;
+            }
+
+            var name = SortName(node);
+            if (name.StartsWith("global::", StringComparison.Ordinal))
+            {
+                name = name.Substring("global::".Length);
+            }
+
+            var separator = name.IndexOf('.');
+            return separator < 0 ? name : name.Substring(0, separator);
         }
 
         private SyntaxList<UsingDirectiveSyntax> Sort(SyntaxList<UsingDirectiveSyntax> usings)
@@ -97,44 +132,10 @@ namespace PNFmt
             return SyntaxFactory.List(result);
         }
 
-        private bool CanMove(UsingDirectiveSyntax node)
-        {
-            return !this.exclusions.Intersects(node.FullSpan)
-                && node.DescendantTrivia().Where(trivia => node.Span.Contains(trivia.Span)).All(IsWhitespace)
-                && node.GetTrailingTrivia().All(trivia => IsWhitespace(trivia) || trivia.IsKind(SyntaxKind.SingleLineCommentTrivia));
-        }
-
-        private static bool IsWhitespace(SyntaxTrivia trivia)
-        {
-            return trivia.IsKind(SyntaxKind.WhitespaceTrivia) || trivia.IsKind(SyntaxKind.EndOfLineTrivia);
-        }
-
-        private static int Category(UsingDirectiveSyntax node)
-        {
-            return node.Alias is not null ? 2 : node.StaticKeyword.IsKind(SyntaxKind.StaticKeyword) ? 1 : 0;
-        }
-
         private static string SortName(UsingDirectiveSyntax node)
         {
             return node.Alias?.Name.Identifier.ValueText
                 ?? string.Concat(node.NamespaceOrType.DescendantTokens().Select(token => token.Text));
-        }
-
-        private static string RootName(UsingDirectiveSyntax node)
-        {
-            if (node.Alias is not null)
-            {
-                return string.Empty;
-            }
-
-            var name = SortName(node);
-            if (name.StartsWith("global::", StringComparison.Ordinal))
-            {
-                name = name.Substring("global::".Length);
-            }
-
-            var separator = name.IndexOf('.');
-            return separator < 0 ? name : name.Substring(0, separator);
         }
     }
 }

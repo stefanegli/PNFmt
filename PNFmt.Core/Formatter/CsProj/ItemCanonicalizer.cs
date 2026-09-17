@@ -63,6 +63,26 @@ namespace PNFmt
             }
         }
 
+        private static int CompareMetadata(MetadataGroup left, MetadataGroup right)
+        {
+            var order = GetOrder(AttributeOrder, left.Element.Name.LocalName)
+                .CompareTo(GetOrder(AttributeOrder, right.Element.Name.LocalName));
+            if (order != 0)
+            {
+                return order;
+            }
+
+            var nameOrder = StringComparer.OrdinalIgnoreCase.Compare(
+                left.Element.Name.LocalName,
+                right.Element.Name.LocalName);
+            return nameOrder != 0 ? nameOrder : left.OriginalIndex.CompareTo(right.OriginalIndex);
+        }
+
+        private static int GetOrder(Dictionary<string, int> order, string name)
+        {
+            return order.TryGetValue(name, out var value) ? value : 500;
+        }
+
         private static void SortAttributes(XElement item)
         {
             var attributes = item.Attributes().ToList();
@@ -138,26 +158,6 @@ namespace PNFmt
 
             replacementNodes.AddRange(leadingNodes);
             item.ReplaceNodes(replacementNodes);
-        }
-
-        private static int CompareMetadata(MetadataGroup left, MetadataGroup right)
-        {
-            var order = GetOrder(AttributeOrder, left.Element.Name.LocalName)
-                .CompareTo(GetOrder(AttributeOrder, right.Element.Name.LocalName));
-            if (order != 0)
-            {
-                return order;
-            }
-
-            var nameOrder = StringComparer.OrdinalIgnoreCase.Compare(
-                left.Element.Name.LocalName,
-                right.Element.Name.LocalName);
-            return nameOrder != 0 ? nameOrder : left.OriginalIndex.CompareTo(right.OriginalIndex);
-        }
-
-        private static int GetOrder(Dictionary<string, int> order, string name)
-        {
-            return order.TryGetValue(name, out var value) ? value : 500;
         }
 
         private sealed class MetadataGroup

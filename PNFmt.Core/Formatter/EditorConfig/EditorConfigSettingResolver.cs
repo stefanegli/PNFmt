@@ -51,11 +51,8 @@ namespace PNFmt
 
     internal static class EditorConfigSettingNames
     {
-        public const string Enabled = "pnfmt_enabled";
-        public const string Format = "pnfmt_format";
-        public const string Formatter = "pnfmt_formatter";
-        public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CSharpCollapseBlankLines = "pnfmt_csharp_collapse_blank_lines";
+        public const string CSharpFormat = "pnfmt_csharp_format";
         public const string CSharpMemberAccessibilityOrder = "pnfmt_csharp_member_accessibility_order";
         public const string CSharpMemberOrder = "pnfmt_csharp_member_order";
         public const string CSharpRemoveRegions = "pnfmt_csharp_remove_regions";
@@ -64,13 +61,16 @@ namespace PNFmt
         public const string CSharpSortModifiers = "pnfmt_csharp_sort_modifiers";
         public const string CsProjEmptyLinesBetweenGroups = "pnfmt_csproj_empty_lines_between_groups";
         public const string CsProjSortItemTypes = "pnfmt_csproj_sort_item_types";
+        public const string Enabled = "pnfmt_enabled";
+        public const string Format = "pnfmt_format";
+        public const string Formatter = "pnfmt_formatter";
         public const string IniGroupByPrefix = "pnfmt_ini_group_by_prefix";
         public const string IniMergeGroups = "pnfmt_ini_merge_groups";
         public const string IniSortGroups = "pnfmt_ini_sort_groups";
-        public const string ResxRemoveDocumentationComment = "pnfmt_resx_remove_documentation_comment";
-        public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
         public const string ResxInsertDocumentationComment = "pnfmt_resx_insert_documentation_comment";
         public const string ResxInsertXsdSchema = "pnfmt_resx_insert_xsd_schema";
+        public const string ResxRemoveDocumentationComment = "pnfmt_resx_remove_documentation_comment";
+        public const string ResxRemoveXsdSchema = "pnfmt_resx_remove_xsd_schema";
         public const string ResxSortComparer = "pnfmt_resx_sort_comparer";
         public const string SortEntries = "pnfmt_sort_entries";
         public const string XamlFormat = "pnfmt_xaml_format";

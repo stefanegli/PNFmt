@@ -4,13 +4,34 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using PNFmt.Cli;
+
 using Xunit;
 
 namespace PNFmt.Tests
 {
     public sealed class FormattingReporterTests
     {
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Errors_take_precedence_over_formatting_changes(bool targetError)
+        {
+            var root = Path.GetTempPath();
+            var updated = new FileFormattingOutcome(Path.Combine(root, "Changed.cs"), new FileFormatResult(FileFormatStatus.Updated), null,
+                Array.Empty<FormatterLogMessage>(), Array.Empty<Exception>());
+            var failed = new FileFormattingOutcome(Path.Combine(root, "Failed.cs"), null, new IOException("Cannot read input."),
+                Array.Empty<FormatterLogMessage>(), Array.Empty<Exception>());
+            var outcomes = targetError ? new[] { updated } : new[] { updated, failed };
+            var errors = targetError ? new[] { "Path not found: Missing.cs" } : Array.Empty<string>();
+            var report = Report(root, new FormattingRunResult(outcomes, TimeSpan.Zero), new[] { "--check" }, errors);
+
+            Assert.Equal(2, report.ExitCode);
+            Assert.Contains("Would update 1", report.Output);
+            Assert.Contains(targetError ? "Path not found: Missing.cs" : "Cannot read input.", report.Error);
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
@@ -54,25 +75,6 @@ namespace PNFmt.Tests
             Assert.Contains("warning PNFMT004", report.Error);
             Assert.Equal(diagnostics, report.Output.Contains("Sample.csproj(7): warning CSPROJ001: A project issue."));
             Assert.Contains("in 0.125s.", report.Output);
-        }
-
-        [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void Errors_take_precedence_over_formatting_changes(bool targetError)
-        {
-            var root = Path.GetTempPath();
-            var updated = new FileFormattingOutcome(Path.Combine(root, "Changed.cs"), new FileFormatResult(FileFormatStatus.Updated), null,
-                Array.Empty<FormatterLogMessage>(), Array.Empty<Exception>());
-            var failed = new FileFormattingOutcome(Path.Combine(root, "Failed.cs"), null, new IOException("Cannot read input."),
-                Array.Empty<FormatterLogMessage>(), Array.Empty<Exception>());
-            var outcomes = targetError ? new[] { updated } : new[] { updated, failed };
-            var errors = targetError ? new[] { "Path not found: Missing.cs" } : Array.Empty<string>();
-            var report = Report(root, new FormattingRunResult(outcomes, TimeSpan.Zero), new[] { "--check" }, errors);
-
-            Assert.Equal(2, report.ExitCode);
-            Assert.Contains("Would update 1", report.Output);
-            Assert.Contains(targetError ? "Path not found: Missing.cs" : "Cannot read input.", report.Error);
         }
 
         private static (int ExitCode, string Output, string Error) Report(

@@ -80,11 +80,6 @@ namespace PNFmt
 
         public IReadOnlyCollection<string> SupportedExtensions { get; }
 
-        internal bool TryGetConfiguredFormatter(string filePath, out IFileFormatter formatter)
-        {
-            return FileFormattingConfiguration.Load(filePath).TryGetFormatter(this, out formatter);
-        }
-
         public bool TryGetFormatter(string filePath, out IFileFormatter formatter)
         {
             if (string.IsNullOrEmpty(filePath))
@@ -102,6 +97,11 @@ namespace PNFmt
             var fileName = Path.GetFileName(filePath);
             return fileName.StartsWith(".", StringComparison.Ordinal)
                 && this.formattersByExtension.TryGetValue(fileName, out formatter);
+        }
+
+        internal bool TryGetConfiguredFormatter(string filePath, out IFileFormatter formatter)
+        {
+            return FileFormattingConfiguration.Load(filePath).TryGetFormatter(this, out formatter);
         }
 
         private static string NormalizeExtension(string extension, string formatterName)

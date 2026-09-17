@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using PNFmt;
 
 namespace PNFmt.Cli
@@ -109,28 +110,6 @@ namespace PNFmt.Cli
                 errors,
                 settings.GitFiltered,
                 settings.MaxCpuCount);
-        }
-
-        private static bool IsPathException(Exception exception)
-        {
-            return exception is ArgumentException
-                || exception is IOException
-                || exception is NotSupportedException
-                || exception is UnauthorizedAccessException;
-        }
-
-        private static bool IsInIgnoredDirectory(string file, string rootDirectory)
-        {
-            var relativeDirectory = Path.GetDirectoryName(
-                Path.GetRelativePath(rootDirectory, file));
-            if (string.IsNullOrEmpty(relativeDirectory))
-            {
-                return false;
-            }
-
-            return relativeDirectory
-                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
-                .Any(IgnoredRecursiveDirectories.Contains);
         }
 
         private void AddFile(
@@ -241,6 +220,28 @@ namespace PNFmt.Cli
             {
                 errors.Add($"Unable to access path '{directoryPath}': {ex.Message}");
             }
+        }
+
+        private static bool IsInIgnoredDirectory(string file, string rootDirectory)
+        {
+            var relativeDirectory = Path.GetDirectoryName(
+                Path.GetRelativePath(rootDirectory, file));
+            if (string.IsNullOrEmpty(relativeDirectory))
+            {
+                return false;
+            }
+
+            return relativeDirectory
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(IgnoredRecursiveDirectories.Contains);
+        }
+
+        private static bool IsPathException(Exception exception)
+        {
+            return exception is ArgumentException
+                || exception is IOException
+                || exception is NotSupportedException
+                || exception is UnauthorizedAccessException;
         }
     }
 

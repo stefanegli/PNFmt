@@ -3,40 +3,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading;
+
 using PNFmt.Cli;
+
 using Xunit;
 
 namespace PNFmt.Tests
 {
     public sealed class FormattingRunnerTests
     {
-        [Fact]
-        public void Runner_processes_files_concurrently_and_keeps_result_order()
-        {
-            using (var formatter = new ConcurrencyFormatter())
-            {
-                var registry = new FormatterRegistry(new[] { formatter });
-                var files = new[] { "first.concurrent", "second.concurrent" };
-
-                var result = new FormattingRunner(registry).Run(files, true, false, 2);
-
-                Assert.Equal(2, formatter.PeakConcurrency);
-                Assert.Equal(files[0], result.Outcomes[0].File);
-                Assert.Equal(files[1], result.Outcomes[1].File);
-                Assert.All(result.Outcomes, outcome => Assert.Null(outcome.Error));
-            }
-        }
-
-        [Fact]
-        public void Runner_rejects_non_positive_parallelism()
-        {
-            var registry = new FormatterRegistry(new[] { new NoOpFormatter() });
-            var runner = new FormattingRunner(registry);
-
-            Assert.Throws<ArgumentOutOfRangeException>(
-                () => runner.Run(Array.Empty<string>(), true, false, 0));
-        }
-
         [Fact]
         public void Runner_finishes_editorconfig_files_before_dependent_files()
         {
@@ -79,6 +54,33 @@ namespace PNFmt.Tests
             Assert.All(result.Outcomes, outcome => Assert.Null(outcome.Error));
         }
 
+        [Fact]
+        public void Runner_processes_files_concurrently_and_keeps_result_order()
+        {
+            using (var formatter = new ConcurrencyFormatter())
+            {
+                var registry = new FormatterRegistry(new[] { formatter });
+                var files = new[] { "first.concurrent", "second.concurrent" };
+
+                var result = new FormattingRunner(registry).Run(files, true, false, 2);
+
+                Assert.Equal(2, formatter.PeakConcurrency);
+                Assert.Equal(files[0], result.Outcomes[0].File);
+                Assert.Equal(files[1], result.Outcomes[1].File);
+                Assert.All(result.Outcomes, outcome => Assert.Null(outcome.Error));
+            }
+        }
+
+        [Fact]
+        public void Runner_rejects_non_positive_parallelism()
+        {
+            var registry = new FormatterRegistry(new[] { new NoOpFormatter() });
+            var runner = new FormattingRunner(registry);
+
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => runner.Run(Array.Empty<string>(), true, false, 0));
+        }
+
         private sealed class ConcurrencyFormatter : IFileFormatter, IDisposable
         {
             private readonly Barrier barrier = new Barrier(2);
@@ -88,9 +90,9 @@ namespace PNFmt.Tests
             public IReadOnlyCollection<string> FileExtensions { get; } =
                 Array.AsReadOnly(new[] { ".concurrent" });
 
-            public int PeakConcurrency => this.peakConcurrency;
-
             public string Name => "concurrency";
+
+            public int PeakConcurrency => this.peakConcurrency;
 
             public void Dispose()
             {
@@ -132,24 +134,6 @@ namespace PNFmt.Tests
             }
         }
 
-        private sealed class NoOpFormatter : IFileFormatter
-        {
-            public IReadOnlyCollection<string> FileExtensions { get; } =
-                Array.AsReadOnly(new[] { ".noop" });
-
-            public string Name => "noop";
-
-            public FileFormatResult Format(FileFormatRequest request)
-            {
-                return new FileFormatResult(FileFormatStatus.Unchanged);
-            }
-        }
-
-        private sealed class ConfigurationState
-        {
-            public bool IsReady { get; set; }
-        }
-
         private sealed class ConfigurationFormatter : IFileFormatter
         {
             private readonly ConfigurationState state;
@@ -178,6 +162,11 @@ namespace PNFmt.Tests
             }
         }
 
+        private sealed class ConfigurationState
+        {
+            public bool IsReady { get; set; }
+        }
+
         private sealed class DependentFormatter : IFileFormatter
         {
             private readonly ConfigurationState state;
@@ -200,6 +189,19 @@ namespace PNFmt.Tests
                         "The EditorConfig dependency was not processed first.");
                 }
 
+                return new FileFormatResult(FileFormatStatus.Unchanged);
+            }
+        }
+
+        private sealed class NoOpFormatter : IFileFormatter
+        {
+            public IReadOnlyCollection<string> FileExtensions { get; } =
+                Array.AsReadOnly(new[] { ".noop" });
+
+            public string Name => "noop";
+
+            public FileFormatResult Format(FileFormatRequest request)
+            {
                 return new FileFormatResult(FileFormatStatus.Unchanged);
             }
         }

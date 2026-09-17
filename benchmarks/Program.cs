@@ -3,6 +3,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+
 using PNFmt.Cli;
 
 namespace PNFmt.Benchmarks
@@ -57,6 +58,30 @@ namespace PNFmt.Benchmarks
             }
         }
 
+        private static void RunRepository(string scenario, RepositoryFixture fixture, int samples, int parallelism)
+        {
+            var registry = FormatterCatalog.CreateDefault();
+            var resolver = new TargetFileResolver(registry, registry,
+                new FilePatternMatcher(RepositoryFixture.Extensions.Select(extension => "*." + extension)));
+            TargetFileResolution Discover() => resolver.Resolve(new[] { fixture.DirectoryPath }, recursive: true, allFiles: true);
+            BenchmarkMeasurement.Run(scenario, "discovery", fixture.Files.Count, 1, samples, Discover, fixture.ValidateDiscovery);
+            var files = Discover().Files;
+            var runner = new FormattingRunner(registry);
+            foreach (var workers in new[] { 1, parallelism })
+            {
+                fixture.Restore();
+                BenchmarkMeasurement.Run(scenario, "preview", files.Count, workers, samples,
+                    () => runner.Run(files, writeChanges: false, lint: false, workers),
+                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: false));
+                BenchmarkMeasurement.Run(scenario, "write", files.Count, workers, samples,
+                    () => runner.Run(files, writeChanges: true, lint: false, workers),
+                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: true), fixture.Restore);
+                BenchmarkMeasurement.Run(scenario, "unchanged", files.Count, workers, samples,
+                    () => runner.Run(files, writeChanges: false, lint: false, workers),
+                    result => fixture.Validate(result, FileFormatStatus.Unchanged, formatted: true));
+            }
+        }
+
         private static void RunSorting(string directory, bool quick, int samples)
         {
             Directory.CreateDirectory(directory);
@@ -84,30 +109,6 @@ namespace PNFmt.Benchmarks
                             }
                         });
                 }
-            }
-        }
-
-        private static void RunRepository(string scenario, RepositoryFixture fixture, int samples, int parallelism)
-        {
-            var registry = FormatterCatalog.CreateDefault();
-            var resolver = new TargetFileResolver(registry, registry,
-                new FilePatternMatcher(RepositoryFixture.Extensions.Select(extension => "*." + extension)));
-            TargetFileResolution Discover() => resolver.Resolve(new[] { fixture.DirectoryPath }, recursive: true, allFiles: true);
-            BenchmarkMeasurement.Run(scenario, "discovery", fixture.Files.Count, 1, samples, Discover, fixture.ValidateDiscovery);
-            var files = Discover().Files;
-            var runner = new FormattingRunner(registry);
-            foreach (var workers in new[] { 1, parallelism })
-            {
-                fixture.Restore();
-                BenchmarkMeasurement.Run(scenario, "preview", files.Count, workers, samples,
-                    () => runner.Run(files, writeChanges: false, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: false));
-                BenchmarkMeasurement.Run(scenario, "write", files.Count, workers, samples,
-                    () => runner.Run(files, writeChanges: true, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: true), fixture.Restore);
-                BenchmarkMeasurement.Run(scenario, "unchanged", files.Count, workers, samples,
-                    () => runner.Run(files, writeChanges: false, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Unchanged, formatted: true));
             }
         }
 

@@ -4,6 +4,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+
 using PNFmt;
 
 namespace PNFmt.Cli
@@ -108,12 +109,6 @@ namespace PNFmt.Cli
             return options.Check && (changed > 0 || (options.Lint && diagnosticCount > 0)) ? 1 : 0;
         }
 
-        private void WriteStatus(string status, string file)
-        {
-            var label = $"[{status}]".PadRight(StatusColumnWidth);
-            this.output.WriteLine($"{label} {this.DisplayPath(file)}");
-        }
-
         private string DisplayPath(string file)
         {
             var relative = Path.GetRelativePath(this.workingDirectory, Path.GetFullPath(file));
@@ -141,6 +136,12 @@ namespace PNFmt.Cli
                     this.error.WriteLine(exception);
                 }
             }
+        }
+
+        private void WriteStatus(string status, string file)
+        {
+            var label = $"[{status}]".PadRight(StatusColumnWidth);
+            this.output.WriteLine($"{label} {this.DisplayPath(file)}");
         }
     }
 }

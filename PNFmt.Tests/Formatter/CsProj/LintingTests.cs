@@ -2,18 +2,60 @@
 
 namespace PNFmt.Tests.Formatter.CsProj
 {
-    using PNFmt;
-
-    using NFluent;
-
     using System;
     using System.IO;
     using System.Linq;
+
+    using NFluent;
+
+    using PNFmt;
 
     using Xunit;
 
     public class LintingTests
     {
+        [Theory]
+        [InlineData("Compile", "Missing*.cs", "Existing.cs", false)]
+        [InlineData("Compile", "Existing*.cs", "Existing.cs", true)]
+        [InlineData("Compile", "*.cs", "nested/Existing.cs", false)]
+        [InlineData("Compile", "**/*.cs", "Existing.cs", true)]
+        [InlineData("Compile", "**/*.cs", "nested/Existing.cs", true)]
+        [InlineData("Compile", "**/Missing*.cs", "nested/Existing.cs", false)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match1.cs", true)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/deep/Match1.cs", false)]
+        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match10.cs", false)]
+        [InlineData("Compile", @"src\**\Match?.cs", "src/child/Match1.cs", true)]
+        [InlineData("Compile", @"src\Missing*.cs", "src/Existing.cs", false)]
+        [InlineData("Compile", "./src/*.cs", "src/Existing.cs", true)]
+        [InlineData("EmbeddedResource", "Missing*.resx", "Existing.resx", false)]
+        [InlineData("EmbeddedResource", @"src\*.resx", "src/Existing.resx", true)]
+        [InlineData("None", @"src\data.txt", "src/data.txt", true)]
+        public void Default_item_lint_requires_a_file_matching_the_entire_include(string itemType, string include, string file, bool expectedDiagnostic)
+        {
+            var project = "<Project Sdk=\"Microsoft.NET.Sdk\"><ItemGroup><" + itemType
+                + " Include=\"" + include + "\" /></ItemGroup></Project>";
+
+            var diagnostics = Analyze(project, true, file);
+
+            Assert.Equal(expectedDiagnostic, diagnostics.Any(diagnostic => diagnostic.Code == "CSPROJ005"));
+        }
+
+        [Fact]
+        public void Formatting_does_not_run_project_lints()
+        {
+            const string Project =
+                "<Project Sdk=\"Microsoft.NET.Sdk\">"
+                + "<PropertyGroup>"
+                + "<TargetFramework>net10.0</TargetFramework>"
+                + "<TargetFrameworks>net10.0;net9.0</TargetFrameworks>"
+                + "</PropertyGroup>"
+                + "</Project>";
+
+            var diagnostics = Analyze(Project, lint: false);
+
+            Assert.Empty(diagnostics);
+        }
+
         [Fact]
         public void Lint_reports_structural_project_issues()
         {
@@ -67,48 +109,6 @@ namespace PNFmt.Tests.Formatter.CsProj
             var diagnostics = Analyze(project);
 
             Check.That(diagnostics.Select(diagnostic => diagnostic.Code)).Not.Contains("CSPROJ005");
-        }
-
-        [Fact]
-        public void Formatting_does_not_run_project_lints()
-        {
-            const string Project =
-                "<Project Sdk=\"Microsoft.NET.Sdk\">"
-                + "<PropertyGroup>"
-                + "<TargetFramework>net10.0</TargetFramework>"
-                + "<TargetFrameworks>net10.0;net9.0</TargetFrameworks>"
-                + "</PropertyGroup>"
-                + "</Project>";
-
-            var diagnostics = Analyze(Project, lint: false);
-
-            Assert.Empty(diagnostics);
-        }
-
-        [Theory]
-        [InlineData("Compile", "Missing*.cs", "Existing.cs", false)]
-        [InlineData("Compile", "Existing*.cs", "Existing.cs", true)]
-        [InlineData("Compile", "*.cs", "nested/Existing.cs", false)]
-        [InlineData("Compile", "**/*.cs", "Existing.cs", true)]
-        [InlineData("Compile", "**/*.cs", "nested/Existing.cs", true)]
-        [InlineData("Compile", "**/Missing*.cs", "nested/Existing.cs", false)]
-        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match1.cs", true)]
-        [InlineData("Compile", "src/*/Match?.cs", "src/child/deep/Match1.cs", false)]
-        [InlineData("Compile", "src/*/Match?.cs", "src/child/Match10.cs", false)]
-        [InlineData("Compile", @"src\**\Match?.cs", "src/child/Match1.cs", true)]
-        [InlineData("Compile", @"src\Missing*.cs", "src/Existing.cs", false)]
-        [InlineData("Compile", "./src/*.cs", "src/Existing.cs", true)]
-        [InlineData("EmbeddedResource", "Missing*.resx", "Existing.resx", false)]
-        [InlineData("EmbeddedResource", @"src\*.resx", "src/Existing.resx", true)]
-        [InlineData("None", @"src\data.txt", "src/data.txt", true)]
-        public void Default_item_lint_requires_a_file_matching_the_entire_include(string itemType, string include, string file, bool expectedDiagnostic)
-        {
-            var project = "<Project Sdk=\"Microsoft.NET.Sdk\"><ItemGroup><" + itemType
-                + " Include=\"" + include + "\" /></ItemGroup></Project>";
-
-            var diagnostics = Analyze(project, true, file);
-
-            Assert.Equal(expectedDiagnostic, diagnostics.Any(diagnostic => diagnostic.Code == "CSPROJ005"));
         }
 
         private static System.Collections.Generic.IReadOnlyList<FormatterDiagnostic> Analyze(

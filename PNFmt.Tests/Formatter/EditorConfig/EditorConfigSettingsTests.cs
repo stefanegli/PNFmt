@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.EditorConfig
@@ -10,149 +11,32 @@ namespace PNFmt.Tests.Formatter.EditorConfig
     public sealed class EditorConfigSettingsTests
     {
         [Fact]
-        public void Csproj_reads_pnfmt_settings_and_standard_layout_settings()
+        public void Cached_editorconfig_files_refresh_after_changes()
         {
-            const string Configuration =
+            const string EnabledConfiguration =
                 "root = true\n\n"
-                + "[*.csproj]\n"
-                + "pnfmt_sort_entries = true\n"
-                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
-                + "pnfmt_csproj_sort_item_types = Protobuf, PackageReference, protobuf\n"
-                + "indent_style = tab\n"
-                + "tab_width = 8\n"
-                + "end_of_line = lf\n";
-
-            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
-            {
-                var log = new RecordingLog();
-                var settings = new CsProjEditorConfigSettings(target.Path, log);
-
-                Assert.True(settings.IsActive);
-                Assert.True(settings.SortEntries);
-                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
-                Assert.Equal(new[] { "Protobuf", "PackageReference" }, settings.SortItemTypes);
-                Assert.Equal('\t', settings.IndentStyle);
-                Assert.Equal(8, settings.IndentSize);
-                Assert.Equal("\n", settings.EndOfLine);
-                Assert.Empty(log.Messages);
-            }
-        }
-
-        [Fact]
-        public void Csproj_indent_size_controls_space_indentation_and_wins_over_tab_width()
-        {
-            const string Configuration =
+                + "[*.ini]\n"
+                + "pnfmt_sort_entries = true\n";
+            const string DisabledConfiguration =
                 "root = true\n\n"
-                + "[*.csproj]\n"
-                + "indent_style = space\n"
-                + "indent_size = 4\n"
-                + "tab_width = 8\n";
+                + "[*.ini]\n"
+                + "pnfmt_sort_entries = false\n";
 
-            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            using (var target = TemporaryTarget.Create("Settings.ini", EnabledConfiguration))
             {
-                var settings = new CsProjEditorConfigSettings(target.Path);
+                var enabled = new IniEditorConfigSettings(
+                    target.Path,
+                    new RecordingLog());
 
-                Assert.Equal(' ', settings.IndentStyle);
-                Assert.Equal(4, settings.IndentSize);
-                Assert.Equal("    ", settings.ResolveIndentChars());
-            }
-        }
+                File.WriteAllText(
+                    System.IO.Path.Combine(target.DirectoryPath, ".editorconfig"),
+                    DisabledConfiguration);
+                var disabled = new IniEditorConfigSettings(
+                    target.Path,
+                    new RecordingLog());
 
-        [Fact]
-        public void Csproj_uses_every_legacy_formatter_setting_as_a_fallback()
-        {
-            const string Configuration =
-                "root = true\n\n"
-                + "[*.csproj]\n"
-                + "csproj_formatter_sort_entries = true\n"
-                + "csproj_formatter_empty_lines_between_groups = 0\n"
-                + "csproj_formatter_sort_item_types = Protobuf\n";
-
-            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
-            {
-                var log = new RecordingLog();
-                var settings = new CsProjEditorConfigSettings(target.Path, log);
-
-                Assert.True(settings.SortEntries);
-                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
-                Assert.Equal(new[] { "Protobuf" }, settings.SortItemTypes);
-                Assert.Equal(3, log.Messages.Count);
-                Assert.All(log.Messages, message => Assert.Contains("warning PNFMT001", message));
-                Assert.Contains(log.Messages, message => message.Contains("pnfmt_sort_entries"));
-                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_empty_lines_between_groups"));
-                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_sort_item_types"));
-            }
-        }
-
-        [Fact]
-        public void Csproj_pnfmt_settings_win_when_legacy_settings_are_also_present()
-        {
-            const string Configuration =
-                "root = true\n\n"
-                + "[*.csproj]\n"
-                + "pnfmt_sort_entries = false\n"
-                + "csproj_formatter_sort_entries = true\n"
-                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
-                + "csproj_formatter_empty_lines_between_groups = 3\n"
-                + "pnfmt_csproj_sort_item_types = Compile\n"
-                + "csproj_formatter_sort_item_types = None\n";
-
-            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
-            {
-                var log = new RecordingLog();
-                var settings = new CsProjEditorConfigSettings(target.Path, log);
-
-                Assert.False(settings.SortEntries);
-                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
-                Assert.Equal(new[] { "Compile" }, settings.SortItemTypes);
-                Assert.Equal(3, log.Messages.Count);
-                Assert.All(log.Messages, message => Assert.Contains("deprecated and ignored", message));
-            }
-        }
-
-        [Fact]
-        public void Resx_reads_every_pnfmt_setting()
-        {
-            const string Configuration =
-                "root = true\n\n"
-                + "[*.resx]\n"
-                + "pnfmt_sort_entries = true\n"
-                + "pnfmt_resx_remove_xsd_schema = true\n"
-                + "pnfmt_resx_remove_documentation_comment = false\n"
-                + "pnfmt_resx_sort_comparer = OrdinalIgnoreCase\n";
-
-            using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
-            {
-                var log = new RecordingLog();
-                var settings = new ResxEditorConfigSettings(log, target.Path);
-
-                Assert.True(settings.IsActive);
-                Assert.True(settings.SortEntries);
-                Assert.True(settings.RemoveXsdSchema);
-                Assert.False(settings.RemoveDocumentationComment);
-                Assert.Same(StringComparer.OrdinalIgnoreCase, settings.Comparer);
-                Assert.Empty(log.Messages);
-            }
-        }
-
-        [Theory]
-        [InlineData("indent_size = invalid")]
-        [InlineData("indent_size = 0")]
-        [InlineData("indent_size = -1")]
-        [InlineData("tab_width = invalid")]
-        [InlineData("tab_width = 0")]
-        [InlineData("tab_width = -1")]
-        public void Invalid_project_indentation_does_not_activate_formatting(string setting)
-        {
-            using (var target = TemporaryTarget.Create("Project.csproj", "root = true\n\n[*.csproj]\n" + setting + "\n"))
-            {
-                const string Original = "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>";
-                File.WriteAllText(target.Path, Original);
-
-                var result = new CsProjFormatter().Format(new FileFormatRequest(target.Path, true, false, new RecordingLog()));
-
-                Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                Assert.Equal(Original, File.ReadAllText(target.Path));
+                Assert.True(enabled.SortEntries);
+                Assert.False(disabled.SortEntries);
             }
         }
 
@@ -183,6 +67,150 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
+        public void Csproj_indent_size_controls_space_indentation_and_wins_over_tab_width()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.csproj]\n"
+                + "indent_style = space\n"
+                + "indent_size = 4\n"
+                + "tab_width = 8\n";
+
+            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            {
+                var settings = new CsProjEditorConfigSettings(target.Path);
+
+                Assert.Equal(' ', settings.IndentStyle);
+                Assert.Equal(4, settings.IndentSize);
+                Assert.Equal("    ", settings.ResolveIndentChars());
+            }
+        }
+
+        [Fact]
+        public void Csproj_pnfmt_settings_win_when_legacy_settings_are_also_present()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.csproj]\n"
+                + "pnfmt_sort_entries = false\n"
+                + "csproj_formatter_sort_entries = true\n"
+                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
+                + "csproj_formatter_empty_lines_between_groups = 3\n"
+                + "pnfmt_csproj_sort_item_types = Compile\n"
+                + "csproj_formatter_sort_item_types = None\n";
+
+            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            {
+                var log = new RecordingLog();
+                var settings = new CsProjEditorConfigSettings(target.Path, log);
+
+                Assert.False(settings.SortEntries);
+                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
+                Assert.Equal(new[] { "Compile" }, settings.SortItemTypes);
+                Assert.Equal(3, log.Messages.Count);
+                Assert.All(log.Messages, message => Assert.Contains("deprecated and ignored", message));
+            }
+        }
+
+        [Fact]
+        public void Csproj_reads_pnfmt_settings_and_standard_layout_settings()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.csproj]\n"
+                + "pnfmt_sort_entries = true\n"
+                + "pnfmt_csproj_empty_lines_between_groups = 0\n"
+                + "pnfmt_csproj_sort_item_types = Protobuf, PackageReference, protobuf\n"
+                + "indent_style = tab\n"
+                + "tab_width = 8\n"
+                + "end_of_line = lf\n";
+
+            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            {
+                var log = new RecordingLog();
+                var settings = new CsProjEditorConfigSettings(target.Path, log);
+
+                Assert.True(settings.IsActive);
+                Assert.True(settings.SortEntries);
+                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
+                Assert.Equal(new[] { "Protobuf", "PackageReference" }, settings.SortItemTypes);
+                Assert.Equal('\t', settings.IndentStyle);
+                Assert.Equal(8, settings.IndentSize);
+                Assert.Equal("\n", settings.EndOfLine);
+                Assert.Empty(log.Messages);
+            }
+        }
+
+        [Fact]
+        public void Csproj_uses_every_legacy_formatter_setting_as_a_fallback()
+        {
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.csproj]\n"
+                + "csproj_formatter_sort_entries = true\n"
+                + "csproj_formatter_empty_lines_between_groups = 0\n"
+                + "csproj_formatter_sort_item_types = Protobuf\n";
+
+            using (var target = TemporaryTarget.Create("Project.csproj", Configuration))
+            {
+                var log = new RecordingLog();
+                var settings = new CsProjEditorConfigSettings(target.Path, log);
+
+                Assert.True(settings.SortEntries);
+                Assert.Equal(0, settings.EmptyLinesBetweenGroups);
+                Assert.Equal(new[] { "Protobuf" }, settings.SortItemTypes);
+                Assert.Equal(3, log.Messages.Count);
+                Assert.All(log.Messages, message => Assert.Contains("warning PNFMT001", message));
+                Assert.Contains(log.Messages, message => message.Contains("pnfmt_sort_entries"));
+                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_empty_lines_between_groups"));
+                Assert.Contains(log.Messages, message => message.Contains("pnfmt_csproj_sort_item_types"));
+            }
+        }
+
+        [Theory]
+        [InlineData("indent_size = invalid")]
+        [InlineData("indent_size = 0")]
+        [InlineData("indent_size = -1")]
+        [InlineData("tab_width = invalid")]
+        [InlineData("tab_width = 0")]
+        [InlineData("tab_width = -1")]
+        public void Invalid_project_indentation_does_not_activate_formatting(string setting)
+        {
+            using (var target = TemporaryTarget.Create("Project.csproj", "root = true\n\n[*.csproj]\n" + setting + "\n"))
+            {
+                const string Original = "<Project Sdk=\"Microsoft.NET.Sdk\"></Project>";
+                File.WriteAllText(target.Path, Original);
+
+                var result = new CsProjFormatter().Format(new FileFormatRequest(target.Path, true, false, new RecordingLog()));
+
+                Assert.Equal(FileFormatStatus.Skipped, result.Status);
+                Assert.Equal(Original, File.ReadAllText(target.Path));
+            }
+        }
+
+        [Fact]
+        public void Loads_observe_added_changed_and_removed_child_configurations()
+        {
+            using (var directory = new TestDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*]\ncustom = outer\n");
+                var target = directory.Write("child/Settings.ini", "");
+                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+
+                var childConfig = directory.Write("child/.editorconfig", "[*]\ncustom = inner\n");
+                Assert.Equal("inner", EditorConfigSettings.Load(target)["custom"]);
+
+                var timestamp = File.GetLastWriteTimeUtc(childConfig);
+                File.WriteAllText(childConfig, "[*]\ncustom = newer\n");
+                File.SetLastWriteTimeUtc(childConfig, timestamp.AddSeconds(2));
+                Assert.Equal("newer", EditorConfigSettings.Load(target)["custom"]);
+
+                File.Delete(childConfig);
+                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+            }
+        }
+
+        [Fact]
         public void Resx_boolean_settings_are_case_insensitive()
         {
             const string Configuration =
@@ -199,31 +227,6 @@ namespace PNFmt.Tests.Formatter.EditorConfig
                 Assert.True(settings.SortEntries);
                 Assert.True(settings.RemoveXsdSchema);
                 Assert.True(settings.RemoveDocumentationComment);
-            }
-        }
-
-        [Fact]
-        public void Resx_uses_every_legacy_setting_as_a_fallback()
-        {
-            const string Configuration =
-                "root = true\n\n"
-                + "[*.resx]\n"
-                + "resx_formatter_sort_entries = true\n"
-                + "resx_formatter_remove_xsd_schema = true\n"
-                + "resx_formatter_remove_documentation_comment = true\n"
-                + "resx_formatter_sort_comparer = InvariantCultureIgnoreCase\n";
-
-            using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
-            {
-                var log = new RecordingLog();
-                var settings = new ResxEditorConfigSettings(log, target.Path);
-
-                Assert.True(settings.SortEntries);
-                Assert.True(settings.RemoveXsdSchema);
-                Assert.True(settings.RemoveDocumentationComment);
-                Assert.Same(StringComparer.InvariantCultureIgnoreCase, settings.Comparer);
-                Assert.Equal(4, log.Messages.Count);
-                Assert.All(log.Messages, message => Assert.Contains("warning PNFMT001", message));
             }
         }
 
@@ -257,54 +260,52 @@ namespace PNFmt.Tests.Formatter.EditorConfig
         }
 
         [Fact]
-        public void Cached_editorconfig_files_refresh_after_changes()
+        public void Resx_reads_every_pnfmt_setting()
         {
-            const string EnabledConfiguration =
+            const string Configuration =
                 "root = true\n\n"
-                + "[*.ini]\n"
-                + "pnfmt_sort_entries = true\n";
-            const string DisabledConfiguration =
-                "root = true\n\n"
-                + "[*.ini]\n"
-                + "pnfmt_sort_entries = false\n";
+                + "[*.resx]\n"
+                + "pnfmt_sort_entries = true\n"
+                + "pnfmt_resx_remove_xsd_schema = true\n"
+                + "pnfmt_resx_remove_documentation_comment = false\n"
+                + "pnfmt_resx_sort_comparer = OrdinalIgnoreCase\n";
 
-            using (var target = TemporaryTarget.Create("Settings.ini", EnabledConfiguration))
+            using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
             {
-                var enabled = new IniEditorConfigSettings(
-                    target.Path,
-                    new RecordingLog());
+                var log = new RecordingLog();
+                var settings = new ResxEditorConfigSettings(log, target.Path);
 
-                File.WriteAllText(
-                    System.IO.Path.Combine(target.DirectoryPath, ".editorconfig"),
-                    DisabledConfiguration);
-                var disabled = new IniEditorConfigSettings(
-                    target.Path,
-                    new RecordingLog());
-
-                Assert.True(enabled.SortEntries);
-                Assert.False(disabled.SortEntries);
+                Assert.True(settings.IsActive);
+                Assert.True(settings.SortEntries);
+                Assert.True(settings.RemoveXsdSchema);
+                Assert.False(settings.RemoveDocumentationComment);
+                Assert.Same(StringComparer.OrdinalIgnoreCase, settings.Comparer);
+                Assert.Empty(log.Messages);
             }
         }
 
         [Fact]
-        public void Loads_observe_added_changed_and_removed_child_configurations()
+        public void Resx_uses_every_legacy_setting_as_a_fallback()
         {
-            using (var directory = new TestDirectory())
+            const string Configuration =
+                "root = true\n\n"
+                + "[*.resx]\n"
+                + "resx_formatter_sort_entries = true\n"
+                + "resx_formatter_remove_xsd_schema = true\n"
+                + "resx_formatter_remove_documentation_comment = true\n"
+                + "resx_formatter_sort_comparer = InvariantCultureIgnoreCase\n";
+
+            using (var target = TemporaryTarget.Create("Strings.resx", Configuration))
             {
-                directory.Write(".editorconfig", "root = true\n[*]\ncustom = outer\n");
-                var target = directory.Write("child/Settings.ini", "");
-                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+                var log = new RecordingLog();
+                var settings = new ResxEditorConfigSettings(log, target.Path);
 
-                var childConfig = directory.Write("child/.editorconfig", "[*]\ncustom = inner\n");
-                Assert.Equal("inner", EditorConfigSettings.Load(target)["custom"]);
-
-                var timestamp = File.GetLastWriteTimeUtc(childConfig);
-                File.WriteAllText(childConfig, "[*]\ncustom = newer\n");
-                File.SetLastWriteTimeUtc(childConfig, timestamp.AddSeconds(2));
-                Assert.Equal("newer", EditorConfigSettings.Load(target)["custom"]);
-
-                File.Delete(childConfig);
-                Assert.Equal("outer", EditorConfigSettings.Load(target)["custom"]);
+                Assert.True(settings.SortEntries);
+                Assert.True(settings.RemoveXsdSchema);
+                Assert.True(settings.RemoveDocumentationComment);
+                Assert.Same(StringComparer.InvariantCultureIgnoreCase, settings.Comparer);
+                Assert.Equal(4, log.Messages.Count);
+                Assert.All(log.Messages, message => Assert.Contains("warning PNFMT001", message));
             }
         }
 

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+
 using Xunit;
 
 namespace PNFmt.Tests.Snapshots
@@ -25,15 +26,6 @@ namespace PNFmt.Tests.Snapshots
                 yield return new object[] { "Xml", "Data.xml", "xml" };
                 yield return new object[] { "Xml", "View.xaml", "xaml" };
             }
-        }
-
-        [Fact]
-        public void Every_registered_formatter_has_a_cli_fixture()
-        {
-            var registered = FormatterCatalog.CreateDefault().Formatters.Select(formatter => formatter.Name);
-            var covered = Cases.Select(testCase => (string)testCase[2]).Distinct(StringComparer.Ordinal);
-            Assert.Equal(registered.OrderBy(name => name, StringComparer.Ordinal),
-                covered.OrderBy(name => name, StringComparer.Ordinal));
         }
 
         [Theory]
@@ -64,6 +56,15 @@ namespace PNFmt.Tests.Snapshots
                 relativePath);
 
             Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void Every_registered_formatter_has_a_cli_fixture()
+        {
+            var registered = FormatterCatalog.CreateDefault().Formatters.Select(formatter => formatter.Name);
+            var covered = Cases.Select(testCase => (string)testCase[2]).Distinct(StringComparer.Ordinal);
+            Assert.Equal(registered.OrderBy(name => name, StringComparer.Ordinal),
+                covered.OrderBy(name => name, StringComparer.Ordinal));
         }
 
     }

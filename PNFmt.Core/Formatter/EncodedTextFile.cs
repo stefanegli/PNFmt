@@ -23,6 +23,15 @@ namespace PNFmt
 
         public string Text { get; }
 
+        public byte[] GetBytes(string text)
+        {
+            // Encode completely before opening the destination, so encoding failures
+            // cannot truncate it. Keep precisely the original BOM convention.
+            return this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
+        }
+
+        public bool HasSameBytes(byte[] bytes) => this.originalBytes.SequenceEqual(bytes);
+
         public static EncodedTextFile Read(string path, Encoding configuredEncoding = null, bool xml = false)
         {
             var bytes = File.ReadAllBytes(path);
@@ -77,18 +86,9 @@ namespace PNFmt
             return new EncodedTextFile(bytes, utf8.GetString(bytes), utf8);
         }
 
-        public bool HasSameBytes(byte[] bytes) => this.originalBytes.SequenceEqual(bytes);
-
         public void Write(string path, byte[] bytes)
         {
             FileReplacement.Write(path, this.originalBytes, output => output.Write(bytes, 0, bytes.Length));
-        }
-
-        public byte[] GetBytes(string text)
-        {
-            // Encode completely before opening the destination, so encoding failures
-            // cannot truncate it. Keep precisely the original BOM convention.
-            return this.preamble.Concat(this.encoding.GetBytes(text)).ToArray();
         }
 
         private static Encoding DetectXmlUnicodeEncoding(byte[] bytes)

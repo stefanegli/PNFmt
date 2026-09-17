@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+
 using PNFmt.Tests.Snapshots;
+
 using Xunit;
 
 namespace PNFmt.Tests.Formatter.Ini

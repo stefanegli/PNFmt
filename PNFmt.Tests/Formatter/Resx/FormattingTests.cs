@@ -1,16 +1,15 @@
 namespace PNFmt.Tests.Formatter.Resx
 {
-    using PNFmt;
-
-    using PNFmt.Tests.Formatter.Resx.Fake;
-    using PNFmt.Tests.Formatter.Resx.TestFoundation;
-    using PNFmt.Tests.Snapshots;
-
     using System;
     using System.Globalization;
     using System.IO;
     using System.Linq;
     using System.Threading;
+
+    using PNFmt;
+    using PNFmt.Tests.Formatter.Resx.Fake;
+    using PNFmt.Tests.Formatter.Resx.TestFoundation;
+    using PNFmt.Tests.Snapshots;
 
     using Xunit;
     using Xunit.Sdk;
@@ -21,17 +20,27 @@ namespace PNFmt.Tests.Formatter.Resx
             FileSnapshotCaseSource.Create(GetFixtureRoot(), ".resx")
                 .Select(testCase => new object[] { testCase.RelativePath, testCase.InputFile, testCase.CaseName });
 
-        [Theory]
-        [MemberData(nameof(FileSnapshots))]
-        public void Formatter_matches_snapshot(string relativePath, string inputFile, string caseName)
+        [Fact]
+        public void Every_legacy_snapshot_input_is_registered()
         {
-            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
-                new ResxFormatter(), GetFixtureRoot(), relativePath, inputFile, caseName);
-            GitSnapshot.Match(actual, typeof(ResxSnapshotTests), caseName);
-        }
+            var fixtureRoot = Path.Combine(
+                System.AppContext.BaseDirectory,
+                "Formatter",
+                "Resx",
+                "_files");
+            var fixtureInputs = Directory.GetFiles(fixtureRoot)
+                .Where(path => path.EndsWith(".resx", StringComparison.OrdinalIgnoreCase)
+                    || path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+                .Where(path => !Path.GetFileNameWithoutExtension(path)
+                    .EndsWith("-expected", StringComparison.OrdinalIgnoreCase))
+                .Select(Path.GetFileName)
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
+            var registeredInputs = new ResxSnapshotData()
+                .Select(testCase => (string)testCase[1])
+                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
 
-        private static string GetFixtureRoot() =>
-            Path.Combine(AppContext.BaseDirectory, "Formatter", "Resx", "_files");
+            Assert.Equal(fixtureInputs, registeredInputs);
+        }
 
         [Theory]
         [ClassData(typeof(ResxSnapshotData))]
@@ -87,27 +96,17 @@ namespace PNFmt.Tests.Formatter.Resx
             }
         }
 
-        [Fact]
-        public void Every_legacy_snapshot_input_is_registered()
+        [Theory]
+        [MemberData(nameof(FileSnapshots))]
+        public void Formatter_matches_snapshot(string relativePath, string inputFile, string caseName)
         {
-            var fixtureRoot = Path.Combine(
-                System.AppContext.BaseDirectory,
-                "Formatter",
-                "Resx",
-                "_files");
-            var fixtureInputs = Directory.GetFiles(fixtureRoot)
-                .Where(path => path.EndsWith(".resx", StringComparison.OrdinalIgnoreCase)
-                    || path.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-                .Where(path => !Path.GetFileNameWithoutExtension(path)
-                    .EndsWith("-expected", StringComparison.OrdinalIgnoreCase))
-                .Select(Path.GetFileName)
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
-            var registeredInputs = new ResxSnapshotData()
-                .Select(testCase => (string)testCase[1])
-                .OrderBy(name => name, StringComparer.OrdinalIgnoreCase);
-
-            Assert.Equal(fixtureInputs, registeredInputs);
+            var actual = FormatterSnapshotTestRunner.FormatAndAssertIdempotent(
+                new ResxFormatter(), GetFixtureRoot(), relativePath, inputFile, caseName);
+            GitSnapshot.Match(actual, typeof(ResxSnapshotTests), caseName);
         }
+
+        private static string GetFixtureRoot() =>
+            Path.Combine(AppContext.BaseDirectory, "Formatter", "Resx", "_files");
 
         internal class ResxSnapshotData : TheoryData<string, string, string, object>
         {

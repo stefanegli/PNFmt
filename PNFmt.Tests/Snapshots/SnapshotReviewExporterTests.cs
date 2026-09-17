@@ -3,7 +3,9 @@
 using System;
 using System.IO;
 using System.Linq;
+
 using LibGit2Sharp;
+
 using Xunit;
 
 namespace PNFmt.Tests.Snapshots

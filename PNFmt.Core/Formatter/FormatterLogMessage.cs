@@ -28,11 +28,11 @@ namespace PNFmt
 
         public static FormatterLogMessage Detail(string message) => new FormatterLogMessage(FormatterLogMessageKind.Detail, message);
         public static FormatterLogMessage Progress(string message) => new FormatterLogMessage(FormatterLogMessageKind.Progress, message);
-        public static FormatterLogMessage Warning(string file, string code, string message)
-            => new FormatterLogMessage(FormatterLogMessageKind.Warning, message, file, code);
-
         public override string ToString() => this.Kind == FormatterLogMessageKind.Warning
             ? $"{this.File}: warning {this.Code}: {this.Message}" : this.Message;
+
+        public static FormatterLogMessage Warning(string file, string code, string message)
+            => new FormatterLogMessage(FormatterLogMessageKind.Warning, message, file, code);
     }
 
     internal interface IFormatterMessageLog : IFormatterLog
@@ -42,11 +42,11 @@ namespace PNFmt
 
     internal static class FormatterLog
     {
-        public static void Warning(this IFormatterLog log, string file, string code, string message)
-            => Write(log, FormatterLogMessage.Warning(file, code, message));
-
         public static void Progress(this IFormatterLog log, string message)
             => Write(log, FormatterLogMessage.Progress(message));
+
+        public static void Warning(this IFormatterLog log, string file, string code, string message)
+            => Write(log, FormatterLogMessage.Warning(file, code, message));
 
         private static void Write(IFormatterLog log, FormatterLogMessage message)
         {

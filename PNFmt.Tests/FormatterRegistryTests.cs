@@ -2,34 +2,13 @@
 
 using System;
 using System.Collections.Generic;
+
 using Xunit;
 
 namespace PNFmt.Tests
 {
     public sealed class FormatterRegistryTests
     {
-        [Fact]
-        public void One_formatter_can_handle_multiple_extensions()
-        {
-            var formatter = new TestFormatter("resource", "markup", ".xml");
-            var registry = new FormatterRegistry(new[] { formatter });
-
-            Assert.True(registry.TryGetFormatter("settings.MARKUP", out var markupFormatter));
-            Assert.True(registry.TryGetFormatter("settings.xml", out var xmlFormatter));
-            Assert.Same(formatter, markupFormatter);
-            Assert.Same(formatter, xmlFormatter);
-        }
-
-        [Fact]
-        public void Duplicate_extensions_are_rejected()
-        {
-            var first = new TestFormatter("first", ".xml");
-            var second = new TestFormatter("second", "xml");
-
-            Assert.Throws<InvalidOperationException>(
-                () => new FormatterRegistry(new[] { first, second }));
-        }
-
         [Fact]
         public void Default_catalog_registers_the_current_file_types()
         {
@@ -53,6 +32,28 @@ namespace PNFmt.Tests
             Assert.True(registry.TryGetFormatter("Data.XML", out var xmlFormatter));
             Assert.Equal("xaml", xamlFormatter.Name);
             Assert.Equal("xml", xmlFormatter.Name);
+        }
+
+        [Fact]
+        public void Duplicate_extensions_are_rejected()
+        {
+            var first = new TestFormatter("first", ".xml");
+            var second = new TestFormatter("second", "xml");
+
+            Assert.Throws<InvalidOperationException>(
+                () => new FormatterRegistry(new[] { first, second }));
+        }
+
+        [Fact]
+        public void One_formatter_can_handle_multiple_extensions()
+        {
+            var formatter = new TestFormatter("resource", "markup", ".xml");
+            var registry = new FormatterRegistry(new[] { formatter });
+
+            Assert.True(registry.TryGetFormatter("settings.MARKUP", out var markupFormatter));
+            Assert.True(registry.TryGetFormatter("settings.xml", out var xmlFormatter));
+            Assert.Same(formatter, markupFormatter);
+            Assert.Same(formatter, xmlFormatter);
         }
 
         private sealed class TestFormatter : IFileFormatter

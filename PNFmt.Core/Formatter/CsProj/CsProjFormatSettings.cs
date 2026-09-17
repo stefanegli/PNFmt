@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2026 by Stefan Egli.All rights reserved
+// Copyright (c) 2026 by Stefan Egli.All rights reserved
 
 namespace PNFmt
 {

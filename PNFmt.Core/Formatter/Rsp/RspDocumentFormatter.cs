@@ -83,6 +83,19 @@ namespace PNFmt
             }
         }
 
+        private static void FlushEntries(
+            List<ResponseFileEntry> entries,
+            List<string> output,
+            bool sortEntries)
+        {
+            var ordered = sortEntries
+                ? entries.OrderBy(entry => entry.SortKey, StringComparer.OrdinalIgnoreCase)
+                    .ThenBy(entry => entry.SortKey, StringComparer.Ordinal)
+                : (IEnumerable<ResponseFileEntry>)entries;
+            output.AddRange(ordered.Select(entry => entry.Text));
+            entries.Clear();
+        }
+
         private static string SortWithoutFormatting(string text)
         {
             // Keep separators in their original slots, including a missing final newline.
@@ -116,19 +129,6 @@ namespace PNFmt
 
                 indexes.Clear();
             }
-        }
-
-        private static void FlushEntries(
-            List<ResponseFileEntry> entries,
-            List<string> output,
-            bool sortEntries)
-        {
-            var ordered = sortEntries
-                ? entries.OrderBy(entry => entry.SortKey, StringComparer.OrdinalIgnoreCase)
-                    .ThenBy(entry => entry.SortKey, StringComparer.Ordinal)
-                : (IEnumerable<ResponseFileEntry>)entries;
-            output.AddRange(ordered.Select(entry => entry.Text));
-            entries.Clear();
         }
 
         private sealed class ResponseFileEntry

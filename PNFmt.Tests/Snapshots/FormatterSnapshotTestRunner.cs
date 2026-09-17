@@ -2,6 +2,7 @@
 
 using System.IO;
 using System.Linq;
+
 using Xunit;
 
 namespace PNFmt.Tests.Snapshots

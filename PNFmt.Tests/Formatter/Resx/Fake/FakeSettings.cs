@@ -1,8 +1,8 @@
 namespace PNFmt.Tests.Formatter.Resx.Fake
 {
-    using PNFmt;
-
     using System;
+
+    using PNFmt;
 
     internal sealed class FakeSettings : IResxFormatSettings
     {

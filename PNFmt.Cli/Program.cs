@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+
 using PNFmt;
 
 namespace PNFmt.Cli
@@ -88,6 +89,12 @@ namespace PNFmt.Cli
                 .Report(targets, run, options);
         }
 
+        private static string GetRelativePathFromWorkingDirectory(string file, string workingDirectory)
+        {
+            var relative = Path.GetRelativePath(workingDirectory, Path.GetFullPath(file));
+            return string.IsNullOrEmpty(relative) ? "." : relative;
+        }
+
         private static string GetVersionLabel()
         {
             var version = typeof(Program).Assembly
@@ -145,60 +152,6 @@ namespace PNFmt.Cli
             writer.WriteLine("  --formatter filters the selected formatters; it does not override EditorConfig activation.");
             writer.WriteLine("  Shared settings use pnfmt_; format-specific settings add the formatter name.");
             writer.WriteLine("  Legacy formatter settings remain fallbacks and produce warnings.");
-        }
-
-        private static int WriteDefaultConfig(
-            string targetPath,
-            bool? migrateLegacyConfig,
-            bool? removeLegacyConfig)
-        {
-            try
-            {
-                var writer = DefaultEditorConfigWriter.Open(targetPath);
-                if (writer.LegacySettingCount > 0)
-                {
-                    var settingLabel = writer.LegacySettingCount == 1 ? "setting" : "settings";
-                    migrateLegacyConfig ??= PromptYesNo(
-                        $"Migrate {writer.LegacySettingCount} legacy formatter {settingLabel} "
-                        + "to current PNFmt names?",
-                        defaultValue: true);
-                    removeLegacyConfig ??= PromptYesNo(
-                        $"Remove the {writer.LegacySettingCount} legacy formatter {settingLabel}?",
-                        defaultValue: false);
-                }
-
-                var editorConfigResult = writer.Write(
-                    migrateLegacyConfig.GetValueOrDefault(),
-                    removeLegacyConfig.GetValueOrDefault());
-                var targetDirectory = Path.GetDirectoryName(editorConfigResult.Path);
-                var repository = GitRepositoryContext.Discover(
-                    targetDirectory,
-                    includeChangedFiles: false);
-                var configurationResult = PNFmtConfiguration.WriteDefault(
-                    repository?.RootPath ?? targetDirectory);
-                var editorConfigDisplayPath = GetRelativePathFromWorkingDirectory(
-                    editorConfigResult.Path,
-                    Environment.CurrentDirectory);
-                var configurationDisplayPath = GetRelativePathFromWorkingDirectory(
-                    configurationResult.Path,
-                    Environment.CurrentDirectory);
-                Console.WriteLine(editorConfigResult.Changed
-                    ? $"Wrote default PNFmt configuration to {editorConfigDisplayPath}."
-                    : $"Default PNFmt configuration is already current in {editorConfigDisplayPath}.");
-                Console.WriteLine(configurationResult.Changed
-                    ? $"Wrote default PNFmt tool settings to {configurationDisplayPath}."
-                    : $"Existing PNFmt tool settings left unchanged in {configurationDisplayPath}.");
-                return 0;
-            }
-            catch (Exception ex) when (ex is ArgumentException
-                || ex is GitRepositoryContextException
-                || ex is IOException
-                || ex is UnauthorizedAccessException)
-            {
-                Console.Error.WriteLine(
-                    $"Failed to write default PNFmt configuration: {ex.Message}");
-                return 2;
-            }
         }
 
         private static bool PromptYesNo(string question, bool defaultValue)
@@ -268,10 +221,58 @@ namespace PNFmt.Cli
             return true;
         }
 
-        private static string GetRelativePathFromWorkingDirectory(string file, string workingDirectory)
+        private static int WriteDefaultConfig(
+            string targetPath,
+            bool? migrateLegacyConfig,
+            bool? removeLegacyConfig)
         {
-            var relative = Path.GetRelativePath(workingDirectory, Path.GetFullPath(file));
-            return string.IsNullOrEmpty(relative) ? "." : relative;
+            try
+            {
+                var writer = DefaultEditorConfigWriter.Open(targetPath);
+                if (writer.LegacySettingCount > 0)
+                {
+                    var settingLabel = writer.LegacySettingCount == 1 ? "setting" : "settings";
+                    migrateLegacyConfig ??= PromptYesNo(
+                        $"Migrate {writer.LegacySettingCount} legacy formatter {settingLabel} "
+                        + "to current PNFmt names?",
+                        defaultValue: true);
+                    removeLegacyConfig ??= PromptYesNo(
+                        $"Remove the {writer.LegacySettingCount} legacy formatter {settingLabel}?",
+                        defaultValue: false);
+                }
+
+                var editorConfigResult = writer.Write(
+                    migrateLegacyConfig.GetValueOrDefault(),
+                    removeLegacyConfig.GetValueOrDefault());
+                var targetDirectory = Path.GetDirectoryName(editorConfigResult.Path);
+                var repository = GitRepositoryContext.Discover(
+                    targetDirectory,
+                    includeChangedFiles: false);
+                var configurationResult = PNFmtConfiguration.WriteDefault(
+                    repository?.RootPath ?? targetDirectory);
+                var editorConfigDisplayPath = GetRelativePathFromWorkingDirectory(
+                    editorConfigResult.Path,
+                    Environment.CurrentDirectory);
+                var configurationDisplayPath = GetRelativePathFromWorkingDirectory(
+                    configurationResult.Path,
+                    Environment.CurrentDirectory);
+                Console.WriteLine(editorConfigResult.Changed
+                    ? $"Wrote default PNFmt configuration to {editorConfigDisplayPath}."
+                    : $"Default PNFmt configuration is already current in {editorConfigDisplayPath}.");
+                Console.WriteLine(configurationResult.Changed
+                    ? $"Wrote default PNFmt tool settings to {configurationDisplayPath}."
+                    : $"Existing PNFmt tool settings left unchanged in {configurationDisplayPath}.");
+                return 0;
+            }
+            catch (Exception ex) when (ex is ArgumentException
+                || ex is GitRepositoryContextException
+                || ex is IOException
+                || ex is UnauthorizedAccessException)
+            {
+                Console.Error.WriteLine(
+                    $"Failed to write default PNFmt configuration: {ex.Message}");
+                return 2;
+            }
         }
 
     }
