@@ -62,8 +62,35 @@ jobs:
           $projectPaths = @($solution.SelectNodes('//Project') | ForEach-Object { $_.Path })
           dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release --no-build -- --all --check --verbose .editorconfig PNFmt.slnx @projectPaths
 
-      - name: Test
-        run: dotnet test PNFmt.slnx --configuration Release --no-build --no-restore
+      - name: Verify coverage gate
+        shell: pwsh
+        run: ./scripts/Test-CoverageReport.Tests.ps1
+
+      - name: Restore coverage history
+        uses: actions/cache/restore@v6
+        with:
+          path: artifacts/coverage-history/
+          key: coverage-history-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: coverage-history-${{ runner.os }}-
+
+      - name: Test with coverage
+        shell: pwsh
+        run: ./scripts/Test-Coverage.ps1 -Configuration Release -NoBuild -NoRestore
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.os }}
+          path: artifacts/coverage/
+          if-no-files-found: warn
+
+      - name: Save coverage history
+        if: github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+        uses: actions/cache/save@v6
+        with:
+          path: artifacts/coverage-history/
+          key: coverage-history-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Validate benchmark scenarios
         run: dotnet run --project benchmarks/PNFmt.Benchmarks.csproj --configuration Release --no-build -- --quick

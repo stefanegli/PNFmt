@@ -178,13 +178,9 @@ try
 
     if (-not $SkipTests)
     {
-        Write-Host "Running PNFmt tests..."
-        Invoke-NativeCommand "dotnet" @(
-            "test",
-            $resolvedSolutionPath,
-            "--configuration", $Configuration,
-            "--nologo"
-        )
+        Write-Host "Running PNFmt tests and coverage checks..."
+        & (Join-Path $PSScriptRoot "Test-Coverage.ps1") `
+            -SolutionPath $resolvedSolutionPath -Configuration $Configuration
     }
 
     if (-not $SkipPack)

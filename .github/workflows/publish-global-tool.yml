@@ -60,6 +60,14 @@ jobs:
           -Configuration Release
           -PackOnly
 
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-release
+          path: artifacts/coverage/
+          if-no-files-found: warn
+
       - name: Log in to NuGet.org with trusted publishing
         id: nuget_login
         uses: NuGet/login@v1
