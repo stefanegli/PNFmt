@@ -112,21 +112,21 @@ namespace PNFmt
                 return false;
             }
 
-            if (member is PropertyDeclarationSyntax property)
-            {
-                // Storage order affects initialization and layout. Records also print
-                // computed properties in declaration order in their synthesized ToString.
-                return property.Parent is not RecordDeclarationSyntax
-                    && property.Initializer is null
-                    && !property.DescendantNodes().OfType<FieldExpressionSyntax>().Any()
-                    && (property.Parent is InterfaceDeclarationSyntax
-                        || property.Modifiers.Any(SyntaxKind.AbstractKeyword)
-                        || property.Modifiers.Any(SyntaxKind.ExternKeyword)
-                        || property.AccessorList is null
-                        || property.AccessorList.Accessors.All(accessor => accessor.Body is not null || accessor.ExpressionBody is not null));
-            }
+            return member is not PropertyDeclarationSyntax property || CanMoveProperty(property);
+        }
 
-            return true;
+        private static bool CanMoveProperty(PropertyDeclarationSyntax property)
+        {
+            // Storage order affects initialization and layout. Records also print
+            // computed properties in declaration order in their synthesized ToString.
+            return property.Parent is not RecordDeclarationSyntax
+                && property.Initializer is null
+                && !property.DescendantNodes().OfType<FieldExpressionSyntax>().Any()
+                && (property.Parent is InterfaceDeclarationSyntax
+                    || property.Modifiers.Any(SyntaxKind.AbstractKeyword)
+                    || property.Modifiers.Any(SyntaxKind.ExternKeyword)
+                    || property.AccessorList is null
+                    || property.AccessorList.Accessors.All(accessor => accessor.Body is not null || accessor.ExpressionBody is not null));
         }
 
         private static string Category(MemberDeclarationSyntax member)

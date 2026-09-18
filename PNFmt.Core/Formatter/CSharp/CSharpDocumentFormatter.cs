@@ -88,21 +88,7 @@ namespace PNFmt
             {
                 result = CSharpBlankLineCleanup.Apply(result);
             }
-            if (text.Length > 0 && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r'
-                && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
-            {
-                // Sorting can move the final import into the middle of the list,
-                // where it needs a newline. Preserve the original EOF convention,
-                // unless removing a region exposed a protected newline at EOF.
-                var trimmed = result.TrimEnd('\r', '\n');
-                var touchesExclusion = exclusions.Spans.Count > 0 && CSharpFormattingExclusions.Parse(
-                    CSharpSyntaxTree.ParseText(result, (CSharpParseOptions)tree.Options).GetRoot())
-                    .Intersects(TextSpan.FromBounds(trimmed.Length, result.Length));
-                if (!touchesExclusion)
-                {
-                    result = trimmed;
-                }
-            }
+            result = PreserveFinalNewline(text, result, settings, exclusions, (CSharpParseOptions)tree.Options);
 
             // In particular, literals (including raw strings) and inactive #if text
             // must remain byte-for-byte identical as text. Fail closed if a formatting
@@ -165,6 +151,32 @@ namespace PNFmt
                     .GetAwaiter().GetResult();
                 return formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
             }
+        }
+
+        private static string PreserveFinalNewline(
+            string originalText,
+            string result,
+            IReadOnlyDictionary<string, string> settings,
+            CSharpFormattingExclusions exclusions,
+            CSharpParseOptions parseOptions)
+        {
+            if (originalText.Length > 0 && originalText[originalText.Length - 1] != '\n' && originalText[originalText.Length - 1] != '\r'
+                && !EditorConfigSettings.IsEnabled(settings, "insert_final_newline"))
+            {
+                // Sorting can move the final import into the middle of the list,
+                // where it needs a newline. Preserve the original EOF convention,
+                // unless removing a region exposed a protected newline at EOF.
+                var trimmed = result.TrimEnd('\r', '\n');
+                var touchesExclusion = exclusions.Spans.Count > 0 && CSharpFormattingExclusions.Parse(
+                    CSharpSyntaxTree.ParseText(result, parseOptions).GetRoot())
+                    .Intersects(TextSpan.FromBounds(trimmed.Length, result.Length));
+                if (!touchesExclusion)
+                {
+                    result = trimmed;
+                }
+            }
+
+            return result;
         }
 
         private static IEnumerable<string> ProtectedTrivia(SyntaxNode root)

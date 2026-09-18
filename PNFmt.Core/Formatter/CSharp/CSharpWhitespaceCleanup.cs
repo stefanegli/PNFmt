@@ -24,28 +24,13 @@ namespace PNFmt
             var source = SourceText.From(text);
             var changes = new List<TextChange>();
             var trim = EditorConfigSettings.IsEnabled(settings, "trim_trailing_whitespace");
-            settings.TryGetValue("end_of_line", out var endOfLine);
-            var newLine = endOfLine == "crlf" ? "\r\n" : endOfLine == "lf" ? "\n" : endOfLine == "cr" ? "\r" : null;
+            var newLine = ResolveNewLine(settings);
             var protectedIndex = 0;
             foreach (var line in source.Lines)
             {
-                var end = line.End;
-                if (trim)
-                {
-                    while (end > line.Start && (text[end - 1] == ' ' || text[end - 1] == '\t'))
-                    {
-                        end--;
-                    }
-                }
-
-                var changeSpan = TextSpan.FromBounds(end, line.EndIncludingLineBreak);
-                while (protectedIndex < protectedSpans.Length && protectedSpans[protectedIndex].End <= changeSpan.Start)
-                {
-                    protectedIndex++;
-                }
-
-                if (changeSpan.Length == 0 || exclusions.Intersects(changeSpan)
-                    || (protectedIndex < protectedSpans.Length && protectedSpans[protectedIndex].OverlapsWith(changeSpan)))
+                var changeSpan = GetLineEndSpan(text, line, trim);
+                var overlapsProtectedSpan = OverlapsProtectedSpan(changeSpan, protectedSpans, ref protectedIndex);
+                if (changeSpan.Length == 0 || exclusions.Intersects(changeSpan) || overlapsProtectedSpan)
                 {
                     continue;
                 }
@@ -68,6 +53,37 @@ namespace PNFmt
             }
 
             return result;
+        }
+
+        private static TextSpan GetLineEndSpan(string text, TextLine line, bool trim)
+        {
+            var end = line.End;
+            if (trim)
+            {
+                while (end > line.Start && (text[end - 1] == ' ' || text[end - 1] == '\t'))
+                {
+                    end--;
+                }
+            }
+
+            return TextSpan.FromBounds(end, line.EndIncludingLineBreak);
+        }
+
+        private static bool OverlapsProtectedSpan(TextSpan changeSpan, TextSpan[] protectedSpans, ref int index)
+        {
+            // Lines are visited in order, so consumed spans never need revisiting.
+            while (index < protectedSpans.Length && protectedSpans[index].End <= changeSpan.Start)
+            {
+                index++;
+            }
+
+            return index < protectedSpans.Length && protectedSpans[index].OverlapsWith(changeSpan);
+        }
+
+        private static string ResolveNewLine(IReadOnlyDictionary<string, string> settings)
+        {
+            settings.TryGetValue("end_of_line", out var endOfLine);
+            return endOfLine == "crlf" ? "\r\n" : endOfLine == "lf" ? "\n" : endOfLine == "cr" ? "\r" : null;
         }
     }
 }
