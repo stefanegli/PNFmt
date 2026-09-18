@@ -29,13 +29,13 @@ The linked pages describe each formatter's settings, behavior, and order-sensiti
 Install the [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), then install PNFmt from NuGet.org:
 
 ```powershell
-dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.8
+dotnet tool install --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.9
 ```
 
 Update an existing installation with:
 
 ```powershell
-dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.8
+dotnet tool update --global PetchNaka.PNFmt.Cli --version 0.1.0-alpha.9
 ```
 
 Verify the installation:
