@@ -12,6 +12,16 @@ namespace PNFmt
     // execution resolves again after any preceding .editorconfig writes.
     internal sealed class FileFormattingConfiguration
     {
+        private static readonly IReadOnlyDictionary<string, string> LegacyActivationSettings =
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["csharp"] = EditorConfigSettingNames.CSharpFormat,
+                ["xml"] = EditorConfigSettingNames.XmlFormat,
+                ["xaml"] = EditorConfigSettingNames.XamlFormat,
+                ["rsp"] = EditorConfigSettingNames.SortEntries,
+                ["slnx"] = EditorConfigSettingNames.SortEntries,
+            };
+
         private readonly string targetFile;
         private readonly IFormatterLog log;
         private readonly Lazy<CsProjEditorConfigSettings> project;
@@ -64,17 +74,7 @@ namespace PNFmt
         public bool IsActive(string formatterName, bool lint = false)
         {
             // Resolve these settings before activation, preserving legacy alias diagnostics.
-            var implicitlyEnabled = formatterName switch
-            {
-                "csproj" => this.project.Value.IsActive || lint,
-                "resx" => this.resource.Value.IsActive,
-                "ini" => this.ini.Value.IsActive,
-                "csharp" => EditorConfigSettings.IsEnabled(this.Properties, EditorConfigSettingNames.CSharpFormat),
-                "xml" => EditorConfigSettings.IsEnabled(this.Properties, EditorConfigSettingNames.XmlFormat),
-                "xaml" => EditorConfigSettings.IsEnabled(this.Properties, EditorConfigSettingNames.XamlFormat),
-                "rsp" or "slnx" => EditorConfigSettings.IsEnabled(this.Properties, EditorConfigSettingNames.SortEntries),
-                _ => false,
-            };
+            var implicitlyEnabled = this.IsImplicitlyEnabled(formatterName, lint);
             if (this.Enablement == false || (this.Selection is not null
                 && !string.Equals(this.Selection, formatterName, StringComparison.OrdinalIgnoreCase)))
             {
@@ -119,6 +119,18 @@ namespace PNFmt
             }
 
             return true;
+        }
+
+        private bool IsImplicitlyEnabled(string formatterName, bool lint)
+        {
+            return formatterName switch
+            {
+                "csproj" => this.project.Value.IsActive || lint,
+                "resx" => this.resource.Value.IsActive,
+                "ini" => this.ini.Value.IsActive,
+                _ => LegacyActivationSettings.TryGetValue(formatterName ?? string.Empty, out var setting)
+                    && EditorConfigSettings.IsEnabled(this.Properties, setting),
+            };
         }
 
         private static Encoding ResolveEncoding(IReadOnlyDictionary<string, string> settings)

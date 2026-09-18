@@ -12,35 +12,9 @@ namespace PNFmt
     {
         public ResxLayoutSettings(IReadOnlyDictionary<string, string> settings)
         {
-            var useTabs = false;
-            if (settings.TryGetValue("indent_style", out var style)
-                && (string.Equals(style, "tab", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(style, "space", StringComparison.OrdinalIgnoreCase)))
-            {
-                this.HasOverrides = true;
-                useTabs = string.Equals(style, "tab", StringComparison.OrdinalIgnoreCase);
-            }
-
-            var width = 2;
-            if (settings.TryGetValue("tab_width", out var tabWidth)
-                && int.TryParse(tabWidth, out var parsedTabWidth) && parsedTabWidth > 0)
-            {
-                this.HasOverrides = true;
-                width = parsedTabWidth;
-            }
-
-            if (settings.TryGetValue("indent_size", out var indentSize)
-                && int.TryParse(indentSize, out var parsedIndentSize) && parsedIndentSize > 0)
-            {
-                this.HasOverrides = true;
-                width = parsedIndentSize;
-            }
-            else if (string.Equals(indentSize, "tab", StringComparison.OrdinalIgnoreCase))
-            {
-                this.HasOverrides = true;
-            }
-
-            this.IndentChars = useTabs ? "\t" : new string(' ', width);
+            var indentation = ResolveIndentation(settings);
+            this.IndentChars = indentation.Characters;
+            this.HasOverrides = indentation.HasOverrides;
 
             if (settings.TryGetValue("end_of_line", out var endOfLine))
             {
@@ -58,6 +32,40 @@ namespace PNFmt
                 this.HasOverrides = true;
                 this.InsertFinalNewline = parsedFinalNewline;
             }
+        }
+
+        private static (string Characters, bool HasOverrides) ResolveIndentation(IReadOnlyDictionary<string, string> settings)
+        {
+            var hasOverrides = false;
+            var useTabs = false;
+            if (settings.TryGetValue("indent_style", out var style)
+                && (string.Equals(style, "tab", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(style, "space", StringComparison.OrdinalIgnoreCase)))
+            {
+                hasOverrides = true;
+                useTabs = string.Equals(style, "tab", StringComparison.OrdinalIgnoreCase);
+            }
+
+            var width = 2;
+            if (settings.TryGetValue("tab_width", out var tabWidth)
+                && int.TryParse(tabWidth, out var parsedTabWidth) && parsedTabWidth > 0)
+            {
+                hasOverrides = true;
+                width = parsedTabWidth;
+            }
+
+            if (settings.TryGetValue("indent_size", out var indentSize)
+                && int.TryParse(indentSize, out var parsedIndentSize) && parsedIndentSize > 0)
+            {
+                hasOverrides = true;
+                width = parsedIndentSize;
+            }
+            else if (string.Equals(indentSize, "tab", StringComparison.OrdinalIgnoreCase))
+            {
+                hasOverrides = true;
+            }
+
+            return (useTabs ? "\t" : new string(' ', width), hasOverrides);
         }
 
         public bool HasOverrides { get; }

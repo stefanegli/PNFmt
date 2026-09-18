@@ -86,6 +86,29 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             }
         }
 
+        [Theory]
+        [InlineData("4", "8", 4, true)]
+        [InlineData("4", "invalid", 4, true)]
+        [InlineData("tab", "8", 8, true)]
+        [InlineData("invalid", "8", 8, true)]
+        [InlineData("0", "8", 8, true)]
+        [InlineData("-1", "8", 8, true)]
+        [InlineData("unset", "8", 8, true)]
+        [InlineData("tab", "invalid", 2, false)]
+        [InlineData("invalid", "0", 2, false)]
+        public void Csproj_indentation_preserves_numeric_precedence_and_tab_width_fallback(
+            string indentSize, string tabWidth, int expectedSize, bool expectedActive)
+        {
+            var configuration = "root = true\n[*.csproj]\n"
+                + $"indent_size = {indentSize}\ntab_width = {tabWidth}\n";
+            using (var target = TemporaryTarget.Create("Project.csproj", configuration))
+            {
+                var settings = new CsProjEditorConfigSettings(target.Path);
+                Assert.Equal(expectedSize, settings.IndentSize);
+                Assert.Equal(expectedActive, settings.IsActive);
+            }
+        }
+
         [Fact]
         public void Csproj_pnfmt_settings_win_when_legacy_settings_are_also_present()
         {

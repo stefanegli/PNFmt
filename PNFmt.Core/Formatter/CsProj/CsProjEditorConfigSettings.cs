@@ -1,6 +1,7 @@
 // Copyright (c) 2026 by Stefan Egli.All rights reserved
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace PNFmt
@@ -31,38 +32,14 @@ namespace PNFmt
                 this.IndentStyle = ResolveIndentStyle(indentStyle);
             }
 
-            int? parsedTabWidth = null;
-            if (settings.TryGetValue("tab_width", out var tabWidth))
+            // A numeric indent size takes precedence; "tab", invalid, and missing
+            // sizes all fall back to a valid tab width, then to the default.
+            var indentSize = ReadPositiveInteger(settings, "indent_size")
+                ?? ReadPositiveInteger(settings, "tab_width");
+            if (indentSize.HasValue)
             {
-                if (int.TryParse(tabWidth, out var width) && width > 0)
-                {
-                    isActive = true;
-                    parsedTabWidth = width;
-                }
-            }
-
-            var hasIndentSize = false;
-            if (settings.TryGetValue("indent_size", out var indentSize))
-            {
-                if (int.TryParse(indentSize, out var parsedIndentSize)
-                    && parsedIndentSize > 0)
-                {
-                    isActive = true;
-                    this.IndentSize = parsedIndentSize;
-                    hasIndentSize = true;
-                }
-                else if (string.Equals(indentSize, "tab", StringComparison.OrdinalIgnoreCase)
-                    && parsedTabWidth.HasValue)
-                {
-                    isActive = true;
-                    this.IndentSize = parsedTabWidth.Value;
-                    hasIndentSize = true;
-                }
-            }
-
-            if (!hasIndentSize && parsedTabWidth.HasValue)
-            {
-                this.IndentSize = parsedTabWidth.Value;
+                isActive = true;
+                this.IndentSize = indentSize.Value;
             }
 
             if (settings.TryGetValue("end_of_line", out var endOfLine))
@@ -123,6 +100,12 @@ namespace PNFmt
         public bool InsertFinalNewline { get; } = true;
 
         public int EmptyLinesBetweenGroups { get; } = 1;
+
+        private static int? ReadPositiveInteger(IReadOnlyDictionary<string, string> settings, string name)
+        {
+            return settings.TryGetValue(name, out var value)
+                && int.TryParse(value, out var parsed) && parsed > 0 ? parsed : (int?)null;
+        }
 
         private static string ResolveEndOfLine(string endOfLine)
         {
