@@ -29,14 +29,7 @@ namespace PNFmt
             }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
-            IReadOnlyList<string> lines = text
-                .Replace("\r\n", "\n")
-                .Replace('\r', '\n')
-                .Split(new[] { '\n' }, StringSplitOptions.None);
-            if (mergeGroups)
-            {
-                lines = isEditorConfig ? MergeAdjacentGroups(lines) : MergeGroups(lines);
-            }
+            var lines = PrepareLines(text, mergeGroups, isEditorConfig);
 
             var output = new List<string>();
             var properties = new List<PropertyLine>();
@@ -323,6 +316,20 @@ namespace PNFmt
             }
 
             return output;
+        }
+
+        private static IReadOnlyList<string> PrepareLines(string text, bool mergeGroups, bool isEditorConfig)
+        {
+            IReadOnlyList<string> lines = text
+                .Replace("\r\n", "\n")
+                .Replace('\r', '\n')
+                .Split(new[] { '\n' }, StringSplitOptions.None);
+            if (mergeGroups)
+            {
+                lines = isEditorConfig ? MergeAdjacentGroups(lines) : MergeGroups(lines);
+            }
+
+            return lines;
         }
 
         private static List<string> SortGroups(IReadOnlyList<string> lines)
