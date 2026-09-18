@@ -43,7 +43,7 @@ the gate. All generated artifacts are ignored by Git.
 ## Set minimum coverage
 
 Edit `coverage-thresholds.json`. Each production assembly has independent line
-and branch minimums, as percentages from 0 to 100. For example:
+and branch minimums, as percentages from 0 to 100. The enforced minimums are:
 
 ```json
 {
@@ -52,10 +52,10 @@ and branch minimums, as percentages from 0 to 100. For example:
 }
 ```
 
-These are examples, not the configured minimums. The initial configuration uses
-zero for all thresholds while the Windows and Linux baselines are reviewed.
+These minimums apply to both Windows and Linux builds and to release validation.
 Missing reports, missing assemblies, invalid settings, and empty or invalid
-coverage counts still fail in this measurement phase.
+coverage counts also fail. Raise the minimums as coverage improves, retaining a
+small margin. Investigate regressions before lowering a minimum or excluding code.
 
 The gate compares integer counts against each minimum without rounding; equality
 passes. Strong coverage in one assembly cannot compensate for weak coverage in
@@ -93,8 +93,8 @@ On 2026-09-17, Windows with .NET SDK 10.0.302 and Release configuration passed a
 | PNFmt.Core | 2,910 / 3,005 | 96.84% | 1,720 / 1,925 | 89.35% |
 | pnfmt | 973 / 1,041 | 93.47% | 388 / 458 | 84.72% |
 
-These are observations, not enforced minimums. Review the first Linux CI result
-before choosing thresholds that will apply to both operating systems.
+These observations informed the enforced minimums above, leaving roughly one to
+two percentage points of headroom for each metric.
 
 ## Release and merge enforcement
 

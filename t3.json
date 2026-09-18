@@ -12,6 +12,12 @@
       "command": "dotnet test .\\PNFmt.slnx --configuration Release",
       "icon": "play",
       "runOnWorktreeCreate": false
+    },
+    {
+      "name": "Format Repository",
+      "command": ".\\scripts\\Format-Repository.cmd",
+      "icon": "play",
+      "runOnWorktreeCreate": false
     }
   ]
 }
