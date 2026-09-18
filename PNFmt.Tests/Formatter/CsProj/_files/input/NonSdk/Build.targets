@@ -1,0 +1,20 @@
+<Project>
+  <UsingTask TaskName="Inline" TaskFactory="RoslynCodeTaskFactory" AssemblyFile="$(MSBuildToolsPath)\Microsoft.Build.Tasks.Core.dll">
+    <Task><Code Type="Fragment" Language="cs"><![CDATA[
+var text = "<tag>";
+Log.LogMessage(text);
+]]></Code></Task>
+  </UsingTask>
+  <ItemGroup>
+    <None Include="z.txt" />
+    <None Include="a.txt" />
+    <None Update="*.txt"><CopyToOutputDirectory>Always</CopyToOutputDirectory></None>
+    <None Remove="excluded.txt" />
+  </ItemGroup>
+  <Target Name="Prepare">
+    <ItemGroup><None Include="last.txt" /><None Include="first.txt" /></ItemGroup>
+    <PropertyGroup><Zebra>@(None)</Zebra><Alpha>$(Zebra)</Alpha></PropertyGroup>
+    <Message Text="$(Alpha)" />
+    <Inline />
+  </Target>
+</Project>

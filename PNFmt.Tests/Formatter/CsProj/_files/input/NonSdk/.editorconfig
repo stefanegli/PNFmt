@@ -1,0 +1,7 @@
+[*.{csproj,props,targets,proj}]
+pnfmt_enabled = true
+pnfmt_formatter = csproj
+pnfmt_sort_entries = true
+indent_size = 4
+indent_style = space
+end_of_line = crlf

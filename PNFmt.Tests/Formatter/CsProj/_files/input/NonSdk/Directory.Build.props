@@ -1,0 +1,17 @@
+<Project>
+  <PropertyGroup>
+    <WarningLevel>4</WarningLevel>
+    <Configuration Condition="'$(Configuration)' == ''">Debug</Configuration>
+    <AssemblyName>Sample</AssemblyName>
+  </PropertyGroup>
+  <PropertyGroup>
+    <ObservedBefore>$(Zebra)</ObservedBefore>
+    <Zebra>first</Zebra>
+    <ObservedBetween>$(Zebra)</ObservedBetween>
+    <Zebra>$(Zebra);second</Zebra>
+    <ObservedAfter>$(Zebra)</ObservedAfter>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <Compile><Zebra>default</Zebra><Alpha>%(Zebra)</Alpha></Compile>
+  </ItemDefinitionGroup>
+</Project>

@@ -1,0 +1,48 @@
+<Project DefaultTargets="Build">
+    <Import Project="Directory.Build.props" />
+
+    <PropertyGroup>
+        <BuildLabel>local</BuildLabel>
+        <Zebra>before</Zebra>
+        <Observed>$(Zebra)</Observed>
+        <Zebra>after</Zebra>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="Alpha.csproj" />
+        <!-- Keep this comment with the Zulu project. -->
+        <ProjectReference Include="Zulu.csproj" />
+    </ItemGroup>
+
+    <Choose>
+        <When Condition="'$(Configuration)' == 'Debug'">
+            <PropertyGroup>
+                <Zebra>debug</Zebra>
+                <Alpha>$(Zebra)</Alpha>
+            </PropertyGroup>
+        </When>
+        <Otherwise>
+            <PropertyGroup>
+                <Zebra>release</Zebra>
+                <Alpha>$(Zebra)</Alpha>
+            </PropertyGroup>
+        </Otherwise>
+    </Choose>
+
+    <ImportGroup Condition="Exists('Build.targets')">
+        <Import Project="Build.targets" />
+    </ImportGroup>
+
+    <Target Name="Build" DependsOnTargets="Prepare">
+        <PropertyGroup>
+            <Zebra>runtime</Zebra>
+            <Alpha>$(Zebra)</Alpha>
+        </PropertyGroup>
+        <ItemGroup>
+            <None Include="z.txt" />
+            <None Include="a.txt" />
+        </ItemGroup>
+        <Message Text="first: $(Alpha)" />
+        <Message Text="second: @(None)" />
+    </Target>
+</Project>

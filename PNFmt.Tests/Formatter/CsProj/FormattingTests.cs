@@ -22,8 +22,7 @@ namespace PNFmt.Tests.Formatter.CsProj
                 fixtureRoot,
                 relativePath,
                 inputFile,
-                caseName,
-                allowSkippedWhenUnchanged: true);
+                caseName);
             GitSnapshot.Match(actual, typeof(CsProjSnapshotTests), caseName);
         }
 
@@ -36,7 +35,7 @@ namespace PNFmt.Tests.Formatter.CsProj
         {
             public CsProjSnapshotData()
             {
-                foreach (var testCase in FileSnapshotCaseSource.Create(GetFixtureRoot(), ".csproj"))
+                foreach (var testCase in FileSnapshotCaseSource.Create(GetFixtureRoot(), ".csproj", ".props", ".targets", ".proj"))
                 {
                     this.Add(testCase.InputFile, testCase.RelativePath, testCase.CaseName);
                 }

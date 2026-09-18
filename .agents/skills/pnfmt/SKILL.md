@@ -1,11 +1,11 @@
 ---
 name: pnfmt
-description: Check, format, lint, or configure .NET project, resource, solution, response, INI, and EditorConfig files with PNFmt. Use only when explicitly invoked.
+description: Check, format, lint, or configure C#, SDK-style and non-SDK MSBuild, resource, solution, XML, XAML, response, INI, and EditorConfig files with PNFmt. Use only when explicitly invoked.
 ---
 
 # PNFmt
 
-Use PNFmt only within the task's scope. It supports `.csproj`, `.resx`, `.slnx`, `.rsp`, `.ini`, and `.editorconfig` files. It does not format C# source.
+Use PNFmt only within the task's scope. It supports C# source, MSBuild projects, resources, solutions, XML, XAML, response files, INI, and EditorConfig. Formatter selection through EditorConfig can also enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
 
 ## Invocation
 
@@ -17,6 +17,8 @@ dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release -- <pnfm
 
 Elsewhere, use an installed `pnfmt` command. Do not install or update the tool unless requested.
 
+For repository-wide formatting of PNFmt itself, use `scripts/Format-Repository.cmd` from the repository root (or `scripts/Format-Repository.ps1` with PowerShell 7/Linux), then verify with `-Check -NoBuild`. This script excludes fixture inputs and expected snapshots; recursive formatting over the repository root can modify them because fixture EditorConfig files can override exclusions.
+
 ## Scope selection
 
 With no path, PNFmt uses the current directory. Directory scope is non-recursive unless `--recursive` is passed.
@@ -27,7 +29,7 @@ Useful narrowing and execution options:
 
 - `--recursive`: include subdirectories.
 - `--file-pattern <glob>`: include a glob; repeat for multiple patterns. `*` and `?` stay within one path segment, while `**` crosses directories.
-- `--formatter <name>[,<name>...]`: select `csproj`, `ini`, `resx`, `rsp`, or `slnx` formatters.
+- `--formatter <name>[,<name>...]`: filter the resolved `csharp`, `csproj`, `ini`, `resx`, `rsp`, `slnx`, `xml`, or `xaml` formatters. This does not override EditorConfig selection or enablement.
 - `-m:N` or `-maxCpuCount:N`: override the configured concurrency. Plain `-m` uses the processor count.
 - `--verbose`: show per-file statuses and detailed errors.
 
@@ -43,14 +45,27 @@ Exit code `0` means success. Exit code `1` means `--check` found changes or `--l
 
 ## EditorConfig settings
 
-Every formatter is opt-in. A skipped file normally has no applicable enabled setting; do not enable formatting unless configuration changes are part of the task.
+Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching EditorConfig section. Layout defaults on (`pnfmt_format = true`); optional sorting defaults off (`pnfmt_sort_entries = false`). `pnfmt_enabled = false` skips all processing, including linting. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task.
 
 Project files:
 
+- Both SDK-style and non-SDK MSBuild documents with a `Project` root are supported, including the legacy MSBuild XML namespace. An `Sdk` declaration is not required. Check the file contents rather than inferring project style from its target framework or extension.
+- Select `pnfmt_formatter = csproj` explicitly for `.props`, `.targets`, and `.proj` files. The `csproj` formatter name is used for all these MSBuild formats.
 - `pnfmt_sort_entries = true` sorts eligible properties and items while retaining evaluation-sensitive entries.
 - `pnfmt_csproj_empty_lines_between_groups = <number>` controls blank lines between top-level groups.
 - `pnfmt_csproj_sort_item_types = <names>` replaces the built-in sortable item-type list. Separate names with commas or semicolons, or use `*` for homogeneous item groups.
 - Standard `indent_style`, `indent_size`, `tab_width`, and `end_of_line` settings control XML layout.
+
+Imports, targets, task order, and groups nested inside targets or `Choose` blocks retain their order. Sorting and item canonicalization apply to direct project-level property/item groups. Preserve `pnfmt_sort_entries = false` when the consuming build depends on item order; custom tasks can observe order even without visible dependencies between declarations. The implicit-default-item lint (`CSPROJ005`) applies only to projects declaring the .NET SDK.
+
+For layout-only formatting of other MSBuild files:
+
+```ini
+[*.{props,targets,proj}]
+pnfmt_enabled = true
+pnfmt_formatter = csproj
+pnfmt_sort_entries = false
+```
 
 Resource files:
 

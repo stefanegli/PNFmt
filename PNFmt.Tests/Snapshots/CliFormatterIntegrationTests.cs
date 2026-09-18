@@ -19,6 +19,10 @@ namespace PNFmt.Tests.Snapshots
                 yield return new object[] { "CSharp", "Source.cs", "csharp" };
                 yield return new object[] { "CSharp", "Cleanup.cs", "csharp" };
                 yield return new object[] { "CsProj", "SimpleSort.csproj", "csproj" };
+                yield return new object[] { "CsProj", "NonSdk/ResxFormatter.csproj", "csproj" };
+                yield return new object[] { "CsProj", "NonSdk/Build.proj", "csproj" };
+                yield return new object[] { "CsProj", "NonSdk/Directory.Build.props", "csproj" };
+                yield return new object[] { "CsProj", "NonSdk/Build.targets", "csproj" };
                 yield return new object[] { "Ini", "PrefixGroups.ini", "ini" };
                 yield return new object[] { "Resx", "Strings.resx", "resx" };
                 yield return new object[] { "Rsp", "Compiler.rsp", "rsp" };

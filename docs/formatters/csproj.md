@@ -54,4 +54,10 @@ Sorting applies only to immediate `PropertyGroup` and `ItemGroup` children of `P
 
 Run `pnfmt --lint <paths>` to report project-structure diagnostics and formatting changes without writing files. The command returns exit code `1` when it finds either.
 
+## Regression coverage
+
+The snapshot suite covers the minimal namespaced `LegacyNonSdk.csproj` and the [NonSdk fixtures](../../PNFmt.Tests/Formatter/CsProj/_files/input/NonSdk): a legacy VSIX project, a namespace-free build project, and imported `.props` and `.targets` files. It checks preview behavior, expected formatted output, and idempotence; skipped files fail the project snapshot tests. The non-SDK fixtures also run through the CLI integration tests.
+
+`NonSdk/ResxFormatter.csproj` is copied from the ResxFormatter repository at commit `6b503ad5f714982ff3a892152c10a3f083e4ee85`, immediately before the SDK migration in `cf968ad`. It retains the original MSBuild namespace, conditional build configurations, explicit source files, VSIX metadata, and imports. The tests format this stored copy without building the VSIX project or resolving its Visual Studio dependencies.
+
 [Back to the overview](../../README.md)
