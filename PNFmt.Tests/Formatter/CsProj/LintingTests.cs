@@ -111,6 +111,19 @@ namespace PNFmt.Tests.Formatter.CsProj
             Check.That(diagnostics.Select(diagnostic => diagnostic.Code)).Not.Contains("CSPROJ005");
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData("http://schemas.microsoft.com/developer/msbuild/2003")]
+        public void Non_sdk_projects_receive_structural_lints_without_sdk_default_item_warnings(string xmlNamespace)
+        {
+            var project = "<Project xmlns=\"" + xmlNamespace + "\"><PropertyGroup/>"
+                + "<ItemGroup><Compile Include=\"Program.cs\"/></ItemGroup></Project>";
+
+            var diagnostic = Assert.Single(Analyze(project));
+
+            Assert.Equal("CSPROJ001", diagnostic.Code);
+        }
+
         private static System.Collections.Generic.IReadOnlyList<FormatterDiagnostic> Analyze(
             string project,
             bool lint = true,

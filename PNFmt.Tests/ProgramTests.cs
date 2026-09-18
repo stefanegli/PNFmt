@@ -858,6 +858,31 @@ namespace PNFmt.Tests
         }
 
         [Theory]
+        [InlineData("Legacy.csproj")]
+        [InlineData("Directory.Build.props")]
+        [InlineData("Build.targets")]
+        [InlineData("Build.proj")]
+        public void Non_sdk_msbuild_files_use_the_explicit_project_formatter(string fileName)
+        {
+            using (var directory = new TemporaryDirectory())
+            {
+                directory.Write(".editorconfig", "root = true\n[*.{csproj,props,targets,proj}]\n"
+                    + "pnfmt_enabled = true\npnfmt_formatter = csproj\npnfmt_sort_entries = true\n");
+                const string Input = "<Project><PropertyGroup><Zebra>z</Zebra><Alpha>a</Alpha></PropertyGroup></Project>";
+                var path = directory.Write(fileName, Input);
+
+                Assert.Equal(1, Run("--all", "--check", directory.Path).ExitCode);
+                Assert.Equal(Input, File.ReadAllText(path));
+                var result = Run("--all", directory.Path);
+                Assert.Equal(0, result.ExitCode);
+                Assert.Empty(result.Error);
+                Assert.Equal(new[] { "Alpha", "Zebra" },
+                    XDocument.Load(path).Root.Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
+                Assert.Equal(0, Run("--all", "--check", directory.Path).ExitCode);
+            }
+        }
+
+        [Theory]
         [InlineData("--all")]
         [InlineData("--check")]
         [InlineData("--dry-run")]

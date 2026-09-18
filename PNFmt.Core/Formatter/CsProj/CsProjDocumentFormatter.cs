@@ -94,7 +94,7 @@ namespace PNFmt
             var document = XDocument.Parse(originalText, LoadOptions.SetLineInfo
                 | (formatLayout ? LoadOptions.None : LoadOptions.PreserveWhitespace));
             var originalDocument = formatLayout ? null : new XDocument(document);
-            if (!IsSdkStyleProjectDocument(document))
+            if (!IsProjectDocument(document))
             {
                 return DocumentFormatResult.Skipped();
             }
@@ -105,14 +105,11 @@ namespace PNFmt
 
             if (this.Settings.SortEntries)
             {
-                if (IsProjectDocument(document))
-                {
-                    var sortableItemTypes = CsProjItemSorting.Resolve(this.Settings);
-                    SortPropertyGroups(document);
-                    ItemCanonicalizer.Canonicalize(document, sortableItemTypes);
-                    SortItemGroups(document, sortableItemTypes);
-                    MoveUnexpectedProjectElementsToEnd(document);
-                }
+                var sortableItemTypes = CsProjItemSorting.Resolve(this.Settings);
+                SortPropertyGroups(document);
+                ItemCanonicalizer.Canonicalize(document, sortableItemTypes);
+                SortItemGroups(document, sortableItemTypes);
+                MoveUnexpectedProjectElementsToEnd(document);
             }
 
             var formattedText = !formatLayout && XNode.DeepEquals(originalDocument, document)
@@ -183,13 +180,6 @@ namespace PNFmt
                 ?? string.Empty;
         }
 
-        private static bool HasAttributeValue(XElement element, string attributeLocalName)
-        {
-            var attribute = element.Attributes()
-                .FirstOrDefault(a => a.Name.LocalName == attributeLocalName);
-            return attribute != null && !string.IsNullOrWhiteSpace(attribute.Value);
-        }
-
         private static bool HasCondition(XElement element)
         {
             var condition = element.Attribute("Condition");
@@ -219,29 +209,6 @@ namespace PNFmt
         private static bool IsProjectDocument(XDocument document)
         {
             return document.Root?.Name.LocalName == "Project";
-        }
-
-        private static bool IsSdkStyleProjectDocument(XDocument document)
-        {
-            if (!IsProjectDocument(document) || document.Root is null)
-            {
-                return false;
-            }
-
-            var root = document.Root;
-            if (HasAttributeValue(root, "Sdk"))
-            {
-                return true;
-            }
-
-            if (root.Elements().Any(e => e.Name.LocalName == "Sdk"))
-            {
-                return true;
-            }
-
-            return root.Elements()
-                .Where(e => e.Name.LocalName == "Import")
-                .Any(e => HasAttributeValue(e, "Sdk"));
         }
 
         private static void MoveUnexpectedProjectElementsToEnd(XDocument document)

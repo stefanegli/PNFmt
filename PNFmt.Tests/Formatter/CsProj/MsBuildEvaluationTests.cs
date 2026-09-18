@@ -42,6 +42,54 @@ namespace PNFmt.Tests.Formatter.CsProj
             }
         }
 
+        [Theory]
+        [InlineData("")]
+        [InlineData("xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\"")]
+        public async Task Non_sdk_imports_conditions_and_target_execution_preserve_evaluated_values(string projectAttributes)
+        {
+            using (var project = new EvaluationProject(
+                "<PropertyGroup><Zebra>before</Zebra><Observed>$(Zebra)</Observed></PropertyGroup>"
+                + "<Import Project=\"Common.props\"/>"
+                + "<PropertyGroup><Zebra>after</Zebra><Observed>$(Observed);$(Zebra)</Observed></PropertyGroup>"
+                + "<ImportGroup><Import Project=\"Common.targets\"/></ImportGroup>"
+                + "<Choose><When Condition=\"'$(Zebra)' == 'after'\"><PropertyGroup>"
+                + "<Chosen>$(Observed)</Chosen></PropertyGroup></When></Choose>"
+                + "<Target Name=\"Audit\" DependsOnTargets=\"Imported\">"
+                + "<PropertyGroup><Zebra>runtime</Zebra><Alpha>$(Zebra)</Alpha></PropertyGroup>"
+                + "<ItemGroup><None Include=\"z\"><Tag>first</Tag></None><None Include=\"a\"><Tag>second</Tag></None></ItemGroup>"
+                + "<PropertyGroup><Trace>@(None->'%(Identity)=%(Tag)', ';')</Trace></PropertyGroup>"
+                + "<CreateProperty Value=\"$(Alpha);$(Trace)\"><Output TaskParameter=\"Value\" PropertyName=\"Result\"/></CreateProperty>"
+                + "<CreateProperty Value=\"$(Result);done\"><Output TaskParameter=\"Value\" PropertyName=\"Result\"/></CreateProperty>"
+                + "</Target>", projectAttributes: projectAttributes))
+            {
+                project.WriteFile("Common.props", "<Project " + projectAttributes + ">"
+                    + "<PropertyGroup><Zebra>imported</Zebra><Observed>$(Observed);$(Zebra)</Observed></PropertyGroup></Project>");
+                project.WriteFile("Common.targets", "<Project " + projectAttributes + ">"
+                    + "<Target Name=\"Imported\"><PropertyGroup><ImportedValue>$(Observed)</ImportedValue></PropertyGroup></Target></Project>");
+
+                async Task<string[]> ReadValues()
+                {
+                    using (var document = JsonDocument.Parse(await project.EvaluateAsync(
+                        "-t:Audit", "-getProperty:Observed,Chosen,ImportedValue,Result")))
+                    {
+                        var properties = document.RootElement.GetProperty("Properties");
+                        return new[] { "Observed", "Chosen", "ImportedValue", "Result" }
+                            .Select(name => properties.GetProperty(name).GetString()).ToArray();
+                    }
+                }
+
+                var expected = new[] { "before;imported;after", "before;imported;after", "before;imported;after", "runtime;z=first;a=second;done" };
+                Assert.Equal(expected, await ReadValues());
+                project.Format();
+                project.Format("Common.props");
+                project.Format("Common.targets");
+                Assert.Equal(expected, await ReadValues());
+                project.AssertIdempotent();
+                project.AssertIdempotent("Common.props");
+                project.AssertIdempotent("Common.targets");
+            }
+        }
+
         [Fact]
         public async Task Repeated_assignments_preserve_values_observed_before_between_and_after_them()
         {
@@ -244,23 +292,24 @@ namespace PNFmt.Tests.Formatter.CsProj
             private readonly string directory = Path.Combine(Path.GetTempPath(), "PNFmtEvaluationTests", Guid.NewGuid().ToString("N"));
             private readonly string path;
 
-            public EvaluationProject(string body, string settings = "")
+            public EvaluationProject(string body, string settings = "", string projectAttributes = "Sdk=\"Microsoft.NET.Sdk\"")
             {
                 Directory.CreateDirectory(this.directory);
                 File.WriteAllText(Path.Combine(this.directory, ".editorconfig"),
-                    "root = true\n[*.csproj]\npnfmt_sort_entries = true\n" + settings);
+                    "root = true\n[*.{csproj,props,targets}]\npnfmt_enabled = true\npnfmt_formatter = csproj\npnfmt_sort_entries = true\n" + settings);
                 this.path = Path.Combine(this.directory, "Evaluation.csproj");
-                File.WriteAllText(this.path, "<Project Sdk=\"Microsoft.NET.Sdk\">"
+                File.WriteAllText(this.path, "<Project " + projectAttributes + ">"
                     + "<PropertyGroup><EnableDefaultItems>false</EnableDefaultItems></PropertyGroup>"
                     + body + "</Project>");
             }
 
-            public void AssertIdempotent()
+            public void AssertIdempotent(string name = null)
             {
-                var bytes = File.ReadAllBytes(this.path);
-                var result = new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance));
+                var filePath = name is null ? this.path : Path.Combine(this.directory, name);
+                var bytes = File.ReadAllBytes(filePath);
+                var result = new CsProjFormatter().Format(new FileFormatRequest(filePath, true, false, NullFormatterLog.Instance));
                 Assert.Equal(FileFormatStatus.Unchanged, result.Status);
-                Assert.Equal(bytes, File.ReadAllBytes(this.path));
+                Assert.Equal(bytes, File.ReadAllBytes(filePath));
             }
 
             public void Dispose()
@@ -290,9 +339,11 @@ namespace PNFmt.Tests.Formatter.CsProj
                 }
             }
 
-            public void Format()
+            public void Format(string name = null)
             {
-                new CsProjFormatter().Format(new FileFormatRequest(this.path, true, false, NullFormatterLog.Instance));
+                var filePath = name is null ? this.path : Path.Combine(this.directory, name);
+                var result = new CsProjFormatter().Format(new FileFormatRequest(filePath, true, false, NullFormatterLog.Instance));
+                Assert.Equal(FileFormatStatus.Updated, result.Status);
             }
 
             public void WriteFile(string name, string contents) => File.WriteAllText(Path.Combine(this.directory, name), contents);

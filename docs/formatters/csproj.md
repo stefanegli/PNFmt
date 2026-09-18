@@ -2,6 +2,8 @@
 
 The project formatter normalizes MSBuild project XML, sorts eligible properties and items, and keeps evaluation-sensitive content in its original order. Its `--lint` diagnostics identify project-structure issues; the C#, RESX, XML, and XAML formatters also report diagnostics.
 
+Both SDK-style and non-SDK-style projects are supported, including legacy projects using the MSBuild XML namespace. The document must have a `Project` root element; an `Sdk` declaration is not required. Existing namespaces, `ToolsVersion`, imports, and target definitions are preserved.
+
 ## Configuration
 
 ```ini
@@ -27,6 +29,17 @@ Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 
 Enable processing with `pnfmt_enabled = true` and select `pnfmt_formatter = csproj`. Use `pnfmt_enabled = false` to disable both formatting and linting. Layout defaults on; `pnfmt_format = false` disables layout while allowing sorting or linting. Sorting defaults off and requires `pnfmt_sort_entries = true`. Parameter settings such as group spacing do not enable a behavior. See [activation and compatibility rules](../configuration-contracts.md).
 
+For other MSBuild files, select the same formatter explicitly in a matching EditorConfig section, for example:
+
+```ini
+[*.{props,targets,proj}]
+pnfmt_enabled = true
+pnfmt_formatter = csproj
+pnfmt_sort_entries = false
+```
+
+This enables layout formatting without sorting. Set `pnfmt_sort_entries = true` only when the consuming build does not depend on the order of sortable items. Custom tasks can observe item order even when the item declarations have no visible dependencies.
+
 ## Behavior
 
 Property and item sorting is deliberately limited to content that can be reordered without changing normal MSBuild evaluation. Forward property references, item operations, imports, conditions, and other evaluation-sensitive constructs retain their meaningful order.
@@ -36,6 +49,8 @@ Property groups containing property functions, member access, or nested property
 Item groups containing item or metadata references in any item value or attribute, including conditions and metadata, also retain their original item order.
 
 Groups with property expressions, globs, lists, or escaped characters in `Include` retain their item order because distinct expressions can resolve to the same item. Metadata attributes containing references also retain their order.
+
+Sorting applies only to immediate `PropertyGroup` and `ItemGroup` children of `Project`. Imports, targets, task execution order, and groups nested inside targets or `Choose` blocks retain their order. The implicit-default-item diagnostic (`CSPROJ005`) applies only to projects that declare the .NET SDK, not to ordinary non-SDK projects.
 
 Run `pnfmt --lint <paths>` to report project-structure diagnostics and formatting changes without writing files. The command returns exit code `1` when it finds either.
 
