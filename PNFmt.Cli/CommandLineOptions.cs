@@ -74,245 +74,7 @@ namespace PNFmt.Cli
 
         public static CommandLineOptions Parse(string[] args)
         {
-            var allFiles = false;
-            var recursive = false;
-            var verbose = false;
-            var dryRun = false;
-            var check = false;
-            var lint = false;
-            var writeDefaultConfig = false;
-            bool? migrateLegacyConfig = null;
-            bool? removeLegacyConfig = null;
-            var stopOptions = false;
-            int? maxCpuCount = null;
-            var filePatterns = new List<string>();
-            var formatterNames = new List<string>();
-            var paths = new List<string>();
-            var arguments = args ?? Array.Empty<string>();
-
-            for (var index = 0; index < arguments.Length; index++)
-            {
-                var arg = arguments[index];
-                if (!stopOptions && string.Equals(arg, "--", StringComparison.Ordinal))
-                {
-                    stopOptions = true;
-                    continue;
-                }
-
-                if (!stopOptions && TryGetMaxCpuCountValue(arg, out var maxCpuCountValue))
-                {
-                    if (maxCpuCountValue is null)
-                    {
-                        maxCpuCount = Math.Max(1, Environment.ProcessorCount);
-                    }
-                    else if (!TryParseMaxCpuCount(maxCpuCountValue, out var parsedMaxCpuCount))
-                    {
-                        throw new CommandLineException(
-                            $"Option '{arg}' requires a positive integer after ':'.");
-                    }
-                    else
-                    {
-                        maxCpuCount = parsedMaxCpuCount;
-                    }
-
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        "file pattern",
-                        out var filePattern,
-                        "--file-pattern",
-                        "--filepattern"))
-                {
-                    filePatterns.Add(filePattern);
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        "formatter",
-                        out var formatterValue,
-                        "--formatter",
-                        "--formatters"))
-                {
-                    AddFormatterNames(formatterValue, arg, formatterNames);
-                    continue;
-                }
-
-                if (!stopOptions && IsHelpArg(arg))
-                {
-                    return Create(
-                        allFiles,
-                        recursive,
-                        verbose,
-                        dryRun,
-                        check,
-                        lint,
-                        writeDefaultConfig,
-                        migrateLegacyConfig,
-                        removeLegacyConfig,
-                        showHelp: true,
-                        showVersion: false,
-                        maxCpuCount,
-                        filePatterns,
-                        formatterNames,
-                        paths);
-                }
-
-                if (!stopOptions && IsVersionArg(arg))
-                {
-                    return Create(
-                        allFiles,
-                        recursive,
-                        verbose,
-                        dryRun,
-                        check,
-                        lint,
-                        writeDefaultConfig,
-                        migrateLegacyConfig,
-                        removeLegacyConfig,
-                        showHelp: false,
-                        showVersion: true,
-                        maxCpuCount,
-                        filePatterns,
-                        formatterNames,
-                        paths);
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-r", StringComparison.Ordinal)
-                    || string.Equals(arg, "--recursive", StringComparison.Ordinal)))
-                {
-                    recursive = true;
-                    continue;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-a", StringComparison.Ordinal)
-                    || string.Equals(arg, "--all", StringComparison.Ordinal)))
-                {
-                    allFiles = true;
-                    continue;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-v", StringComparison.Ordinal)
-                    || string.Equals(arg, "--verbose", StringComparison.Ordinal)))
-                {
-                    verbose = true;
-                    continue;
-                }
-
-                if (!stopOptions && (string.Equals(arg, "-n", StringComparison.Ordinal)
-                    || string.Equals(arg, "--dry-run", StringComparison.Ordinal)))
-                {
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions && string.Equals(arg, "--check", StringComparison.Ordinal))
-                {
-                    check = true;
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions && string.Equals(arg, "--lint", StringComparison.Ordinal))
-                {
-                    lint = true;
-                    check = true;
-                    dryRun = true;
-                    continue;
-                }
-
-                if (!stopOptions
-                    && string.Equals(arg, "--write-default-config", StringComparison.Ordinal))
-                {
-                    writeDefaultConfig = true;
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadBooleanOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        out var migrateLegacyConfigValue,
-                        "--migrate-legacy-config"))
-                {
-                    migrateLegacyConfig = migrateLegacyConfigValue;
-                    continue;
-                }
-
-                if (!stopOptions
-                    && TryReadBooleanOptionValue(
-                        arguments,
-                        ref index,
-                        arg,
-                        out var removeLegacyConfigValue,
-                        "--remove-legacy-config"))
-                {
-                    removeLegacyConfig = removeLegacyConfigValue;
-                    continue;
-                }
-
-                if (!stopOptions && arg.StartsWith("-", StringComparison.Ordinal))
-                {
-                    throw new CommandLineException($"Unknown option: {arg}");
-                }
-
-                paths.Add(arg);
-            }
-
-            if (!writeDefaultConfig
-                && (migrateLegacyConfig.HasValue || removeLegacyConfig.HasValue))
-            {
-                throw new CommandLineException(
-                    "Options '--migrate-legacy-config' and '--remove-legacy-config' "
-                    + "require '--write-default-config'.");
-            }
-
-            if (writeDefaultConfig
-                && (allFiles
-                    || recursive
-                    || verbose
-                    || dryRun
-                    || check
-                    || lint
-                    || filePatterns.Count > 0
-                    || formatterNames.Count > 0
-                    || paths.Count > 1))
-            {
-                throw new CommandLineException(
-                    "Option '--write-default-config' accepts at most one path and cannot be combined "
-                    + "with formatting options.");
-            }
-
-            if (paths.Count == 0)
-            {
-                paths.Add(".");
-            }
-
-            return Create(
-                allFiles,
-                recursive,
-                verbose,
-                dryRun,
-                check,
-                lint,
-                writeDefaultConfig,
-                migrateLegacyConfig,
-                removeLegacyConfig,
-                showHelp: false,
-                showVersion: false,
-                maxCpuCount,
-                filePatterns,
-                formatterNames,
-                paths);
+            return new ArgumentParser().Parse(args ?? Array.Empty<string>());
         }
 
         private static void AddFormatterNames(
@@ -497,6 +259,206 @@ namespace PNFmt.Cli
             }
 
             return false;
+        }
+
+        private sealed class ArgumentParser
+        {
+            private static readonly IReadOnlyDictionary<string, SwitchOption> Switches =
+                new Dictionary<string, SwitchOption>(StringComparer.Ordinal)
+                {
+                    ["-r"] = SwitchOption.Recursive,
+                    ["--recursive"] = SwitchOption.Recursive,
+                    ["-a"] = SwitchOption.AllFiles,
+                    ["--all"] = SwitchOption.AllFiles,
+                    ["-v"] = SwitchOption.Verbose,
+                    ["--verbose"] = SwitchOption.Verbose,
+                    ["-n"] = SwitchOption.DryRun,
+                    ["--dry-run"] = SwitchOption.DryRun,
+                    ["--check"] = SwitchOption.Check,
+                    ["--lint"] = SwitchOption.Lint,
+                    ["--write-default-config"] = SwitchOption.WriteDefaultConfig,
+                };
+
+            private readonly List<string> filePatterns = new List<string>();
+            private readonly List<string> formatterNames = new List<string>();
+            private readonly List<string> paths = new List<string>();
+            private bool allFiles;
+            private bool recursive;
+            private bool verbose;
+            private bool dryRun;
+            private bool check;
+            private bool lint;
+            private bool writeDefaultConfig;
+            private bool? migrateLegacyConfig;
+            private bool? removeLegacyConfig;
+            private int? maxCpuCount;
+
+            public CommandLineOptions Parse(string[] arguments)
+            {
+                var stopOptions = false;
+                for (var index = 0; index < arguments.Length; index++)
+                {
+                    var arg = arguments[index];
+                    if (stopOptions)
+                    {
+                        this.paths.Add(arg);
+                        continue;
+                    }
+
+                    if (string.Equals(arg, "--", StringComparison.Ordinal))
+                    {
+                        stopOptions = true;
+                        continue;
+                    }
+
+                    if (this.TryReadValueOption(arguments, ref index, arg))
+                    {
+                        continue;
+                    }
+
+                    // Help/version return the options collected so far, without
+                    // validating combinations or reading later arguments.
+                    if (IsHelpArg(arg))
+                    {
+                        return this.CreateOptions(showHelp: true);
+                    }
+
+                    if (IsVersionArg(arg))
+                    {
+                        return this.CreateOptions(showVersion: true);
+                    }
+
+                    if (this.TryReadSwitch(arg))
+                    {
+                        continue;
+                    }
+
+                    if (arg.StartsWith("-", StringComparison.Ordinal))
+                    {
+                        throw new CommandLineException($"Unknown option: {arg}");
+                    }
+
+                    this.paths.Add(arg);
+                }
+
+                this.ValidateCombination();
+                if (this.paths.Count == 0)
+                {
+                    this.paths.Add(".");
+                }
+
+                return this.CreateOptions();
+            }
+
+            private CommandLineOptions CreateOptions(bool showHelp = false, bool showVersion = false)
+            {
+                return Create(this.allFiles, this.recursive, this.verbose, this.dryRun, this.check,
+                    this.lint, this.writeDefaultConfig, this.migrateLegacyConfig, this.removeLegacyConfig,
+                    showHelp, showVersion, this.maxCpuCount, this.filePatterns, this.formatterNames, this.paths);
+            }
+
+            private static int ParseMaxCpuCount(string arg, string value)
+            {
+                if (value is null)
+                {
+                    return Math.Max(1, Environment.ProcessorCount);
+                }
+
+                if (!TryParseMaxCpuCount(value, out var parsed))
+                {
+                    throw new CommandLineException($"Option '{arg}' requires a positive integer after ':'.");
+                }
+
+                return parsed;
+            }
+
+            private bool TryReadSwitch(string arg)
+            {
+                if (!Switches.TryGetValue(arg, out var option))
+                {
+                    return false;
+                }
+
+                switch (option)
+                {
+                    case SwitchOption.Recursive: this.recursive = true; break;
+                    case SwitchOption.AllFiles: this.allFiles = true; break;
+                    case SwitchOption.Verbose: this.verbose = true; break;
+                    case SwitchOption.DryRun: this.dryRun = true; break;
+                    case SwitchOption.Check: this.check = true; this.dryRun = true; break;
+                    case SwitchOption.Lint: this.lint = true; this.check = true; this.dryRun = true; break;
+                    case SwitchOption.WriteDefaultConfig: this.writeDefaultConfig = true; break;
+                }
+
+                return true;
+            }
+
+            private bool TryReadValueOption(string[] arguments, ref int index, string arg)
+            {
+                if (TryGetMaxCpuCountValue(arg, out var value))
+                {
+                    this.maxCpuCount = ParseMaxCpuCount(arg, value);
+                    return true;
+                }
+
+                if (TryReadOptionValue(arguments, ref index, arg, "file pattern", out var pattern,
+                    "--file-pattern", "--filepattern"))
+                {
+                    this.filePatterns.Add(pattern);
+                    return true;
+                }
+
+                if (TryReadOptionValue(arguments, ref index, arg, "formatter", out var formatter,
+                    "--formatter", "--formatters"))
+                {
+                    AddFormatterNames(formatter, arg, this.formatterNames);
+                    return true;
+                }
+
+                if (TryReadBooleanOptionValue(arguments, ref index, arg, out var migrate, "--migrate-legacy-config"))
+                {
+                    this.migrateLegacyConfig = migrate;
+                    return true;
+                }
+
+                if (TryReadBooleanOptionValue(arguments, ref index, arg, out var remove, "--remove-legacy-config"))
+                {
+                    this.removeLegacyConfig = remove;
+                    return true;
+                }
+
+                return false;
+            }
+
+            private void ValidateCombination()
+            {
+                if (!this.writeDefaultConfig && (this.migrateLegacyConfig.HasValue || this.removeLegacyConfig.HasValue))
+                {
+                    throw new CommandLineException(
+                        "Options '--migrate-legacy-config' and '--remove-legacy-config' "
+                        + "require '--write-default-config'.");
+                }
+
+                if (this.writeDefaultConfig && (this.allFiles || this.recursive || this.verbose || this.dryRun
+                    || this.check || this.lint || this.filePatterns.Count > 0 || this.formatterNames.Count > 0
+                    || this.paths.Count > 1))
+                {
+                    throw new CommandLineException(
+                        "Option '--write-default-config' accepts at most one path and cannot be combined "
+                        + "with formatting options.");
+                }
+            }
+
+            private enum SwitchOption
+            {
+                Recursive,
+                AllFiles,
+                Verbose,
+                DryRun,
+                Check,
+                Lint,
+                WriteDefaultConfig,
+            }
         }
     }
 

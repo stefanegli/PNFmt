@@ -53,17 +53,7 @@ namespace PNFmt.Cli
                 if (outcome.Error is not null)
                 {
                     failed++;
-                    if (options.Verbose)
-                    {
-                        this.WriteStatus("failed", outcome.File);
-                    }
-
-                    this.error.WriteLine($"Failed to format {outcome.File}: {outcome.Error.Message}");
-                    if (options.Verbose)
-                    {
-                        this.error.WriteLine(outcome.Error);
-                    }
-
+                    this.WriteFailure(outcome, options.Verbose);
                     continue;
                 }
 
@@ -75,21 +65,7 @@ namespace PNFmt.Cli
                     case FileFormatStatus.Skipped: skipped++; break;
                 }
 
-                if (options.Verbose)
-                {
-                    var statusLabel = status == FileFormatStatus.Updated && options.DryRun
-                        ? "would-update" : status.ToString().ToLowerInvariant();
-                    this.WriteStatus(statusLabel, outcome.File);
-                }
-
-                foreach (var diagnostic in outcome.Result.Diagnostics)
-                {
-                    diagnosticCount++;
-                    var displayPath = this.DisplayPath(outcome.File);
-                    var location = diagnostic.LineNumber.HasValue
-                        ? $"{displayPath}({diagnostic.LineNumber.Value})" : displayPath;
-                    this.output.WriteLine($"{location}: warning {diagnostic.Code}: {diagnostic.Message}");
-                }
+                diagnosticCount += this.WriteResult(outcome, options);
             }
 
             var changeLabel = options.DryRun ? "Would update" : "Updated";
@@ -104,15 +80,34 @@ namespace PNFmt.Cli
                 return 2;
             }
 
-            // Compatibility warnings are log messages, not formatter diagnostics.
-            // They remain visible without turning a successful check into a failure.
-            return options.Check && (changed > 0 || (options.Lint && diagnosticCount > 0)) ? 1 : 0;
+            return GetCheckExitCode(options, changed, diagnosticCount);
         }
 
         private string DisplayPath(string file)
         {
             var relative = Path.GetRelativePath(this.workingDirectory, Path.GetFullPath(file));
             return string.IsNullOrEmpty(relative) ? "." : relative;
+        }
+
+        private static int GetCheckExitCode(CommandLineOptions options, int changed, int diagnosticCount)
+        {
+            // Compatibility warnings are log messages, not formatter diagnostics.
+            // They remain visible without turning a successful check into a failure.
+            return options.Check && (changed > 0 || (options.Lint && diagnosticCount > 0)) ? 1 : 0;
+        }
+
+        private void WriteFailure(FileFormattingOutcome outcome, bool verbose)
+        {
+            if (verbose)
+            {
+                this.WriteStatus("failed", outcome.File);
+            }
+
+            this.error.WriteLine($"Failed to format {outcome.File}: {outcome.Error.Message}");
+            if (verbose)
+            {
+                this.error.WriteLine(outcome.Error);
+            }
         }
 
         private void WriteLog(FileFormattingOutcome outcome, bool verbose)
@@ -136,6 +131,29 @@ namespace PNFmt.Cli
                     this.error.WriteLine(exception);
                 }
             }
+        }
+
+        private int WriteResult(FileFormattingOutcome outcome, CommandLineOptions options)
+        {
+            if (options.Verbose)
+            {
+                var status = outcome.Result.Status;
+                var statusLabel = status == FileFormatStatus.Updated && options.DryRun
+                    ? "would-update" : status.ToString().ToLowerInvariant();
+                this.WriteStatus(statusLabel, outcome.File);
+            }
+
+            var diagnosticCount = 0;
+            foreach (var diagnostic in outcome.Result.Diagnostics)
+            {
+                diagnosticCount++;
+                var displayPath = this.DisplayPath(outcome.File);
+                var location = diagnostic.LineNumber.HasValue
+                    ? $"{displayPath}({diagnostic.LineNumber.Value})" : displayPath;
+                this.output.WriteLine($"{location}: warning {diagnostic.Code}: {diagnostic.Message}");
+            }
+
+            return diagnosticCount;
         }
 
         private void WriteStatus(string status, string file)
