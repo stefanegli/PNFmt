@@ -50,11 +50,6 @@ namespace PNFmt
 
         private DocumentFormatResult FormatResx(string originalText, Encoding encoding, bool formatLayout, bool hasExplicitLayout)
         {
-            var hasSchemaRemoved = false;
-            var hasCommentRemoved = false;
-            var toSave = new List<XNode>();
-            var toSort = new List<ResourceEntry>();
-            var pendingComments = new List<XNode>();
             XDocument document;
             var readerSettings = new XmlReaderSettings
             {
@@ -70,14 +65,10 @@ namespace PNFmt
             }
 
             var root = document.Root;
-            if (!IsResx(root) || HasUnnamedResourceEntry(root))
+            var diagnostic = GetRootDiagnostic(root);
+            if (diagnostic is not null)
             {
-                var reason = !IsResx(root) ? "The document is not a RESX resource file."
-                    : "Resource data and metadata entries must have a name attribute.";
-                var lineInfo = (IXmlLineInfo)root;
-                return DocumentFormatResult.Skipped(
-                    new FormatterDiagnostic("RESX001", "Formatting skipped: " + reason,
-                        lineInfo?.HasLineInfo() == true ? (int?)lineInfo.LineNumber : null));
+                return DocumentFormatResult.Skipped(diagnostic);
             }
 
             if (formatLayout)
@@ -85,83 +76,7 @@ namespace PNFmt
                 RemoveLayoutWhitespace(document);
             }
 
-            foreach (var node in root.Nodes())
-            {
-                if (this.Settings.RemoveXsdSchema)
-                {
-                    if (!hasSchemaRemoved && node is XElement e && IsXsdSchema(e))
-                    {
-                        toSave.AddRange(pendingComments);
-                        pendingComments.Clear();
-                        toSave.Add(XElement.Parse(ResxSchemaDefaults.FakeSchema));
-                        hasSchemaRemoved = true;
-                        continue;
-                    }
-                }
-
-                if (this.Settings.RemoveDocumentationComment)
-                {
-                    if (!hasCommentRemoved && node is XComment comment && IsDocumentationComment(comment))
-                    {
-                        hasCommentRemoved = true;
-                        continue;
-                    }
-                }
-
-                if (node is XElement element && IsResourceEntry(element))
-                {
-                    toSort.Add(new ResourceEntry(element, pendingComments.ToArray()));
-                    pendingComments.Clear();
-                }
-                else if (node is XComment resourceComment && !IsDocumentationComment(resourceComment))
-                {
-                    pendingComments.Add(node);
-                }
-                else
-                {
-                    toSave.AddRange(pendingComments);
-                    pendingComments.Clear();
-                    toSave.Add(node);
-                }
-            }
-
-            var sorted = this.Settings.SortEntries
-                ? toSort.OrderBy(entry => entry.Element.Name.ToString(), this.Settings.Comparer)
-                    .ThenBy(entry => entry.Element.Attribute("name").Value, this.Settings.Comparer)
-                    .ToList()
-                : toSort;
-
-            var hasCommentAdded = false;
-            if (this.Settings.InsertDocumentationComment && !this.Settings.RemoveDocumentationComment && !HasDocumentationComment(document))
-            {
-                // XML readers normalize comment line endings to LF. Match that
-                // representation immediately so a second rewrite stays identical.
-                toSave.Insert(0, new XComment(ResxSchemaDefaults.OriginalCommentContent
-                    .Replace("\r\n", "\n").Replace('\r', '\n')));
-                hasCommentAdded = true;
-            }
-
-            var hasSchemaAdded = false;
-            if (this.Settings.InsertXsdSchema && !this.Settings.RemoveXsdSchema && !HasSchemaNode(document))
-            {
-                toSave.Insert(Math.Min(1, toSave.Count), XElement.Parse(ResxSchemaDefaults.OriginalSchema));
-                hasSchemaAdded = true;
-            }
-
-            var requiresSorting = this.Settings.SortEntries && !toSort.SequenceEqual(sorted);
-            var hasContentChanges = hasSchemaRemoved || hasCommentRemoved || hasCommentAdded || hasSchemaAdded || requiresSorting;
-            if (hasContentChanges)
-            {
-                foreach (var entry in sorted)
-                {
-                    toSave.AddRange(entry.LeadingComments);
-                    toSave.Add(entry.Element);
-                }
-
-                // Comments without a following resource entry are file footers.
-                toSave.AddRange(pendingComments);
-                document.Root.ReplaceNodes(toSave);
-            }
+            var hasContentChanges = new ResourceContent(this.Settings).Rewrite(document);
 
             if (hasContentChanges || (formatLayout && (hasExplicitLayout || this.Settings.Layout?.HasOverrides == true)) || encoding is not null)
             {
@@ -176,6 +91,20 @@ namespace PNFmt
 
             // Legacy resource settings only rewrite when content actually changes.
             return DocumentFormatResult.FromText(originalText);
+        }
+
+        private static FormatterDiagnostic GetRootDiagnostic(XElement root)
+        {
+            if (!IsResx(root) || HasUnnamedResourceEntry(root))
+            {
+                var reason = !IsResx(root) ? "The document is not a RESX resource file."
+                    : "Resource data and metadata entries must have a name attribute.";
+                var lineInfo = (IXmlLineInfo)root;
+                return new FormatterDiagnostic("RESX001", "Formatting skipped: " + reason,
+                    lineInfo?.HasLineInfo() == true ? (int?)lineInfo.LineNumber : null);
+            }
+
+            return null;
         }
 
         private static bool HasUnnamedResourceEntry(XElement root)
@@ -233,6 +162,121 @@ namespace PNFmt
         private static string RemoveWhiteSpace(string text)
         {
             return string.Join("", text.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        // Owns the association between resource entries and their leading comments,
+        // and only replaces the document nodes when a content change is needed.
+        private sealed class ResourceContent
+        {
+            private readonly IResxFormatSettings settings;
+            private readonly List<XNode> preserved = new List<XNode>();
+            private readonly List<ResourceEntry> entries = new List<ResourceEntry>();
+            private readonly List<XNode> pendingComments = new List<XNode>();
+            private bool schemaRemoved;
+            private bool commentRemoved;
+
+            public ResourceContent(IResxFormatSettings settings)
+            {
+                this.settings = settings;
+            }
+
+            public bool Rewrite(XDocument document)
+            {
+                foreach (var node in document.Root.Nodes())
+                {
+                    this.AddNode(node);
+                }
+
+                var sorted = this.settings.SortEntries
+                    ? this.entries.OrderBy(entry => entry.Element.Name.ToString(), this.settings.Comparer)
+                        .ThenBy(entry => entry.Element.Attribute("name").Value, this.settings.Comparer).ToList()
+                    : this.entries;
+                var metadataAdded = this.InsertMissingMetadata(document);
+                var requiresSorting = this.settings.SortEntries && !this.entries.SequenceEqual(sorted);
+                if (!this.schemaRemoved && !this.commentRemoved && !metadataAdded && !requiresSorting)
+                {
+                    return false;
+                }
+
+                foreach (var entry in sorted)
+                {
+                    this.preserved.AddRange(entry.LeadingComments);
+                    this.preserved.Add(entry.Element);
+                }
+
+                // Comments without a following resource entry are file footers.
+                this.preserved.AddRange(this.pendingComments);
+                document.Root.ReplaceNodes(this.preserved);
+                return true;
+            }
+
+            private void AddNode(XNode node)
+            {
+                if (this.TryRemoveMetadata(node))
+                {
+                    return;
+                }
+
+                if (node is XElement element && IsResourceEntry(element))
+                {
+                    this.entries.Add(new ResourceEntry(element, this.pendingComments.ToArray()));
+                    this.pendingComments.Clear();
+                }
+                else if (node is XComment comment && !IsDocumentationComment(comment))
+                {
+                    this.pendingComments.Add(node);
+                }
+                else
+                {
+                    this.PreserveNode(node);
+                }
+            }
+
+            private bool InsertMissingMetadata(XDocument document)
+            {
+                var changed = false;
+                if (this.settings.InsertDocumentationComment && !this.settings.RemoveDocumentationComment && !HasDocumentationComment(document))
+                {
+                    // Match XML readers' normalized comment line endings so a second
+                    // rewrite produces the same bytes.
+                    this.preserved.Insert(0, new XComment(ResxSchemaDefaults.OriginalCommentContent
+                        .Replace("\r\n", "\n").Replace('\r', '\n')));
+                    changed = true;
+                }
+
+                if (this.settings.InsertXsdSchema && !this.settings.RemoveXsdSchema && !HasSchemaNode(document))
+                {
+                    this.preserved.Insert(Math.Min(1, this.preserved.Count), XElement.Parse(ResxSchemaDefaults.OriginalSchema));
+                    changed = true;
+                }
+
+                return changed;
+            }
+
+            private void PreserveNode(XNode node)
+            {
+                this.preserved.AddRange(this.pendingComments);
+                this.pendingComments.Clear();
+                this.preserved.Add(node);
+            }
+
+            private bool TryRemoveMetadata(XNode node)
+            {
+                if (this.settings.RemoveXsdSchema && !this.schemaRemoved && node is XElement element && IsXsdSchema(element))
+                {
+                    this.PreserveNode(XElement.Parse(ResxSchemaDefaults.FakeSchema));
+                    this.schemaRemoved = true;
+                    return true;
+                }
+
+                if (this.settings.RemoveDocumentationComment && !this.commentRemoved && node is XComment comment && IsDocumentationComment(comment))
+                {
+                    this.commentRemoved = true;
+                    return true;
+                }
+
+                return false;
+            }
         }
 
         private sealed class ResourceEntry

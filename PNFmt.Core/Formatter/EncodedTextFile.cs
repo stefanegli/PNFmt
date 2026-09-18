@@ -98,27 +98,18 @@ namespace PNFmt
                 return null;
             }
 
-            if (bytes[0] == 0x00 && bytes[1] == 0x00 && bytes[2] == 0x00 && bytes[3] == 0x3C)
+            // Compare the opening four bytes as a single signature, independent
+            // of the machine's byte order. UTF-32 starts with '<'; UTF-16 with '<?'.
+            var signature = ((uint)bytes[0] << 24) | ((uint)bytes[1] << 16)
+                | ((uint)bytes[2] << 8) | bytes[3];
+            return signature switch
             {
-                return new UTF32Encoding(true, false, true);
-            }
-
-            if (bytes[0] == 0x3C && bytes[1] == 0x00 && bytes[2] == 0x00 && bytes[3] == 0x00)
-            {
-                return new UTF32Encoding(false, false, true);
-            }
-
-            if (bytes[0] == 0x00 && bytes[1] == 0x3C && bytes[2] == 0x00 && bytes[3] == 0x3F)
-            {
-                return new UnicodeEncoding(true, false, true);
-            }
-
-            if (bytes[0] == 0x3C && bytes[1] == 0x00 && bytes[2] == 0x3F && bytes[3] == 0x00)
-            {
-                return new UnicodeEncoding(false, false, true);
-            }
-
-            return null;
+                0x0000003C => new UTF32Encoding(true, false, true),
+                0x3C000000 => new UTF32Encoding(false, false, true),
+                0x003C003F => new UnicodeEncoding(true, false, true),
+                0x3C003F00 => new UnicodeEncoding(false, false, true),
+                _ => null,
+            };
         }
     }
 }

@@ -45,61 +45,18 @@ namespace PNFmt
             }
 
             var originalDocument = formatLayout ? null : new XDocument(document);
-            SortChildren(root, GetSolutionOrder, GetSolutionKey, sortEntries, formatLayout);
-
-            foreach (var configurations in root.Elements("Configurations"))
-            {
-                SortChildren(configurations, GetConfigurationOrder, GetConfigurationKey, sortEntries, formatLayout);
-                foreach (var projectType in configurations.Elements("ProjectType"))
-                {
-                    SortChildren(projectType, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
-                }
-            }
-
-            foreach (var folder in root.Elements("Folder"))
-            {
-                SortChildren(folder, GetFolderOrder, GetFolderKey, sortEntries, formatLayout);
-                SortProperties(folder, sortEntries, formatLayout);
-                foreach (var project in folder.Elements("Project"))
-                {
-                    SortProject(project, sortEntries, formatLayout);
-                }
-            }
-
-            foreach (var project in root.Elements("Project"))
-            {
-                SortProject(project, sortEntries, formatLayout);
-            }
-
-            SortProperties(root, sortEntries, formatLayout);
+            SortSolution(root, sortEntries, formatLayout);
             if (!formatLayout && XNode.DeepEquals(originalDocument, document))
             {
                 return text;
             }
 
             var newLine = TextFileFormatting.DetectNewLine(text);
-            // Only containers visited by the SLNX sorter own layout whitespace.
-            // Serialize without implicit indentation so extension subtrees retain
-            // even whitespace-only values and compact element-only content.
-            foreach (var container in document.Descendants().Where(element => formatLayout && element.Annotation<LayoutContainer>() is not null).ToArray())
-            {
-                var nodes = container.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
-                if (nodes.Length == 0)
-                {
-                    continue;
-                }
-
-                var indent = new string(' ', container.Ancestors().Count() * 2);
-                container.ReplaceNodes(nodes.SelectMany(node => new XNode[] { new LayoutWhitespace(newLine + indent + "  "), node })
-                    .Concat(new[] { new LayoutWhitespace(newLine + indent) }).ToArray());
-            }
-
             if (formatLayout)
             {
-                var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
-                document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
-                    index > 0 || document.Declaration is not null ? new XNode[] { new LayoutWhitespace(newLine), node } : new[] { node }).ToArray());
+                ApplyLayout(document, newLine);
             }
+
             var writerSettings = new XmlWriterSettings
             {
                 Encoding = new UTF8Encoding(false),
@@ -137,6 +94,29 @@ namespace PNFmt
             }
 
             groups.Clear();
+        }
+
+        private static void ApplyLayout(XDocument document, string newLine)
+        {
+            // Only containers visited by the SLNX sorter own layout whitespace.
+            // Serialize without implicit indentation so extension subtrees retain
+            // even whitespace-only values and compact element-only content.
+            foreach (var container in document.Descendants().Where(element => element.Annotation<LayoutContainer>() is not null).ToArray())
+            {
+                var nodes = container.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
+                if (nodes.Length == 0)
+                {
+                    continue;
+                }
+
+                var indent = new string(' ', container.Ancestors().Count() * 2);
+                container.ReplaceNodes(nodes.SelectMany(node => new XNode[] { new LayoutWhitespace(newLine + indent + "  "), node })
+                    .Concat(new[] { new LayoutWhitespace(newLine + indent) }).ToArray());
+            }
+
+            var documentNodes = document.Nodes().Where(node => !IsLayoutWhitespace(node)).ToArray();
+            document.ReplaceNodes(documentNodes.SelectMany((node, index) =>
+                index > 0 || document.Declaration is not null ? new XNode[] { new LayoutWhitespace(newLine), node } : new[] { node }).ToArray());
         }
 
         private static string Attribute(XElement element, string name)
@@ -310,6 +290,37 @@ namespace PNFmt
                     sortEntries,
                     formatLayout);
             }
+        }
+
+        private static void SortSolution(XElement root, bool sortEntries, bool formatLayout)
+        {
+            SortChildren(root, GetSolutionOrder, GetSolutionKey, sortEntries, formatLayout);
+
+            foreach (var configurations in root.Elements("Configurations"))
+            {
+                SortChildren(configurations, GetConfigurationOrder, GetConfigurationKey, sortEntries, formatLayout);
+                foreach (var projectType in configurations.Elements("ProjectType"))
+                {
+                    SortChildren(projectType, GetProjectRuleOrder, GetProjectRuleKey, sortEntries, formatLayout);
+                }
+            }
+
+            foreach (var folder in root.Elements("Folder"))
+            {
+                SortChildren(folder, GetFolderOrder, GetFolderKey, sortEntries, formatLayout);
+                SortProperties(folder, sortEntries, formatLayout);
+                foreach (var project in folder.Elements("Project"))
+                {
+                    SortProject(project, sortEntries, formatLayout);
+                }
+            }
+
+            foreach (var project in root.Elements("Project"))
+            {
+                SortProject(project, sortEntries, formatLayout);
+            }
+
+            SortProperties(root, sortEntries, formatLayout);
         }
 
         private sealed class ElementGroup
