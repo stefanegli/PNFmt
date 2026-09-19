@@ -23,6 +23,17 @@ invoking PNFmt.
 Keep fixture and snapshot contents unchanged unless the task explicitly requires
 changing them. Do not regenerate expected snapshots to accommodate formatting.
 
+# Skill and documentation maintenance
+
+Keep `.agents/skills/pnfmt/SKILL.md`, its supporting references, `README.md`, and
+the relevant `docs/` pages aligned with the implementation. When changing a
+formatter feature, CLI option, configuration setting, default, diagnostic, or
+compatibility behavior, update the affected skill guidance and documentation in
+the same coherent increment. Include activation requirements, defaults, supported
+values, and preservation limits where they affect usage. Verify examples and
+links, and distinguish defaults for omitted settings from generated configuration.
+Do not consider a user-facing feature complete while its guidance is stale.
+
 # Commits and quality gates
 
 Always commit completed work in useful, coherent increments with descriptive

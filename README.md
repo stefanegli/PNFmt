@@ -11,7 +11,7 @@ Enable processing with `pnfmt_enabled = true` and choose a formatter with `pnfmt
 
 | Files | Formatter | Status | What it does |
 | --- | --- | --- | --- |
-| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace, with optional import, modifier, and member sorting, declaration blank-line cleanup, and region removal. Member ordering is configurable and preserves storage declaration order. Supports exclusion regions. |
+| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace and wraps code, with parameter/argument list styles, import/modifier/member sorting, blank-line preferences, file headers, region removal, and exclusion regions. Member ordering preserves storage declaration order. |
 | [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, sorts safe properties and items, and reports project-structure diagnostics. |
 | [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Experimental | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
 | [`.resx`](docs/formatters/resx.md) | Resource | Stable | Sorts resource entries and optionally removes generated schema and documentation content. |
@@ -105,7 +105,7 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Run the following command to add defaults that enable every formatter. C# region removal is disabled, as are section sorting and merging for `.editorconfig` and `.ini` files; other optional cleanup behaviors are enabled:
+Run the following command to add defaults that enable every formatter with sorting and selected cleanup behaviors. C# region removal and INI/EditorConfig section sorting and merging remain off. C# wrapping, Microsoft blank-line preferences, and file headers are not configured:
 
 ```powershell
 pnfmt --write-default-config .

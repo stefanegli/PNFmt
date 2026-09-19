@@ -5,7 +5,7 @@ description: Check, format, lint, or configure C#, SDK-style and non-SDK MSBuild
 
 # PNFmt
 
-Use PNFmt only within the task's scope. It supports C# source, MSBuild projects, resources, solutions, XML, XAML, response files, INI, and EditorConfig. Formatter selection through EditorConfig can also enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
+Use PNFmt within the requested scope. Formatter selection through EditorConfig can enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
 
 ## Invocation
 
@@ -15,114 +15,75 @@ In the PNFmt source repository, replace `pnfmt` in the commands below with:
 dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release -- <pnfmt-arguments>
 ```
 
-Elsewhere, use an installed `pnfmt` command. Do not install or update the tool unless requested.
+Elsewhere, use the installed `pnfmt` command and check `pnfmt --version` when feature availability matters. An installed release may predate the checkout. Do not install or update the tool unless requested.
 
 For repository-wide formatting of PNFmt itself, use `scripts/Format-Repository.cmd` from the repository root (or `scripts/Format-Repository.ps1` with PowerShell 7/Linux), then verify with `-Check -NoBuild`. This script excludes fixture inputs and expected snapshots; recursive formatting over the repository root can modify them because fixture EditorConfig files can override exclusions.
 
-## Scope selection
+## Scope and operations
 
-With no path, PNFmt uses the current directory. Directory scope is non-recursive unless `--recursive` is passed.
+With no path, PNFmt uses the current directory. Directory scope is non-recursive unless `--recursive` is passed. Inside Git, each target uses its own repository and only staged, unstaged, and untracked files in scope are processed by default. Use `--all` when the task includes unchanged files. Outside Git, all supported files in scope are processed.
 
-Inside a Git working tree, PNFmt processes only staged, unstaged, and untracked files in the requested scope. Use `--all` only when the task calls for unchanged files. Outside Git, it processes all supported files in scope.
+- Check without writing: `pnfmt --check <paths>`.
+- Preview without failing for differences: `pnfmt --dry-run <paths>`.
+- Format when the task permits writes: `pnfmt <paths>`.
+- Check formatting and formatter diagnostics without writing: `pnfmt --lint <paths>`.
+- Add missing default configuration when requested: `pnfmt --write-default-config <directory-or-editorconfig>`.
 
 Useful narrowing and execution options:
 
-- `--recursive`: include subdirectories.
-- `--file-pattern <glob>`: include a glob; repeat for multiple patterns. `*` and `?` stay within one path segment, while `**` crosses directories.
-- `--formatter <name>[,<name>...]`: filter the resolved `csharp`, `csproj`, `ini`, `resx`, `rsp`, `slnx`, `xml`, or `xaml` formatters. This does not override EditorConfig selection or enablement.
-- `-m:N` or `-maxCpuCount:N`: override the configured concurrency. Plain `-m` uses the processor count.
-- `--verbose`: show per-file statuses and detailed errors.
+- `--file-pattern <glob>`: repeat for multiple patterns. `*` and `?` stay within one path segment; `**` crosses directories.
+- `--formatter <name>[,<name>...]`: filter the resolved `csharp`, `csproj`, `ini`, `resx`, `rsp`, `slnx`, `xml`, or `xaml` formatters. It does not override selection or enablement.
+- `-m:N` or `-maxCpuCount:N`: override concurrency. Plain `-m` uses the processor count.
+- `--verbose`: show per-file statuses and detailed errors. `--help` lists the current CLI options.
 
-## Operations
+Exit `0` means success; `1` means `--check` found changes or `--lint` found changes or diagnostics; `2` means a usage, path, or formatting error. A skipped file with a diagnostic does not by itself fail ordinary formatting or `--check`. Inspect diagnostics when a file unexpectedly stays unchanged.
 
-- Check without writing: `pnfmt --check <paths>`.
-- Preview without writing or failing for differences: `pnfmt --dry-run <paths>`.
-- Format when the task permits writes: `pnfmt <paths>`.
-- Check project structure and formatting without writing: `pnfmt --lint <paths>`.
-- Add missing default configuration when explicitly requested: `pnfmt --write-default-config <directory-or-editorconfig>`.
+## Configuration and formatter guidance
 
-Exit code `0` means success. Exit code `1` means `--check` found changes or `--lint` found changes or diagnostics. Exit code `2` means a usage, path, or formatting error.
+Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching section. Formatter names are case-insensitive and independent of the extension. `pnfmt_enabled = false` skips all processing, including linting and encoding changes. `None` remains a compatibility selection for disabling processing; unknown or empty names are errors when processing is enabled.
 
-## EditorConfig settings
+Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup switches default off. Setting `pnfmt_format = false` allows independently enabled transformations and explicit encoding changes to proceed. C# wrapping, Microsoft blank-line preferences, and headers require layout. The older `pnfmt_csharp_format`, `pnfmt_xml_format`, and `pnfmt_xaml_format` switches are layout fallbacks; `pnfmt_format` takes precedence.
 
-Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching EditorConfig section. Layout defaults on (`pnfmt_format = true`); optional sorting defaults off (`pnfmt_sort_entries = false`). `pnfmt_enabled = false` skips all processing, including linting. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task.
+Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. Read the repository's [configuration contracts](../../../docs/configuration-contracts.md) when diagnosing legacy activation or precedence.
 
-Project files:
+Read only the guidance relevant to the selected formatter:
 
-- Both SDK-style and non-SDK MSBuild documents with a `Project` root are supported, including the legacy MSBuild XML namespace. An `Sdk` declaration is not required. Check the file contents rather than inferring project style from its target framework or extension.
-- Select `pnfmt_formatter = csproj` explicitly for `.props`, `.targets`, and `.proj` files. The `csproj` formatter name is used for all these MSBuild formats.
-- `pnfmt_sort_entries = true` sorts eligible properties and items while retaining evaluation-sensitive entries.
-- `pnfmt_csproj_empty_lines_between_groups = <number>` controls blank lines between top-level groups.
-- `pnfmt_csproj_sort_item_types = <names>` replaces the built-in sortable item-type list. Separate names with commas or semicolons, or use `*` for homogeneous item groups.
-- Standard `indent_style`, `indent_size`, `tab_width`, and `end_of_line` settings control XML layout.
+- [C# reference](references/csharp.md): Roslyn layout, line width, parameter/argument chopping, import/modifier/member sorting, region removal, both blank-line mechanisms, file headers, exclusions, generated files, and parse diagnostics.
+- [Other formatters](references/other-formatters.md): MSBuild sorting/linting, RESX insertion/removal, INI and EditorConfig precedence, response files, solutions, and XML/XAML preservation.
 
-Imports, targets, task order, and groups nested inside targets or `Choose` blocks retain their order. Sorting and item canonicalization apply to direct project-level property/item groups. Preserve `pnfmt_sort_entries = false` when the consuming build depends on item order; custom tasks can observe order even without visible dependencies between declarations. The implicit-default-item lint (`CSPROJ005`) applies only to projects declaring the .NET SDK.
+## Encoding and final newlines
 
-For layout-only formatting of other MSBuild files:
+All enabled formatters honor `charset`: `utf-8` (no BOM), `utf-8-bom`, `utf-16le`, `utf-16be` (both with BOM), or `latin1` (no BOM). Values are case-insensitive. Missing, invalid, or `unset` values retain formatter-specific encoding behavior. Charset alone never activates processing; it can change encoding with layout disabled, and preview modes detect those changes without writing. For XML-based files, explicit charset updates the encoding declaration. Encoding errors leave the input untouched rather than replacing characters. See [encoding details](../../../README.md#file-encoding).
 
-```ini
-[*.{props,targets,proj}]
-pnfmt_enabled = true
-pnfmt_formatter = csproj
-pnfmt_sort_entries = false
-```
+With layout enabled, `insert_final_newline` differs by formatter:
 
-Resource files:
+| Formatter | `true` | `false` or missing |
+| --- | --- | --- |
+| C#, XML, XAML | Add a missing final newline. | Preserve whether one existed. |
+| Project | End with one newline. | `false` removes it; missing ends with one. |
+| Resource | End with one newline. | Omit the final newline. |
+| INI, response, solution | End with one newline. | End with one newline. |
 
-- `pnfmt_sort_entries = true` sorts resource entries.
-- `pnfmt_resx_remove_xsd_schema = true` removes the embedded XSD schema.
-- `pnfmt_resx_remove_documentation_comment = true` removes the standard documentation comment.
-- `pnfmt_resx_sort_comparer` accepts `InvariantCulture`, `InvariantCultureIgnoreCase`, `OrdinalIgnoreCase`, or `Ordinal`.
+Protected content can prevent whitespace changes. C#, project, resource, XML, and XAML honor explicit layout settings; INI, response, and solution use the detected line ending instead. Solution indentation is fixed at two spaces.
 
-INI and EditorConfig files:
+## Repository and generated configuration
 
-- `pnfmt_sort_entries = true` sorts keys within property blocks. Blank lines do not split a block; comments, headers, and unknown lines do.
-- `pnfmt_ini_group_by_prefix = true` sorts keys and separates prefixes shared by at least two keys. A prefix is the text before the first underscore; singleton prefixes get no extra blank lines.
-- `pnfmt_ini_merge_groups = true` merges sections with the same header, ignoring case, and retains their body occurrence order.
-- `pnfmt_ini_sort_groups = true` sorts named sections ordinally, ignoring case, while leaving the preamble first.
+The optional `.pnfmt` JSON file supports `maxCpuCount`, a positive integer defaulting to `1`. Each target reads its Git root's configuration, or its target directory's configuration outside Git. If multiple configurations apply, the lowest limit governs the run; command-line concurrency wins. File-formatting policy belongs in `.editorconfig`.
 
-The INI formatter normalizes assignments to `key = value`, collapses repeated blank lines, and preserves comments and unknown lines. An `.editorconfig` containing `root = true` needs its own matching `[*.editorconfig]` section because it cannot inherit this configuration. Merging or sorting sections can change duplicate-section precedence; enable either only when safe.
+`--write-default-config` enables every formatter and writes explicit behavior choices. It reuses matching sections, preserves existing values and line order, inserts missing keys at sorted positions, appends missing sections, and adds no comments. A new file gets `root = true`; earlier marked PNFmt default blocks are migrated. Existing disabled settings remain disabled.
 
-Response files:
+Generated defaults enable sorting where supported, C# modifier/member sorting and declaration blank-line cleanup, prefix grouping for `.ini` files, and RESX schema/documentation removal. They disable C# region removal, INI/EditorConfig section sorting and merging, and RESX insertion. They do not add C# width, list styles, Microsoft blank-line preferences, or header templates. Distinguish these generated choices from defaults for omitted settings.
 
-- `pnfmt_sort_entries = true` sorts non-empty physical lines ordinally, ignoring case with an ordinal tie-breaker.
-- Blank lines do not split a sortable block. A full-line `#` comment does and remains in place.
-- Compiler response arguments can be order-sensitive because later options may override earlier ones. Enable sorting only when safe, and use comment barriers around order-sensitive blocks.
+The command creates `.pnfmt` with `maxCpuCount` set to `4` only when missing: at the Git root, or beside `.editorconfig` outside Git. It never modifies an existing `.pnfmt`.
 
-Solution files:
-
-- `pnfmt_sort_entries = true` orders known `.slnx` elements, uses two-space XML indentation, and preserves unknown extension elements as ordering barriers.
-
-Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases. PNFmt reports warning `PNFMT001` when it uses or ignores one, and a matching `pnfmt_*` setting takes precedence.
-
-## Repository configuration
-
-The optional `.pnfmt` JSON file belongs at the Git repository root and currently supports one tool-level setting:
-
-```json
-{
-  "maxCpuCount": 4
-}
-```
-
-`maxCpuCount` must be positive and defaults to `1`; command-line concurrency options override it. Keep file-formatting behavior in `.editorconfig`.
-
-## Default configuration
-
-`--write-default-config` adds all-enabled PNFmt settings to `.editorconfig`. It reuses matching sections, preserves existing values and line order, inserts only missing keys at sorted positions, appends missing sections, and adds no comments. A new file gets `root = true`. Earlier marked PNFmt default blocks are removed and migrated to this structure.
-
-The command also creates `.pnfmt` with `maxCpuCount` set to `4` when the file is missing and never modifies an existing `.pnfmt`. Inside Git, it targets the repository root; outside Git, it creates the file beside `.editorconfig`.
-
-When legacy formatter settings exist, answer both migration questions explicitly in non-interactive runs:
+When legacy settings exist, supply both migration choices for non-interactive runs:
 
 ```powershell
 pnfmt --write-default-config --migrate-legacy-config=<true|false> --remove-legacy-config=<true|false> <directory-or-editorconfig>
 ```
 
-Migration adds current `pnfmt_*` names with the legacy values in the same sections. Removal is independent; set it to `true` only when the task includes deleting the old names.
-
-The generated defaults enable same-named group merging for `.editorconfig` and `.ini` files and response-file sorting. Review these changes because both behaviors can affect order-sensitive semantics.
+Migration adds current names with legacy values in the same sections. Removal is independent; enable it only when deleting legacy names is in scope.
 
 ## Completion
 
-Inspect the diff and preserve unrelated changes. After formatting, rerun `--check` on the same scope and resolve failures caused by the requested change.
+After formatting, verify with `--check` on the same paths, recursion, and selection options. Review the diff and report changes and diagnostics. For changes to PNFmt itself, follow `AGENTS.md` for documentation maintenance, commits, and applicable quality gates.
