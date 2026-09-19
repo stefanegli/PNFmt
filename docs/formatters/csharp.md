@@ -207,6 +207,23 @@ All three default to allowing the existing spacing. Missing, `true`, `unset`, or
 
 These preferences require layout formatting and are disabled by `pnfmt_format = false`. They can be combined with the independent declaration-only cleanup. Strings, comment contents, retained directives, inactive code, and excluded regions remain protected.
 
+## File headers
+
+Use Microsoft's [`file_header_template`](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide0073) to add or update a file header:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+file_header_template = Copyright (c) Example.\n{fileName}\nAll rights reserved.
+```
+
+Write the template without comment delimiters. Literal `\n` sequences separate lines; `{fileName}` expands to the current file's basename, including its extension. Other backslashes and placeholders remain literal. PNFmt writes `//` comments, uses `//` for empty template lines, and separates a new or updated header from the remaining content with one blank line. Header newlines follow `end_of_line` or the detected file convention.
+
+The initial group of ordinary `//` comments, or the first ordinary `/* ... */` comment, is treated as the existing header and replaced if its text differs. A blank line ends a line-comment header. Matching headers retain their comment style, ignoring surrounding whitespace on each line for comparison; block-comment decoration with leading `*` is also ignored. XML documentation and later comment groups stay in place. Leading directives are preserved, including when the existing header follows them.
+
+Missing, empty, or `unset` templates leave headers alone. The setting is opt-in, is omitted from the generated default configuration, and does not enable file processing by itself. `pnfmt_format = false` disables header processing with layout. Generated files and files with syntax errors are skipped before header processing; exclusion regions and formatter markers remain protected. Preview and check modes report required header changes without writing the file.
+
 ## Exclusion regions
 
 Standalone, case-sensitive `// pnfmt: off` and `// pnfmt: on` comments protect the complete marked lines and everything between them. Their contents retain their exact text, including whitespace and line endings, even when other settings request cleanup. Imports cannot move across or within a protected region.

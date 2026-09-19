@@ -34,7 +34,7 @@ namespace PNFmt
                         return DocumentFormatResult.Skipped();
                     }
 
-                    var formatted = CSharpDocumentFormatter.Format(text, settings, out var diagnostic);
+                    var formatted = CSharpDocumentFormatter.Format(text, settings, out var diagnostic, request.FilePath);
                     return diagnostic is null
                         ? DocumentFormatResult.FromText(formatted)
                         : DocumentFormatResult.Skipped(diagnostic);

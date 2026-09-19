@@ -25,7 +25,8 @@ namespace PNFmt
         public static string Format(
             string text,
             IReadOnlyDictionary<string, string> settings,
-            out FormatterDiagnostic diagnostic)
+            out FormatterDiagnostic diagnostic,
+            string filePath = "Source.cs")
         {
             var tree = CSharpSyntaxTree.ParseText(text, new CSharpParseOptions(LanguageVersion.CSharp14));
             var error = tree.GetDiagnostics().FirstOrDefault(item => item.Severity == DiagnosticSeverity.Error);
@@ -87,6 +88,7 @@ namespace PNFmt
             if (formatLayout)
             {
                 result = CSharpNewLinePreferences.Apply(result, settings);
+                result = CSharpFileHeader.Apply(result, settings, filePath);
             }
             if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpCollapseBlankLines))
             {
