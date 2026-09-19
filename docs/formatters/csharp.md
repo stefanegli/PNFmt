@@ -57,20 +57,47 @@ pnfmt_formatter = csharp
 max_line_length = 120
 ```
 
-Wrapping is disabled when the setting is missing, `unset`, zero, negative, or invalid. `unset` also removes an inherited width. The generated default configuration leaves wrapping disabled. `pnfmt_format = false` disables wrapping together with the other layout formatting; the legacy `pnfmt_csharp_format` layout fallback follows the same rule. The width alone does not enable file processing.
+Width-based wrapping is disabled when the setting is missing, `unset`, zero, negative, or invalid. `unset` also removes an inherited width. Explicit list styles can still chop lists without a width, as described below. The generated default configuration leaves wrapping disabled. `pnfmt_format = false` disables wrapping together with the other layout formatting; the legacy `pnfmt_csharp_format` layout fallback follows the same rule. Neither the width nor a list style enables file processing on its own.
 
 PNFmt measures code after ordinary whitespace formatting, including indentation and tabs expanded to `tab_width` column stops. A line exactly at the width stays as it is. Long trailing comments do not trigger wrapping of otherwise short code.
 
 The supported break points are:
 
-- Argument lists in calls, object creation, and element access: after the opening delimiter and between arguments, with one argument per line.
-- Parameter lists in declarations, constructors, records, delegates, lambdas, and indexers: one parameter per line.
+- Argument lists in calls, object creation, and element access: after the opening delimiter and between arguments, with one argument per line by default.
+- Parameter lists in declarations, constructors, records, delegates, lambdas, and indexers: one parameter per line by default.
 - Chained calls: before member-access dots or the complete `?.` operator.
 - Binary expressions: before operators by default. Set `dotnet_style_operator_placement_when_wrapping = end_of_line` to break after operators instead; `beginning_of_line` is the default.
 
 New continuation lines use one additional indentation level, honoring `indent_style`, `indent_size`, and `tab_width`. Newlines follow `end_of_line` when configured, otherwise the file's detected convention. Outer constructs wrap first; nested calls and expressions are measured again with their new indentation. Wrapping adds line breaks without joining existing multiline layouts. Closing argument and parameter delimiters remain with the last item unless already on a separate line.
 
 The width is a target, not a strict limit. PNFmt only inserts breaks between existing tokens where the intervening text is ordinary horizontal whitespace. Strings, interpolated-string contents, comments, directives, inactive source, and `// pnfmt: off` regions are preserved. Lists or expressions intersecting an excluded region are left alone by the wrapping pass. Long identifiers, literals, and unsupported constructs can still exceed the width.
+
+### Parameter and argument list styles
+
+Configure declarations and calls independently with the [JetBrains list wrapping properties](https://www.jetbrains.com/help/rider/EditorConfig_CSHARP_LineBreaksPageSchema.html):
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+max_line_length = 120
+csharp_wrap_parameters_style = chop_always
+csharp_wrap_arguments_style = wrap_if_long
+```
+
+Both settings accept these case-insensitive values:
+
+| Value | Behavior |
+| --- | --- |
+| `wrap_if_long` | Add breaks only when code exceeds `max_line_length`, keeping as many complete items as fit on each line. Requires a valid width. |
+| `chop_if_long` | Put each item on its own line when code exceeds the width or the list already spans multiple lines. Existing multiline lists are chopped even without a width. |
+| `chop_always` | Put each item on its own line regardless of width. Works without `max_line_length`. |
+
+Chopping adds a break after the opening delimiter, including for a single item; empty lists stay empty. Existing line breaks are retained by all three styles. Chopping also respects comments and other protected boundaries, so two items separated by a comment can remain on the same line. List styles apply to the argument and parameter constructs listed above; they do not change how chains and binary expressions wrap.
+
+The aliases `resharper_csharp_wrap_parameters_style` and `resharper_csharp_wrap_arguments_style` are also supported. When both spellings resolve to a value, the name without `resharper_` takes precedence, including when its value is invalid. `unset` removes that spelling through normal EditorConfig inheritance, allowing the other alias to apply if configured.
+
+Missing, `unset`, or unrecognized styles retain PNFmt's original behavior: chop lists only when their code exceeds a configured width, and preserve shorter multiline layouts. No list style is added by `--write-default-config`.
 
 ## Region removal
 

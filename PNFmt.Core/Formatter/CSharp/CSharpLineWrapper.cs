@@ -18,7 +18,10 @@ namespace PNFmt
         {
             var source = document.GetTextAsync().GetAwaiter().GetResult();
             var width = PositiveInteger(settings, "max_line_length", 0);
-            if (width == 0)
+            var argumentsStyle = ResolveStyle(settings, "csharp_wrap_arguments_style");
+            var parametersStyle = ResolveStyle(settings, "csharp_wrap_parameters_style");
+            var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle);
+            if (width == 0 && !canChopWithoutWidth)
             {
                 return source.ToString();
             }
@@ -41,8 +44,8 @@ namespace PNFmt
             {
                 var root = document.GetSyntaxRootAsync().GetAwaiter().GetResult();
                 var tokens = root.DescendantTokens().ToArray();
-                var longLines = FindLongLines(source, tokens, width, tabWidth);
-                if (!longLines.Any(value => value))
+                var longLines = width > 0 ? FindLongLines(source, tokens, width, tabWidth) : new bool[source.Lines.Count];
+                if (!canChopWithoutWidth && !longLines.Any(value => value))
                 {
                     return source.ToString();
                 }
@@ -52,7 +55,8 @@ namespace PNFmt
                 var exclusions = CSharpFormattingExclusions.Parse(root);
                 var changes = new Dictionary<int, TextChange>();
                 var occupiedLines = new HashSet<int>();
-                foreach (var group in Groups(root, operatorsAtEnd).OrderByDescending(item => item.Owner.Span.Length))
+                foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle)
+                    .OrderByDescending(item => item.Owner.Span.Length))
                 {
                     if (exclusions.Intersects(group.Owner.Span))
                     {
@@ -65,7 +69,9 @@ namespace PNFmt
                         .Select(item => (item.Token, Span: item.Span.Value,
                             Line: source.Lines.GetLineFromPosition(item.Token.SpanStart).LineNumber))
                         .ToArray();
-                    if (!boundaries.Any(item => longLines[item.Line])
+                    var chop = group.Style == WrapStyle.ChopAlways
+                        || (group.Style == WrapStyle.ChopIfLong && IsMultiline(source, group.Owner));
+                    if (boundaries.Length == 0 || (!chop && !boundaries.Any(item => longLines[item.Line]))
                         || boundaries.Any(item => occupiedLines.Contains(item.Line)))
                     {
                         continue;
@@ -75,7 +81,10 @@ namespace PNFmt
                     // after indentation. This avoids wrapping short nested calls simply
                     // because their containing call was too long.
                     var indentation = ContinuationIndent(source, group.Owner.SpanStart, indentSize, tabWidth, useTabs);
-                    foreach (var boundary in boundaries)
+                    var selected = group.Style == WrapStyle.WrapIfLong
+                        ? SelectFittingBreaks(boundaries, source, longLines, width, tabWidth)
+                        : boundaries;
+                    foreach (var boundary in selected)
                     {
                         changes[boundary.Span.Start] = new TextChange(boundary.Span, newLine + indentation);
                         occupiedLines.Add(boundary.Line);
@@ -124,6 +133,11 @@ namespace PNFmt
             }
 
             return TextSpan.FromBounds(previous.Span.End, token.SpanStart);
+        }
+
+        private static bool CanChopWithoutWidth(WrapStyle style)
+        {
+            return style == WrapStyle.ChopAlways || style == WrapStyle.ChopIfLong;
         }
 
         private static IEnumerable<SyntaxToken> ChainBreaks(ExpressionSyntax expression)
@@ -221,17 +235,18 @@ namespace PNFmt
             return result;
         }
 
-        private static IEnumerable<WrapGroup> Groups(SyntaxNode root, bool operatorsAtEnd)
+        private static IEnumerable<WrapGroup> Groups(
+            SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle)
         {
             foreach (var node in root.DescendantNodes(descendIntoChildren: node => !(node is InterpolatedStringExpressionSyntax)))
             {
                 if (node is BaseArgumentListSyntax arguments)
                 {
-                    yield return new WrapGroup(node, arguments.Arguments.Select(argument => argument.GetFirstToken()).ToArray());
+                    yield return new WrapGroup(node, arguments.Arguments.Select(argument => argument.GetFirstToken()).ToArray(), argumentsStyle);
                 }
                 else if (node is BaseParameterListSyntax parameters)
                 {
-                    yield return new WrapGroup(node, parameters.Parameters.Select(parameter => parameter.GetFirstToken()).ToArray());
+                    yield return new WrapGroup(node, parameters.Parameters.Select(parameter => parameter.GetFirstToken()).ToArray(), parametersStyle);
                 }
                 else if (node is BinaryExpressionSyntax binary && !(node.Parent is BinaryExpressionSyntax))
                 {
@@ -262,6 +277,12 @@ namespace PNFmt
             return receiver is InvocationExpressionSyntax;
         }
 
+        private static bool IsMultiline(SourceText source, SyntaxNode node)
+        {
+            return source.Lines.GetLineFromPosition(node.SpanStart).LineNumber
+                != source.Lines.GetLineFromPosition(node.Span.End - 1).LineNumber;
+        }
+
         private static int PositiveInteger(IReadOnlyDictionary<string, string> settings, string name, int fallback)
         {
             return settings.TryGetValue(name, out var value)
@@ -269,16 +290,75 @@ namespace PNFmt
                 && result > 0 ? result : fallback;
         }
 
+        private static WrapStyle ResolveStyle(IReadOnlyDictionary<string, string> settings, string name)
+        {
+            // The C# name wins over its vendor-prefixed alias. EditorConfig's unset
+            // removes only that property, allowing the other spelling to apply.
+            if (!settings.TryGetValue(name, out var value) || string.Equals(value, "unset", StringComparison.OrdinalIgnoreCase))
+            {
+                settings.TryGetValue("resharper_" + name, out value);
+            }
+
+            switch (value?.Trim().ToLowerInvariant())
+            {
+                case "wrap_if_long": return WrapStyle.WrapIfLong;
+                case "chop_if_long": return WrapStyle.ChopIfLong;
+                case "chop_always": return WrapStyle.ChopAlways;
+                default: return WrapStyle.Default;
+            }
+        }
+
+        private static IEnumerable<(SyntaxToken Token, TextSpan Span, int Line)> SelectFittingBreaks(
+            (SyntaxToken Token, TextSpan Span, int Line)[] boundaries,
+            SourceText source,
+            bool[] longLines,
+            int width,
+            int tabWidth)
+        {
+            foreach (var line in boundaries.Where(item => longLines[item.Line]).GroupBy(item => item.Line))
+            {
+                var selected = line.First();
+                var position = source.Lines[line.Key].Start;
+                long column = 0;
+                foreach (var boundary in line)
+                {
+                    // Keep the longest prefix that fits, including the comma. If
+                    // even the first item cannot fit, use the first safe boundary.
+                    for (; position < boundary.Span.Start; position++)
+                    {
+                        column += source[position] == '\t' ? tabWidth - column % tabWidth : 1;
+                    }
+                    if (column > width)
+                    {
+                        break;
+                    }
+                    selected = boundary;
+                }
+                yield return selected;
+            }
+        }
+
         private sealed class WrapGroup
         {
-            public WrapGroup(SyntaxNode owner, SyntaxToken[] tokens)
+            public WrapGroup(SyntaxNode owner, SyntaxToken[] tokens, WrapStyle style = WrapStyle.Default)
             {
                 this.Owner = owner;
                 this.Tokens = tokens;
+                this.Style = style;
             }
 
             public SyntaxNode Owner { get; }
             public SyntaxToken[] Tokens { get; }
+            public WrapStyle Style { get; }
+        }
+
+        private enum WrapStyle
+        {
+            // Retain the original width-triggered chopping when no style is set.
+            Default,
+            WrapIfLong,
+            ChopIfLong,
+            ChopAlways,
         }
     }
 }
