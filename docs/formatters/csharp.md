@@ -190,6 +190,23 @@ csharp_preferred_modifier_order = public,private,protected,internal,file,static,
 
 `pnfmt_csharp_collapse_blank_lines = true` reduces two or more empty lines between adjacent member or type declarations to one empty line. It does not insert a blank line where none existed. Only gaps consisting entirely of whitespace are changed; gaps containing comments or directives are preserved. Blank lines inside method bodies, top-level statements, strings, comments, inactive code, and excluded regions are not collapsed.
 
+For control throughout ordinary code, including method bodies and top-level statements, PNFmt also supports these Microsoft preferences:
+
+```ini
+[*.cs]
+dotnet_style_allow_multiple_blank_lines_experimental = false
+dotnet_style_allow_statement_immediately_after_block_experimental = false
+csharp_style_allow_blank_lines_between_consecutive_braces_experimental = false
+```
+
+- [`dotnet_style_allow_multiple_blank_lines_experimental`](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide2000): `false` reduces runs of multiple blank lines to one, including whitespace-only lines and gaps around comments and directives.
+- [`dotnet_style_allow_statement_immediately_after_block_experimental`](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide2003): `false` requires a blank line after a completed block or switch before a subsequent statement on another line. It preserves `else`, `catch`, `finally`, and `do`/`while` continuations. Comments or directives before the next statement form a boundary; a trailing comment on the closing brace stays attached.
+- [`csharp_style_allow_blank_lines_between_consecutive_braces_experimental`](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/ide2002): `false` removes blank lines between adjacent closing braces when the gap contains only whitespace.
+
+All three default to allowing the existing spacing. Missing, `true`, `unset`, or invalid values make no additional changes. Values are case-insensitive and accept an optional severity suffix such as `false:warning`; the preference controls formatting regardless of severity. These Microsoft names are experimental and may change upstream. PNFmt does not add them to the generated default configuration.
+
+These preferences require layout formatting and are disabled by `pnfmt_format = false`. They can be combined with the independent declaration-only cleanup. Strings, comment contents, retained directives, inactive code, and excluded regions remain protected.
+
 ## Exclusion regions
 
 Standalone, case-sensitive `// pnfmt: off` and `// pnfmt: on` comments protect the complete marked lines and everything between them. Their contents retain their exact text, including whitespace and line endings, even when other settings request cleanup. Imports cannot move across or within a protected region.

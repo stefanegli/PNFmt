@@ -84,6 +84,10 @@ namespace PNFmt
                 }
             }
             var result = formatLayout ? CSharpWhitespaceCleanup.Apply(formattedText, settings) : formattedText;
+            if (formatLayout)
+            {
+                result = CSharpNewLinePreferences.Apply(result, settings);
+            }
             if (EditorConfigSettings.IsEnabled(settings, EditorConfigSettingNames.CSharpCollapseBlankLines))
             {
                 result = CSharpBlankLineCleanup.Apply(result);
