@@ -149,7 +149,7 @@ namespace PNFmt
                     "Source.cs", sourceRoot, filePath: Path.Combine(directory, "Source.cs"));
                 var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document)
                     .GetAwaiter().GetResult();
-                return formatted.GetTextAsync().GetAwaiter().GetResult().ToString();
+                return CSharpLineWrapper.Apply(formatted, settings);
             }
         }
 

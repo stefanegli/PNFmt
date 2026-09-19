@@ -40,11 +40,37 @@ The usual Git changed-file selection, `--all`, `--file-pattern`, `--dry-run`, an
 
 ## Whitespace formatting
 
-PNFmt passes the resolved EditorConfig settings to Roslyn 5.9's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied, apart from the explicitly enabled sorting described below. Formatting does not impose a maximum line length or reflow comments.
+PNFmt passes the resolved EditorConfig settings to Roslyn 5.9's C# whitespace formatter. This supports the standard [C# indentation, spacing, newline, and wrapping options](https://learn.microsoft.com/en-us/dotnet/fundamentals/code-analysis/style-rules/csharp-formatting-options). Code-style preferences that require rewriting declarations or expressions are not applied, apart from the explicitly enabled sorting described below. Width-based line wrapping is available through `max_line_length`; comments are not reflowed.
 
 Without explicit settings, formatting uses spaces, four-column indentation and tab width, the file's detected newline convention, and Roslyn's remaining formatting defaults. `insert_final_newline = true` adds a missing final newline to nonempty files; missing or false preserves the existing final-newline state. `trim_trailing_whitespace = true` removes trailing spaces and tabs from ordinary code whitespace. Explicit `end_of_line` values are `lf`, `crlf`, and `cr`.
 
 Multiline string contents, comments, directives, and disabled preprocessor text are protected from the additional whitespace cleanup. Line-ending normalization therefore does not necessarily make every newline in a file identical. Roslyn may adjust comment indentation, but literal token text, retained directives, and inactive code must remain unchanged; PNFmt skips a file if this protection check fails. Region directives can be explicitly removed by the cleanup described below.
+
+## Line wrapping
+
+Set `max_line_length` to a positive integer to wrap long C# code lines. A suggested starting width is 120 columns:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+max_line_length = 120
+```
+
+Wrapping is disabled when the setting is missing, `unset`, zero, negative, or invalid. `unset` also removes an inherited width. The generated default configuration leaves wrapping disabled. `pnfmt_format = false` disables wrapping together with the other layout formatting; the legacy `pnfmt_csharp_format` layout fallback follows the same rule. The width alone does not enable file processing.
+
+PNFmt measures code after ordinary whitespace formatting, including indentation and tabs expanded to `tab_width` column stops. A line exactly at the width stays as it is. Long trailing comments do not trigger wrapping of otherwise short code.
+
+The supported break points are:
+
+- Argument lists in calls, object creation, and element access: after the opening delimiter and between arguments, with one argument per line.
+- Parameter lists in declarations, constructors, records, delegates, lambdas, and indexers: one parameter per line.
+- Chained calls: before member-access dots or the complete `?.` operator.
+- Binary expressions: before operators by default. Set `dotnet_style_operator_placement_when_wrapping = end_of_line` to break after operators instead; `beginning_of_line` is the default.
+
+New continuation lines use one additional indentation level, honoring `indent_style`, `indent_size`, and `tab_width`. Newlines follow `end_of_line` when configured, otherwise the file's detected convention. Outer constructs wrap first; nested calls and expressions are measured again with their new indentation. Wrapping adds line breaks without joining existing multiline layouts. Closing argument and parameter delimiters remain with the last item unless already on a separate line.
+
+The width is a target, not a strict limit. PNFmt only inserts breaks between existing tokens where the intervening text is ordinary horizontal whitespace. Strings, interpolated-string contents, comments, directives, inactive source, and `// pnfmt: off` regions are preserved. Lists or expressions intersecting an excluded region are left alone by the wrapping pass. Long identifiers, literals, and unsupported constructs can still exceed the width.
 
 ## Region removal
 
