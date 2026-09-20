@@ -42,14 +42,14 @@ Exit `0` means success; `1` means `--check` found changes or `--lint` found chan
 
 Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching section. Formatter names are case-insensitive and independent of the extension. `pnfmt_enabled = false` skips all processing, including linting and encoding changes. `None` remains a compatibility selection for disabling processing; unknown or empty names are errors when processing is enabled.
 
-Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup switches default off. Setting `pnfmt_format = false` allows independently enabled transformations and explicit encoding changes to proceed. C# wrapping, Microsoft blank-line preferences, and headers require layout. The older `pnfmt_csharp_format`, `pnfmt_xml_format`, and `pnfmt_xaml_format` switches are layout fallbacks; `pnfmt_format` takes precedence.
+Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup switches default off. Setting `pnfmt_format = false` allows independently enabled transformations and explicit encoding changes to proceed. C# wrapping, Microsoft blank-line preferences, headers, and XML/MSBuild attribute wrapping and arrangement require layout. The older `pnfmt_csharp_format`, `pnfmt_xml_format`, and `pnfmt_xaml_format` switches are layout fallbacks; `pnfmt_format` takes precedence.
 
 Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. Read the repository's [configuration contracts](../../../docs/configuration-contracts.md) when diagnosing legacy activation or precedence.
 
 Read only the guidance relevant to the selected formatter:
 
 - [C# reference](references/csharp.md): Roslyn layout, line width, parameter/argument chopping, import/modifier/member sorting, region removal, both blank-line mechanisms, file headers, exclusions, generated files, and parse diagnostics.
-- [Other formatters](references/other-formatters.md): MSBuild sorting/linting, RESX insertion/removal, INI and EditorConfig precedence, response files, solutions, and XML/XAML preservation.
+- [Other formatters](references/other-formatters.md): XML/MSBuild attribute wrapping, MSBuild sorting/linting, RESX insertion/removal, INI and EditorConfig precedence, response files, solutions, and XML/XAML preservation.
 
 ## Encoding and final newlines
 
@@ -72,7 +72,7 @@ The optional `.pnfmt` JSON file supports `maxCpuCount`, a positive integer defau
 
 `--write-default-config` enables every formatter and writes explicit behavior choices. It reuses matching sections, preserves existing values and line order, inserts missing keys at sorted positions, appends missing sections, and adds no comments. A new file gets `root = true`; earlier marked PNFmt default blocks are migrated. Existing disabled settings remain disabled.
 
-Generated defaults enable sorting where supported, C# modifier/member sorting and declaration blank-line cleanup, prefix grouping for `.ini` files, and RESX schema/documentation removal. They disable C# region removal, INI/EditorConfig section sorting and merging, and RESX insertion. They do not add C# width, list styles, Microsoft blank-line preferences, or header templates. Distinguish these generated choices from defaults for omitted settings.
+Generated defaults enable sorting where supported, C# modifier/member sorting and declaration blank-line cleanup, prefix grouping for `.ini` files, and RESX schema/documentation removal. They disable C# region removal, INI/EditorConfig section sorting and merging, and RESX insertion. They do not add C# width/list styles, XML/MSBuild wrapping/attribute styles, Microsoft blank-line preferences, or header templates. Distinguish these generated choices from defaults for omitted settings.
 
 The command creates `.pnfmt` with `maxCpuCount` set to `4` only when missing: at the Git root, or beside `.editorconfig` outside Git. It never modifies an existing `.pnfmt`.
 

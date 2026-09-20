@@ -5,6 +5,7 @@ namespace PNFmt
     using System;
     using System.Collections.Generic;
     using System.Linq;
+    using System.Text;
     using System.Text.RegularExpressions;
     using System.Xml;
     using System.Xml.Linq;
@@ -24,7 +25,7 @@ namespace PNFmt
         public FileFormatResult Run(FileFormatRequest request, bool formatLayout = true)
         {
             return TextFileFormatPipeline.Format(request, true,
-                (text, _) => this.Format(text, request.FilePath, request.Lint, formatLayout), xml: true);
+                (text, encoding) => this.Format(text, request.FilePath, request.Lint, formatLayout, request.Configuration.Properties, encoding), xml: true);
         }
 
         private static string ApplyTopLevelGroupSpacing(
@@ -89,7 +90,8 @@ namespace PNFmt
             return true;
         }
 
-        private DocumentFormatResult Format(string originalText, string projectPath, bool lint, bool formatLayout)
+        private DocumentFormatResult Format(string originalText, string projectPath, bool lint, bool formatLayout,
+            IReadOnlyDictionary<string, string> properties, Encoding outputEncoding)
         {
             var document = XDocument.Parse(originalText, LoadOptions.SetLineInfo
                 | (formatLayout ? LoadOptions.None : LoadOptions.PreserveWhitespace));
@@ -115,6 +117,11 @@ namespace PNFmt
             var formattedText = !formatLayout && XNode.DeepEquals(originalDocument, document)
                 ? originalText
                 : FormatDocument(document, this.Settings, formatLayout);
+            if (formatLayout && document.DocumentType is null)
+            {
+                formattedText = XmlDocumentFormatter.WrapAttributes(formattedText, properties,
+                    this.Settings.ResolveIndentChars(), this.Settings.ResolveNewLineChars(), this.Settings.IndentSize, outputEncoding: outputEncoding);
+            }
             return DocumentFormatResult.FromText(formattedText, diagnostics);
         }
 

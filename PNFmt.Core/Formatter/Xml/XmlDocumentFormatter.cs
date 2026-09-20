@@ -11,7 +11,7 @@ namespace PNFmt
 {
     internal static class XmlDocumentFormatter
     {
-        public static string Format(string text, IReadOnlyDictionary<string, string> settings, bool xaml = false)
+        public static string Format(string text, IReadOnlyDictionary<string, string> settings, bool xaml = false, Encoding outputEncoding = null)
         {
             var elements = ReadElements(text, xaml);
             var document = ParseLayout(text, elements);
@@ -44,9 +44,74 @@ namespace PNFmt
                 output.Append(newLine);
             }
 
-            var result = output.ToString();
+            var result = WrapAttributes(output.ToString(), settings, indent, newLine, width, xaml, outputEncoding);
             ReadElements(result, xaml);
             return result;
+        }
+
+        public static string WrapAttributes(string text, IReadOnlyDictionary<string, string> settings,
+            string indent, string newLine, int tabWidth, bool xaml = false, Encoding outputEncoding = null)
+        {
+            var wrapper = new XmlAttributeWrapper(settings, indent, newLine, tabWidth);
+            if (!wrapper.Enabled)
+            {
+                return text;
+            }
+
+            // The file pipeline also updates declarations during encoding. Do it
+            // before measuring so a new or longer encoding attribute is wrapped
+            // on this pass, rather than causing another change on the next run.
+            if (outputEncoding is not null)
+            {
+                text = FileEncoding.UpdateXmlDeclaration(text, outputEncoding);
+            }
+
+            var document = ParseLayout(text, ReadElements(text, xaml, enforceDepthLimit: false));
+            var pending = new Stack<(Node Node, int Depth)>();
+            foreach (var child in document.Children.AsEnumerable().Reverse())
+            {
+                pending.Push((child, 0));
+            }
+
+            var copied = 0;
+            while (pending.Count > 0)
+            {
+                var (node, depth) = pending.Pop();
+                wrapper.Append(text, copied, node.Start - copied);
+                if (node.Preserve || (node.Children.Count > 0 && node.Children.All(child => child.IsWhitespace)))
+                {
+                    wrapper.Append(text, node.Start, node.End - node.Start);
+                    copied = node.End;
+                    continue;
+                }
+
+                if (node.IsElement)
+                {
+                    wrapper.AppendTag(text, node.Start, node.OpenEnd, depth);
+                    copied = node.OpenEnd;
+                    foreach (var child in node.Children.AsEnumerable().Reverse())
+                    {
+                        pending.Push((child, depth + 1));
+                    }
+                }
+                else
+                {
+                    // Ordinary PI data is opaque text. Only the XML declaration
+                    // has attributes whose separating whitespace can be changed.
+                    if (StartsWith(text, node.Start, "<?xml") && node.End - node.Start > 5
+                        && IsXmlWhitespace(text, node.Start + 5, node.Start + 6))
+                    {
+                        wrapper.AppendTag(text, node.Start, node.End, depth, declaration: true);
+                    }
+                    else
+                    {
+                        wrapper.Append(text, node.Start, node.End - node.Start);
+                    }
+                    copied = node.End;
+                }
+            }
+            wrapper.Append(text, copied, text.Length - copied);
+            return wrapper.ToString();
         }
 
         private static void AppendIndent(StringBuilder output, int depth, string indent)
@@ -162,7 +227,7 @@ namespace PNFmt
             return document;
         }
 
-        private static Queue<Node> ReadElements(string text, bool xaml)
+        private static Queue<Node> ReadElements(string text, bool xaml, bool enforceDepthLimit = true)
         {
             var elements = new Queue<Node>();
             using (var input = new StringReader(text))
@@ -177,7 +242,7 @@ namespace PNFmt
                 {
                     if (reader.NodeType == XmlNodeType.Element)
                     {
-                        if (reader.Depth >= 256)
+                        if (enforceDepthLimit && reader.Depth >= 256)
                         {
                             var location = (IXmlLineInfo)reader;
                             throw new XmlException("Formatting supports XML nesting up to 256 levels.", null,

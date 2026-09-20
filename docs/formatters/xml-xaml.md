@@ -1,6 +1,6 @@
 # XML and XAML formatters
 
-PNFmt formats `.xml` and `.xaml` files independently, without loading schemas, application types, projects, or solutions. These are indentation formatters: element and attribute order, namespace prefixes, and attribute layout stay unchanged. Existing `.csproj`, `.resx`, and `.slnx` files continue to use their dedicated formatters.
+PNFmt formats `.xml` and `.xaml` files independently, without loading schemas, application types, projects, or solutions. It indents structural content and optionally wraps attributes. Element and attribute order and namespace prefixes stay unchanged. Existing `.csproj`, `.resx`, and `.slnx` files continue to use their dedicated formatters.
 
 ## Configuration
 
@@ -39,7 +39,11 @@ The normal Git changed-file selection, `--all`, `--file-pattern`, `--dry-run`, a
 
 Formatting places structural child elements, comments, and processing instructions on separate indented lines and normalizes whitespace in those gaps. The XML declaration, top-level comments, processing instructions, and root element occupy separate lines. Excess layout blank lines are removed.
 
-Start and end tags retain their exact original text, including quote style, spaces around attributes, multiline attribute layout, entity references, and self-closing tag spelling. Comments, processing instructions, and CDATA retain their contents. Line endings inside these protected parts are not normalized. Global trailing-whitespace cleanup and line-length wrapping are not applied.
+By default, start and end tags retain their exact original text, including quote style, spaces around attributes, multiline attribute layout, entity references, and self-closing tag spelling. Comments, processing instructions, and CDATA retain their contents. Line endings inside these protected parts are not normalized. Global trailing-whitespace cleanup is not applied.
+
+## Optional attribute wrapping
+
+Set `xml_wrap_tags_and_pi = true` with `max_line_length` to wrap long tags between complete attributes. `xml_attribute_style` also supports explicit single-line or one-attribute-per-line arrangements, and `xml_attribute_indent` controls continuation indentation. The XML declaration can wrap; ordinary processing-instruction data stays intact. Protected subtrees remain unchanged, and attribute values and text are never split. These features require layout and are disabled by default. See [XML and MSBuild attribute wrapping](xml-wrapping.md) for values, aliases, examples, and preservation rules.
 
 ## Text preservation
 

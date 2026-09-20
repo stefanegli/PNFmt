@@ -15,6 +15,20 @@ Imports, targets, tasks, and groups nested in targets or `Choose` retain order. 
 
 Read [project documentation](../../../../docs/formatters/csproj.md) for sorting boundaries and non-SDK examples.
 
+## Attribute wrapping (`xml`, `xaml`, `csproj`)
+
+These formatters share opt-in layout options using JetBrains XML names. They do not activate file processing and are absent from generated defaults. `pnfmt_format = false` disables the pass.
+
+- `xml_wrap_tags_and_pi = true` plus a positive `max_line_length` wraps before complete attributes that exceed the width, keeping as many as fit on each line. `xml_max_line_length` overrides the general width. Missing or invalid widths/switches disable width wrapping. Attribute values, conditions, task arguments, and element text are never split.
+- `xml_attribute_style`: `on_single_line` joins inter-attribute whitespace before optional width wrapping; `first_attribute_on_single_line` breaks before subsequent attributes; `on_different_lines` breaks before every attribute, even a single one; `do_not_touch` prevents element attribute edits by this pass. Missing/invalid styles retain existing breaks while allowing width wrapping. Explicit styles work without a width or wrapping switch.
+- `xml_attribute_indent`: `single_indent` (default), `double_indent`, or `align_by_first_attribute`. Alignment uses spaces at the first attribute's actual column; a first attribute on a new line begins one level deeper. Other continuations use configured indentation. Tab measurement accepts widths up to 256, falling back to resolved indentation width for invalid values. Newlines follow formatter layout settings.
+
+`resharper_xml_wrap_tags_and_pi`, `resharper_xml_attribute_style`, `resharper_xml_attribute_indent`, and `resharper_xml_max_line_length` are aliases. Values are case-insensitive. Unprefixed names take precedence even when invalid; `unset` permits alias fallback. Language-specific width and its alias precede general `max_line_length`. Unqualified aliases such as `attribute_style` are not supported.
+
+The XML declaration can wrap with one continuation indent; ordinary processing-instruction data stays untouched. Tag style/alignment settings do not apply to the declaration. The pass preserves attribute order, names, quotes, values, entities, spacing around `=`, and closing-delimiter whitespace. Text/CDATA/whitespace-only leaf subtrees, `xml:space` subtrees, and XAML text containers remain protected. Unknown XAML tags outside protected subtrees can wrap attributes without changing child layout. Width is a target, so long indivisible values can exceed it.
+
+MSBuild serialization and enabled sorting run first; `do_not_touch` does not preserve source layout already normalized by that serializer. Explicit charset declaration changes happen before wrapping so the first result is stable. Projects with DTDs skip wrapping while retaining existing project formatting behavior. See [wrapping examples and details](../../../../docs/formatters/xml-wrapping.md).
+
 ## Resources (`resx`)
 
 | Setting | Behavior |
@@ -55,7 +69,7 @@ Layout uses two-space indentation independently of `pnfmt_sort_entries`, which o
 
 ## XML and XAML (`xml`, `xaml`)
 
-These format structural whitespace without sorting elements, attributes, namespaces, resource dictionaries, or setters. `pnfmt_sort_entries` has no effect. Original tags, quote styles, entity references, attribute layout, comments, processing instructions, and CDATA remain intact. `indent_style`, `indent_size`, `tab_width`, and `end_of_line` control layout; defaults are spaces, four columns, and detected newlines. `indent_size = tab` uses `tab_width`; tab indentation emits one tab per level. No general trailing-whitespace cleanup or line-length wrapping is applied.
+These format structural whitespace without sorting elements, attributes, namespaces, resource dictionaries, or setters. `pnfmt_sort_entries` has no effect. Tags retain their original text unless attribute wrapping/arrangement is explicitly enabled as described above. Quotes, entities, values, comments, and CDATA remain intact. `indent_style`, `indent_size`, `tab_width`, and `end_of_line` control layout; defaults are spaces, four columns, and detected newlines. `indent_size = tab` uses `tab_width`; tab indentation emits one tab per level. No general trailing-whitespace cleanup or text wrapping is applied.
 
 Text/CDATA-containing elements preserve their entire subtree, including mixed content and whitespace-only leaf values. Inherited `xml:space="preserve"` protects the subtree even if a descendant requests `default`. Ordinary XML treats whitespace-only gaps around child markup as layout without consulting schemas; use existing preservation policy when those gaps are data.
 

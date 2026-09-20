@@ -18,7 +18,7 @@ namespace PNFmt
             var settings = request.Configuration.Properties;
             return TextFileFormatPipeline.Format(request,
                 request.Configuration.IsActive(xaml ? "xaml" : "xml"),
-                (text, _) =>
+                (text, encoding) =>
                 {
                     if (!request.Configuration.FormatLayout(xaml ? "xaml" : "xml"))
                     {
@@ -27,7 +27,7 @@ namespace PNFmt
 
                     try
                     {
-                        return DocumentFormatResult.FromText(XmlDocumentFormatter.Format(text, settings, xaml));
+                        return DocumentFormatResult.FromText(XmlDocumentFormatter.Format(text, settings, xaml, encoding));
                     }
                     catch (XmlException exception)
                     {

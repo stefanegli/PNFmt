@@ -42,6 +42,12 @@ This enables layout formatting without sorting. Set `pnfmt_sort_entries = true` 
 
 ## Behavior
 
+### Optional attribute wrapping
+
+Set `xml_wrap_tags_and_pi = true` with `max_line_length` to wrap long project tags between complete attributes. `xml_attribute_style` can instead arrange attributes explicitly, with indentation controlled by `xml_attribute_indent`. These options require layout, default off, and also work for explicitly selected `.props`, `.targets`, and `.proj` files. Conditions, task arguments, and other attribute values remain whole. Wrapping runs after existing serialization and sorting; it does not restore original attribute layout discarded by serialization. See [XML and MSBuild attribute wrapping](xml-wrapping.md) for supported values and aliases.
+
+### Sorting
+
 Property and item sorting is deliberately limited to content that can be reordered without changing normal MSBuild evaluation. Forward property references, item operations, imports, conditions, and other evaluation-sensitive constructs retain their meaningful order.
 
 Property groups containing property functions, member access, or nested property expansions retain their original order because those dependencies cannot be resolved reliably without evaluating the project.
