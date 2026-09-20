@@ -2,7 +2,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 
 namespace PNFmt
@@ -12,7 +11,8 @@ namespace PNFmt
     // XmlDocumentFormatter; this class never interprets attribute values.
     internal sealed class XmlAttributeWrapper
     {
-        private readonly StringBuilder output = new StringBuilder();
+        private readonly StringBuilder output;
+        private readonly List<string> indentation = new List<string> { string.Empty };
         private readonly string style;
         private readonly string attributeIndent;
         private readonly string indent;
@@ -21,8 +21,9 @@ namespace PNFmt
         private readonly int width;
         private long column;
 
-        public XmlAttributeWrapper(IReadOnlyDictionary<string, string> settings, string indent, string newLine, int defaultTabWidth)
+        public XmlAttributeWrapper(IReadOnlyDictionary<string, string> settings, string indent, string newLine, int defaultTabWidth, int capacity = 16)
         {
+            this.output = new StringBuilder(capacity);
             this.indent = indent;
             this.newLine = newLine;
             this.style = Option(settings, "xml_attribute_style");
@@ -37,23 +38,33 @@ namespace PNFmt
             {
                 this.tabWidth = defaultTabWidth;
             }
+            this.Enabled = this.width > 0 || this.style == "on_single_line"
+                || this.style == "first_attribute_on_single_line" || this.style == "on_different_lines";
         }
 
-        public bool Enabled => this.width > 0 || this.style == "on_single_line"
-            || this.style == "first_attribute_on_single_line" || this.style == "on_different_lines";
+        public bool Enabled { get; }
+        public int Length => this.output.Length;
+
+        public void Append(string text) => this.Append(text, 0, text.Length);
 
         public void Append(string text, int start, int length)
         {
             this.output.Append(text, start, length);
+            if (!this.Enabled)
+            {
+                return;
+            }
             for (var index = start; index < start + length; index++)
             {
                 this.column = this.Advance(this.column, text[index]);
             }
         }
 
+        public void AppendIndent(int depth) => this.Append(this.Indentation(depth));
+
         public void AppendTag(string text, int start, int end, int depth, bool declaration = false)
         {
-            if ((!declaration && this.style == "do_not_touch") || (declaration && this.width == 0))
+            if (!this.Enabled || (!declaration && this.style == "do_not_touch") || (declaration && this.width == 0))
             {
                 this.Append(text, start, end - start);
                 return;
@@ -66,14 +77,15 @@ namespace PNFmt
             }
 
             this.Append(text, start, position - start);
-            var continuation = string.Concat(Enumerable.Repeat(this.indent,
-                depth + (!declaration && this.attributeIndent == "double_indent" ? 2 : 1)));
-            long? firstColumn = null;
+            var continuation = this.Indentation(depth + (!declaration && this.attributeIndent == "double_indent" ? 2 : 1));
+            var firstAttribute = true;
             while (position < end)
             {
                 var gapStart = position;
+                var hasNewLine = false;
                 while (position < end && IsWhitespace(text[position]))
                 {
+                    hasNewLine |= text[position] == '\r' || text[position] == '\n';
                     position++;
                 }
                 if (position == end || text[position] == '/' || text[position] == '>' || text[position] == '?')
@@ -96,16 +108,20 @@ namespace PNFmt
                 }
                 position++;
 
-                var gap = text.Substring(gapStart, attributeStart - gapStart);
+                // Retain source slices for unchanged gaps instead of allocating
+                // one string (and a newline-search array) per attribute.
+                string gap = null;
                 if (!declaration)
                 {
-                    if (this.style == "on_different_lines" || (this.style == "first_attribute_on_single_line" && firstColumn.HasValue))
+                    if (this.style == "on_different_lines" || (this.style == "first_attribute_on_single_line" && !firstAttribute))
                     {
                         gap = this.newLine + continuation;
+                        hasNewLine = true;
                     }
                     else if (this.style == "on_single_line" || this.style == "first_attribute_on_single_line")
                     {
                         gap = " ";
+                        hasNewLine = false;
                     }
                 }
 
@@ -116,16 +132,23 @@ namespace PNFmt
                 }
                 var last = suffix < end && (text[suffix] == '/' || text[suffix] == '>' || text[suffix] == '?');
                 var measuredEnd = last ? end : position;
-                if (this.width > 0 && gap.IndexOfAny(new[] { '\r', '\n' }) < 0
-                    && !this.Fits(gap, text, attributeStart, measuredEnd))
+                if (this.width > 0 && !hasNewLine
+                    && !this.Fits(gap, text, gapStart, attributeStart, measuredEnd))
                 {
                     gap = this.newLine + continuation;
                 }
 
-                this.Append(gap, 0, gap.Length);
-                if (!firstColumn.HasValue)
+                if (gap is null)
                 {
-                    firstColumn = this.column;
+                    this.Append(text, gapStart, attributeStart - gapStart);
+                }
+                else
+                {
+                    this.Append(gap);
+                }
+                if (firstAttribute)
+                {
+                    firstAttribute = false;
                     if (!declaration && this.attributeIndent == "align_by_first_attribute")
                     {
                         continuation = new string(' ', (int)this.column);
@@ -143,12 +166,22 @@ namespace PNFmt
                 : character == '\t' ? current + this.tabWidth - (current % this.tabWidth) : current + 1;
         }
 
-        private bool Fits(string gap, string text, int start, int end)
+        private bool Fits(string gap, string text, int gapStart, int start, int end)
         {
             var projected = this.column;
-            foreach (var character in gap)
+            if (gap is null)
             {
-                projected = this.Advance(projected, character);
+                for (var index = gapStart; index < start; index++)
+                {
+                    projected = this.Advance(projected, text[index]);
+                }
+            }
+            else
+            {
+                foreach (var character in gap)
+                {
+                    projected = this.Advance(projected, character);
+                }
             }
             for (var index = start; index < end; index++)
             {
@@ -165,6 +198,15 @@ namespace PNFmt
                 }
             }
             return true;
+        }
+
+        private string Indentation(int depth)
+        {
+            while (this.indentation.Count <= depth)
+            {
+                this.indentation.Add(this.indentation[this.indentation.Count - 1] + this.indent);
+            }
+            return this.indentation[depth];
         }
 
         private static bool IsWhitespace(char value) => value == ' ' || value == '\t' || value == '\r' || value == '\n';

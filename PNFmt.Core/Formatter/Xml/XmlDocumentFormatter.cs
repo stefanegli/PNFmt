@@ -14,7 +14,6 @@ namespace PNFmt
         public static string Format(string text, IReadOnlyDictionary<string, string> settings, bool xaml = false, Encoding outputEncoding = null)
         {
             var elements = ReadElements(text, xaml);
-            var document = ParseLayout(text, elements);
             settings.TryGetValue("end_of_line", out var endOfLine);
             var newLine = endOfLine == "lf" ? "\n" : endOfLine == "crlf" ? "\r\n" : endOfLine == "cr" ? "\r"
                 : TextFileFormatting.DetectNewLine(text);
@@ -27,7 +26,15 @@ namespace PNFmt
 
             var width = int.TryParse(indentSize, out var size) && size > 0 && size <= 256 ? size : 4;
             var indent = indentStyle == "tab" ? "\t" : new string(' ', width);
-            var output = new StringBuilder(text.Length);
+            var output = new XmlAttributeWrapper(settings, indent, newLine, width, text.Length);
+            // The original document has already been validated. Updating only its
+            // declaration leaves the element metadata valid while ensuring width
+            // measurement includes an inserted or changed encoding attribute.
+            if (output.Enabled && outputEncoding is not null)
+            {
+                text = FileEncoding.UpdateXmlDeclaration(text, outputEncoding);
+            }
+            var document = ParseLayout(text, elements);
             foreach (var child in document.Children.Where(node => !node.IsWhitespace))
             {
                 if (output.Length > 0)
@@ -35,7 +42,7 @@ namespace PNFmt
                     output.Append(newLine);
                 }
 
-                Render(child, text, output, 0, indent, newLine);
+                Render(child, text, output, 0, newLine);
             }
 
             if (EditorConfigSettings.IsEnabled(settings, "insert_final_newline")
@@ -44,7 +51,7 @@ namespace PNFmt
                 output.Append(newLine);
             }
 
-            var result = WrapAttributes(output.ToString(), settings, indent, newLine, width, xaml, outputEncoding);
+            var result = output.ToString();
             ReadElements(result, xaml);
             return result;
         }
@@ -96,17 +103,7 @@ namespace PNFmt
                 }
                 else
                 {
-                    // Ordinary PI data is opaque text. Only the XML declaration
-                    // has attributes whose separating whitespace can be changed.
-                    if (StartsWith(text, node.Start, "<?xml") && node.End - node.Start > 5
-                        && IsXmlWhitespace(text, node.Start + 5, node.Start + 6))
-                    {
-                        wrapper.AppendTag(text, node.Start, node.End, depth, declaration: true);
-                    }
-                    else
-                    {
-                        wrapper.Append(text, node.Start, node.End - node.Start);
-                    }
+                    AppendNonElement(node, text, wrapper, depth);
                     copied = node.End;
                 }
             }
@@ -114,11 +111,18 @@ namespace PNFmt
             return wrapper.ToString();
         }
 
-        private static void AppendIndent(StringBuilder output, int depth, string indent)
+        private static void AppendNonElement(Node node, string text, XmlAttributeWrapper output, int depth)
         {
-            for (var index = 0; index < depth; index++)
+            // Ordinary PI data is opaque. Only the XML declaration has
+            // pseudo-attributes whose separating whitespace can be changed.
+            if (StartsWith(text, node.Start, "<?xml") && node.End - node.Start > 5
+                && IsXmlWhitespace(text, node.Start + 5, node.Start + 6))
             {
-                output.Append(indent);
+                output.AppendTag(text, node.Start, node.End, depth, declaration: true);
+            }
+            else
+            {
+                output.Append(text, node.Start, node.End - node.Start);
             }
         }
 
@@ -263,15 +267,22 @@ namespace PNFmt
             return elements;
         }
 
-        private static void Render(Node node, string text, StringBuilder output, int depth, string indent, string newLine)
+        private static void Render(Node node, string text, XmlAttributeWrapper output, int depth, string newLine)
         {
-            if (!node.IsElement || node.Preserve || node.Children.Count == 0)
+            if (!node.IsElement)
+            {
+                AppendNonElement(node, text, output, depth);
+                return;
+            }
+            if (node.Preserve || (node.Children.Count > 0 && node.Children.All(child => child.IsWhitespace)))
             {
                 output.Append(text, node.Start, node.End - node.Start);
                 return;
             }
 
-            output.Append(text, node.Start, node.OpenEnd - node.Start);
+            // Wrap the validated source tag as it is rendered, avoiding another
+            // XML parse, layout tree, and complete intermediate output string.
+            output.AppendTag(text, node.Start, node.OpenEnd, depth);
             var block = node.IndentChildren && node.Children.Any(child => !child.IsWhitespace);
             foreach (var child in node.Children)
             {
@@ -283,16 +294,16 @@ namespace PNFmt
                 if (block)
                 {
                     output.Append(newLine);
-                    AppendIndent(output, depth + 1, indent);
+                    output.AppendIndent(depth + 1);
                 }
 
-                Render(child, text, output, depth + 1, indent, newLine);
+                Render(child, text, output, depth + 1, newLine);
             }
 
             if (block)
             {
                 output.Append(newLine);
-                AppendIndent(output, depth, indent);
+                output.AppendIndent(depth);
             }
 
             output.Append(text, node.CloseStart, node.End - node.CloseStart);

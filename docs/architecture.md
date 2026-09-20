@@ -16,6 +16,8 @@ Project, resource, solution, XML, and XAML implementations retain their own pars
 
 Project and resource document formatters return `FileFormatResult` directly from each call. They retain settings, but no per-run status, diagnostics, or logger; callers keep independent results and supply operation context through `FileFormatRequest`.
 
+XML and XAML attribute wrapping shares the normal layout render, using validated source slices and cached indentation rather than parsing an intermediate formatted document. XML declaration encoding is normalized before width measurement; final XML validation and protected-subtree rules remain in place. MSBuild applies the shared attribute writer after its existing project serializer.
+
 ## Configuration
 
 `FileFormattingConfiguration` owns selection, activation, compatibility rules, layout enablement, and charset resolution. Format-specific settings are resolved from the same EditorConfig hierarchy, on demand.
