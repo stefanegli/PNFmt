@@ -48,7 +48,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool
 
 Use a short validation version, as above, to keep isolated Windows package paths
 within native library loader limits. `-PackOnly` runs the Release
-tests, coverage thresholds, package build, isolated tool installation, and
+tests, coverage thresholds, performance regression comparisons, package build, isolated tool installation, and
 installed-tool checks without publishing. Leave `-SkipTests`, `-SkipPack`, and
 `-SkipPackageValidation` off. Fix failures and rerun until all gates pass;
 do not lower coverage thresholds or bypass checks to make a change pass.
+
+The performance gate has no skip switch. Keep the pinned baseline and tolerances
+in `benchmarks/performance-baseline.json` reviewable. Investigate regressions;
+do not widen tolerances to make a failure pass. When accepting an intentional
+feature cost, record the old/new measurements and reason in `docs/performance.md`,
+then update the pinned revision in a separate, descriptive commit. Never advance
+the baseline automatically. See `docs/performance.md` for the comparison method.

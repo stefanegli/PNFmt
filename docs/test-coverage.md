@@ -102,6 +102,8 @@ two percentage points of headroom for each metric.
 uploads a `coverage-release` artifact, and a failed check prevents publication.
 `-SkipTests` remains an explicit bypass for callers that have already validated
 the same source, such as the Build workflow's later packaging step.
+It does not skip the separate [performance gate](performance.md), which runs on
+every publish-script invocation, including `-PackOnly`.
 
 The repository's [Required build checks ruleset](https://github.com/stefanegli/PNFmt/rules/23625522)
 requires these GitHub Actions checks on the default branch to block merges when

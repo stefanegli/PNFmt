@@ -159,6 +159,8 @@ Run `./scripts/Format-Repository.cmd` on Windows, or `./scripts/Format-Repositor
 
 Run `./scripts/Test-Coverage.ps1` in PowerShell to test with coverage and generate an HTML report. See [test coverage](docs/test-coverage.md) for reports, minimum thresholds, and CI enforcement.
 
+Run `./scripts/Test-Performance.ps1` to compare Release performance with the pinned Git baseline on the same machine. The publish script runs this gate before packing or pushing, including `-PackOnly` and invocations with other skip switches. Timing and allocation changes are reported per case; intentional baseline updates require a committed explanation. See [performance gates](docs/performance.md) for limits, reports, and baseline maintenance.
+
 Use the [HTML snapshot viewer](tools/SnapshotViewer/README.md) to inspect test inputs, expected cleanup, and configuration by formatter.
 
 Please use the [issue tracker](https://github.com/stefanegli/PNFmt/issues) for bug reports and feature requests.

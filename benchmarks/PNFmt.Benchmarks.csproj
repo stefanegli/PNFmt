@@ -1,11 +1,12 @@
 <Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <FormatterSourceRoot Condition="'$(FormatterSourceRoot)' == ''">$(MSBuildThisFileDirectory)..</FormatterSourceRoot>
         <IsPackable>false</IsPackable>
         <OutputType>Exe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="../PNFmt.Cli/PNFmt.Cli.csproj" />
+        <ProjectReference Include="$(FormatterSourceRoot)/PNFmt.Cli/PNFmt.Cli.csproj" />
     </ItemGroup>
 </Project>

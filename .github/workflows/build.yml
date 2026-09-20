@@ -21,7 +21,7 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -30,6 +30,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -100,3 +102,11 @@ jobs:
           -Configuration Release
           -SkipTests
           -PackOnly
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-${{ matrix.os }}
+          path: artifacts/performance/
+          if-no-files-found: warn

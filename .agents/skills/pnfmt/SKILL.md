@@ -87,3 +87,5 @@ Migration adds current names with legacy values in the same sections. Removal is
 ## Completion
 
 After formatting, verify with `--check` on the same paths, recursion, and selection options. Review the diff and report changes and diagnostics. For changes to PNFmt itself, follow `AGENTS.md` for documentation maintenance, commits, and applicable quality gates.
+
+The publish script also enforces [performance gates](../../../docs/performance.md), including in `-PackOnly` mode. It compares timing and managed allocations with the pinned revision using the same harness and machine. Inspect the per-case report on failure; do not widen tolerances or silently advance the baseline. An intentional feature cost needs before/after measurements and a documented baseline update.

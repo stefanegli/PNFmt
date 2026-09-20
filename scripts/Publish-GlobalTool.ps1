@@ -183,6 +183,10 @@ try
             -SolutionPath $resolvedSolutionPath -Configuration $Configuration
     }
 
+    Write-Host "Running performance regression checks and benchmarks..."
+    & (Join-Path $PSScriptRoot "Test-PerformanceReport.Tests.ps1")
+    & (Join-Path $PSScriptRoot "Test-Performance.ps1")
+
     if (-not $SkipPack)
     {
         Write-Host "Packing '$packageId' version $Version..."

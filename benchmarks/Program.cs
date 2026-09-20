@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -12,9 +13,13 @@ namespace PNFmt.Benchmarks
     {
         public static int Main(string[] args)
         {
+            if (args.Length == 3 && args[0] == "--performance")
+            {
+                return PerformanceRunner.Run(args[1], args[2]);
+            }
             if (args.Length > 1 || (args.Length == 1 && args[0] != "--quick"))
             {
-                Console.Error.WriteLine("Usage: dotnet run --project benchmarks -c Release -- [--quick]");
+                Console.Error.WriteLine("Usage: dotnet run --project benchmarks -c Release -- [--quick | --performance <family> <report.json>]");
                 return 2;
             }
 
@@ -58,13 +63,14 @@ namespace PNFmt.Benchmarks
             }
         }
 
-        private static void RunRepository(string scenario, RepositoryFixture fixture, int samples, int parallelism)
+        internal static void RunRepository(string scenario, RepositoryFixture fixture, int samples, int parallelism,
+            ICollection<PerformanceCaseResult> results = null)
         {
             var registry = FormatterCatalog.CreateDefault();
             var resolver = new TargetFileResolver(registry, registry,
                 new FilePatternMatcher(RepositoryFixture.Extensions.Select(extension => "*." + extension)));
             TargetFileResolution Discover() => resolver.Resolve(new[] { fixture.DirectoryPath }, recursive: true, allFiles: true);
-            BenchmarkMeasurement.Run(scenario, "discovery", fixture.Files.Count, 1, samples, Discover, fixture.ValidateDiscovery);
+            BenchmarkMeasurement.Run(scenario, "discovery", fixture.Files.Count, 1, samples, Discover, fixture.ValidateDiscovery, results: results);
             var files = Discover().Files;
             var runner = new FormattingRunner(registry);
             foreach (var workers in new[] { 1, parallelism })
@@ -72,17 +78,17 @@ namespace PNFmt.Benchmarks
                 fixture.Restore();
                 BenchmarkMeasurement.Run(scenario, "preview", files.Count, workers, samples,
                     () => runner.Run(files, writeChanges: false, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: false));
+                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: false), results: results);
                 BenchmarkMeasurement.Run(scenario, "write", files.Count, workers, samples,
                     () => runner.Run(files, writeChanges: true, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: true), fixture.Restore);
+                    result => fixture.Validate(result, FileFormatStatus.Updated, formatted: true), fixture.Restore, results);
                 BenchmarkMeasurement.Run(scenario, "unchanged", files.Count, workers, samples,
                     () => runner.Run(files, writeChanges: false, lint: false, workers),
-                    result => fixture.Validate(result, FileFormatStatus.Unchanged, formatted: true));
+                    result => fixture.Validate(result, FileFormatStatus.Unchanged, formatted: true), results: results);
             }
         }
 
-        private static void RunSorting(string directory, bool quick, int samples)
+        internal static void RunSorting(string directory, bool quick, int samples, ICollection<PerformanceCaseResult> results = null)
         {
             Directory.CreateDirectory(directory);
             File.WriteAllText(Path.Combine(directory, ".editorconfig"),
@@ -107,7 +113,7 @@ namespace PNFmt.Benchmarks
                             {
                                 throw new InvalidOperationException("Sorting benchmark did not format its input.");
                             }
-                        });
+                        }, results: results);
                 }
             }
         }

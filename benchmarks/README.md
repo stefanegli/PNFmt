@@ -21,8 +21,20 @@ The full suite uses three measured samples after one warm-up per case:
 
 Repository cases use the CLI's actual `TargetFileResolver` and `FormattingRunner`. Discovery is measured separately; execution uses the discovered paths. Each repository runs serially and with up to eight workers (at least two, even on a single-CPU host). Execution phases measure preview of unformatted files, writing changed files, and checking already formatted files. Writes include permission-preserving staging, flushing, conflict detection, replacement, and cleanup.
 
-Setup, restoring inputs before each write, and correctness checks are outside the measured interval. Every warm-up and sample verifies complete discovery or expected statuses, no errors/diagnostics, unchanged preview bytes, identical serial/parallel output, and no leftover staging files. An incorrect result exits with failure; elapsed time has no pass/fail threshold. CI runs `--quick` on Windows and Linux.
+Setup, restoring inputs before each write, and correctness checks are outside the measured interval. Every warm-up and sample verifies complete discovery or expected statuses, no errors/diagnostics, unchanged preview bytes, identical serial/parallel output, and no leftover staging files. An incorrect result exits with failure. These standalone full/quick runs do not impose timing thresholds. CI also runs the separate publish performance gate described below.
 
 Output includes runtime, OS, architecture, logical CPU count, worker count, minimum and median elapsed milliseconds, and median managed allocations in MiB. Allocation uses `GC.GetTotalAllocatedBytes` so worker-thread allocations are included; it also includes any unrelated managed background activity. This differs from the old benchmark's minimum allocation on the calling thread. Compare like-for-like runs, on the same machine, in Release, without other heavy work running.
 
 These are warm-process and warm-cache measurements; they exclude CLI startup, console reporting, Git filtering, and formatting the EditorConfig files themselves. The nested case measures hierarchy lookup against the normal shared parsed-file cache, not cold parsing on every file. Timing depends on filesystem, antivirus, and storage flush latency; the full suite can take several minutes. Temporary fixtures are removed after completion or a handled failure.
+
+## Publish performance gate
+
+```powershell
+./scripts/Test-Performance.ps1
+```
+
+The gate compiles this checkout's harness against both the current formatter/CLI and the revision pinned in [performance-baseline.json](performance-baseline.json). It runs 59 cases in isolated processes, three times per revision, and checks each case's elapsed time and total managed allocations. The repository scenarios use 128 files and seven samples, batching read-only operations after at least three operations/300 ms of warm-up. Formatter scenarios use 1,000 XML/XAML/MSBuild elements or 200 C# methods and nine batched samples after warm-up. Both initial previews and already formatted checks are included. C# modes cover defaults, width, argument/parameter list styles, Microsoft blank-line preferences, and headers; XML modes cover defaults, width, and one attribute per line.
+
+`Program --performance <family> <report.json>` is the worker entry point (`xml`, `xaml`, `csproj`, `csharp`, or `repository`). It writes samples and environment metadata; the script controls builds, process isolation, runtime settings, and revision order. `FormatterSourceRoot` selects the referenced source tree when building the same harness for both revisions. Run the script for a valid gate result rather than invoking a worker alone.
+
+See [performance gates](../docs/performance.md) for tolerance rules, report locations, CI visibility, and how to review intentional baseline changes.

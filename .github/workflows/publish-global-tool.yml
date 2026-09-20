@@ -18,7 +18,7 @@ jobs:
     name: Publish PetchNaka.PNFmt.Cli
     runs-on: ubuntu-latest
     environment: nuget
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -27,6 +27,8 @@ jobs:
     steps:
       - name: Check out source
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -54,11 +56,16 @@ jobs:
 
       - name: Test, pack, and validate tool
         shell: pwsh
-        run: >
-          ./scripts/Publish-GlobalTool.ps1
-          -Version $env:PACKAGE_VERSION
-          -Configuration Release
-          -PackOnly
+        run: |
+          ./scripts/Publish-GlobalTool.ps1 `
+            -Version $env:PACKAGE_VERSION `
+            -Configuration Release `
+            -PackOnly | Tee-Object -Variable validationOutput
+          $validatedPackage = $validationOutput | Select-Object -Last 1
+          if (-not (Test-Path -LiteralPath $validatedPackage -PathType Leaf)) {
+            throw 'Validation did not return a package path.'
+          }
+          "VALIDATED_PACKAGE_PATH=$validatedPackage" >> $env:GITHUB_ENV
 
       - name: Upload coverage reports
         if: always()
@@ -79,9 +86,14 @@ jobs:
         env:
           NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
         run: >
-          ./scripts/Publish-GlobalTool.ps1
-          -Version $env:PACKAGE_VERSION
-          -Configuration Release
-          -SkipTests
-          -SkipPack
-          -SkipPackageValidation
+          dotnet nuget push "$env:VALIDATED_PACKAGE_PATH"
+          --api-key "$env:NUGET_API_KEY"
+          --source https://api.nuget.org/v3/index.json
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: performance-release
+          path: artifacts/performance/
+          if-no-files-found: warn

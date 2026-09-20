@@ -40,6 +40,6 @@ The EditorConfig parsed-file cache remains shared; a resolved hierarchy is scope
 - Reporting tests use captured text writers; CLI integration tests verify dispatch, output, and exit codes together.
 - File replacement tests cover partial staging failures, intervening edits, read-only files, cleanup, and platform-specific permission/link behavior.
 
-The [benchmark suite](../benchmarks/README.md) measures dependency sorting and repository discovery/execution, including mixed formats, nested configuration, serial/parallel work, and staged writes. Its short CI run checks outcomes and byte stability without timing thresholds.
+The [benchmark suite](../benchmarks/README.md) measures dependency sorting and repository discovery/execution, including mixed formats, nested configuration, serial/parallel work, and staged writes. Its short CI run checks outcomes and byte stability. A separate mandatory [publish performance gate](performance.md) compares the same benchmark harness against a pinned source revision, including wrapping, C# preferences/headers, already formatted files, and the repository scenarios. Per-case timing and managed allocation regressions fail independently.
 
 `TargetFileResolver`, `GitRepositoryContext`, `FormattingRunner`, and MSBuild original-order dependency sorting keep their existing seams. They already concentrate substantive behavior and have tests through those interfaces.
