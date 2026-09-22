@@ -103,6 +103,7 @@ jobs:
           ./scripts/Publish-GlobalTool.ps1
           -Version "0.0.0-ci.$env:GITHUB_RUN_NUMBER"
           -Configuration Release
+          -TimingPolicy ReportOnly
           -SkipTests
           -PackOnly
 

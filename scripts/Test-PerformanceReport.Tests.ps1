@@ -51,10 +51,12 @@ function Write-Fixture([scriptblock]$Change = {})
     }
 }
 
-function Assert-Gate([string]$Name, [bool]$ShouldPass)
+function Assert-Gate([string]$Name, [bool]$ShouldPass, [string]$TimingPolicy)
 {
     $passed = $true
-    try { & $gateScript -RunDirectory $directory -BaselinePath $baselinePath 6>$null }
+    $arguments = @{ RunDirectory = $directory; BaselinePath = $baselinePath }
+    if ($TimingPolicy) { $arguments.TimingPolicy = $TimingPolicy }
+    try { & $gateScript @arguments 3>$null 6>$null }
     catch { $passed = $false }
     if ($passed -ne $ShouldPass) { throw "Performance gate test '$Name': expected pass=$ShouldPass; got $passed." }
     $script:passedCount++
@@ -65,6 +67,7 @@ try
 {
     Write-Fixture
     Assert-Gate 'Identical measurements pass' $true
+    Assert-Gate 'Identical measurements pass in report-only mode' $true 'ReportOnly'
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].Milliseconds = @(1..9 | ForEach-Object { 1000.0 }) }
     Assert-Gate 'One noisy process does not outweigh two stable runs' $true
     Write-Fixture { param($f) foreach ($r in 1..2) { $f.Reports["current-xml-$r"].Cases[0].Milliseconds = @(1..9 | ForEach-Object { 12.001 }) } }
@@ -74,14 +77,30 @@ try
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-xml-$r"].Cases[0].Milliseconds = @(1..9 | ForEach-Object { 12.001 }) } }
     Assert-Gate 'A single slow case fails without averaging it away' $false
     if (-not (Select-String -LiteralPath (Join-Path $directory 'PerformanceGate.md') -Pattern '\| FAIL \|')) { throw 'Failure report was not retained.' }
+    Assert-Gate 'Timing regression is advisory in report-only mode' $true 'ReportOnly'
+    $reportText = Get-Content -LiteralPath (Join-Path $directory 'PerformanceGate.md') -Raw
+    if ($reportText -notlike '*Timing policy: **ReportOnly***' -or
+        $reportText -notlike '*| TIMING WARNING |*' -or
+        $reportText -notlike '*0 failed enforced limits; 1 report-only timing warnings*')
+    {
+        throw 'Report-only timing regression was not clearly reported.'
+    }
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-xml-$r"].Cases[0].AllocatedBytes = @(1..9 | ForEach-Object { 110000.0 }) } }
     Assert-Gate 'Allocation equality at the limit passes' $true
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-xml-$r"].Cases[0].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 }) } }
     Assert-Gate 'Allocation regression fails even when time passes' $false
+    Assert-Gate 'Allocation regression still fails in report-only mode' $false 'ReportOnly'
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-repository-$r"].Cases[0].Milliseconds = @(1..7 | ForEach-Object { 15.0 }) } }
     Assert-Gate 'Writes use the documented larger time allowance' $true
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-repository-$r"].Cases[0].Milliseconds = @(1..7 | ForEach-Object { 15.001 }) } }
     Assert-Gate 'Write regression beyond its limit fails' $false
+    Assert-Gate 'Write timing regression is advisory in report-only mode' $true 'ReportOnly'
+    Write-Fixture { param($f) foreach ($r in 1..3) {
+        $f.Reports["current-xml-$r"].Cases[0].Milliseconds = @(1..9 | ForEach-Object { 1000.0 })
+        $f.Reports["current-xml-$r"].Cases[0].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 })
+    } }
+    Assert-Gate 'Timing warnings do not hide an allocation failure' $false 'ReportOnly'
+    if (-not (Select-String -LiteralPath (Join-Path $directory 'PerformanceGate.md') -Pattern '\| FAIL \|')) { throw 'Allocation failure was not retained in report-only mode.' }
     Write-Fixture { param($f)
         foreach ($r in 1..3) {
             $f.Reports["baseline-xml-$r"].Cases[0].Milliseconds = @(1..9 | ForEach-Object { 0.01 })
@@ -93,6 +112,7 @@ try
     Assert-Gate 'Absolute floors avoid failing negligible differences' $true
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases = @($f.Reports['current-xml-1'].Cases[0]) }
     Assert-Gate 'Missing cases fail' $false
+    Assert-Gate 'Missing cases still fail in report-only mode' $false 'ReportOnly'
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[1].Id = 'xml/case0' }
     Assert-Gate 'Duplicate cases fail' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].Id = 'xml/replaced' }
@@ -101,6 +121,7 @@ try
     Assert-Gate 'Missing samples fail' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].AllocatedBytes[0] = 0 }
     Assert-Gate 'Invalid sample values fail' $false
+    Assert-Gate 'Invalid samples still fail in report-only mode' $false 'ReportOnly'
     Write-Fixture { param($f) $f.Policy.Tolerances.TimePercent = -1 }
     Assert-Gate 'Invalid tolerance fails' $false
     Write-Fixture { param($f) $f.Policy.Reason = '' }
@@ -109,18 +130,23 @@ try
     Assert-Gate 'A moving baseline reference fails' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Runtime = 'another runtime' }
     Assert-Gate 'Different environments fail' $false
+    Assert-Gate 'Different environments still fail in report-only mode' $false 'ReportOnly'
     Write-Fixture { param($f) $f.Reports['current-xml-1'].SuiteVersion = 2 }
     Assert-Gate 'Incompatible suite versions fail' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].TieredCompilation = '1' }
     Assert-Gate 'Wrong timing configuration fails' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].OutputHash = 'B' * 64 }
     Assert-Gate 'Non-repeatable outputs fail' $false
+    Assert-Gate 'Non-repeatable outputs still fail in report-only mode' $false 'ReportOnly'
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-xml-$r"].Cases[0].OutputHash = 'B' * 64 } }
     Assert-Gate 'Intentional output differences are reported' $true
     if (-not (Select-String -LiteralPath (Join-Path $directory 'PerformanceGate.md') -SimpleMatch '**changed**')) { throw 'Changed output was not visible.' }
     Write-Fixture
     Remove-Item -LiteralPath (Join-Path $directory 'current-xml-2.json')
     Assert-Gate 'A missing round fails' $false
+    Assert-Gate 'A missing round still fails in report-only mode' $false 'ReportOnly'
+    Write-Fixture
+    Assert-Gate 'Unknown timing policy is rejected' $false 'Ignore'
     Write-Host "$passedCount performance gate regression checks passed."
 }
 finally

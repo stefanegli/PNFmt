@@ -38,3 +38,5 @@ The gate compiles this checkout's harness against both the current formatter/CLI
 `Program --performance <family> <report.json>` is the worker entry point (`xml`, `xaml`, `csproj`, `csharp`, or `repository`). It writes samples and environment metadata; the script controls builds, process isolation, runtime settings, and revision order. `FormatterSourceRoot` selects the referenced source tree when building the same harness for both revisions. Run the script for a valid gate result rather than invoking a worker alone.
 
 See [performance gates](../docs/performance.md) for tolerance rules, report locations, CI visibility, and how to review intentional baseline changes.
+
+The script defaults to `-TimingPolicy Enforce`, which fails timing or allocation regressions. Hosted workflows explicitly select `-TimingPolicy ReportOnly`: all measurements still run and timing regressions produce warnings, while allocations, correctness, report validity, and output stability remain enforced. Complete release validation on the controlled local machine, VELA, must use the default enforcement mode before a release tag is pushed. The reports record the timing policy and machine name.

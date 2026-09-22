@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$RunDirectory,
-    [Parameter(Mandatory = $true)][string]$BaselinePath
+    [Parameter(Mandatory = $true)][string]$BaselinePath,
+    [ValidateSet('Enforce', 'ReportOnly')][string]$TimingPolicy = 'Enforce'
 )
 
 Set-StrictMode -Version Latest
@@ -104,11 +105,13 @@ $lines.Add('# PNFmt performance gate')
 $lines.Add('')
 $lines.Add("Baseline: ``$($policy.Revision)``. $($policy.Reason)")
 $lines.Add("Environment: $environmentIdentity. Three process runs; medians of 7 repository or 9 formatter samples, then the median of all three runs.")
+$lines.Add("Timing policy: **$TimingPolicy**. Allocation limits, report validity, and output stability are always enforced.")
 $lines.Add("Limits: time +$($policy.Tolerances.TimePercent)%, writes +$($policy.Tolerances.WriteTimePercent)%, allocations +$($policy.Tolerances.AllocationPercent)%. Noise floors: $($policy.Tolerances.TimeFloorMilliseconds) ms and $($policy.Tolerances.AllocationFloorBytes) bytes; the larger allowance applies.")
 $lines.Add('')
 $lines.Add('| Case | Baseline ms | Current ms | Time change | Baseline KiB | Current KiB | Allocation change | Output | Result |')
 $lines.Add('| --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |')
 $failures = [Collections.Generic.List[string]]::new()
+$timingWarnings = [Collections.Generic.List[string]]::new()
 foreach ($key in @($measurements.Keys | Where-Object { $_.StartsWith('baseline/') } | Sort-Object))
 {
     $id = $key.Substring(9)
@@ -128,20 +131,27 @@ foreach ($key in @($measurements.Keys | Where-Object { $_.StartsWith('baseline/'
     $timePercent = if ($before[0].Write) { $policy.Tolerances.WriteTimePercent } else { $policy.Tolerances.TimePercent }
     $timeLimit = $beforeTime + [Math]::Max($beforeTime * $timePercent / 100, $policy.Tolerances.TimeFloorMilliseconds)
     $byteLimit = $beforeBytes + [Math]::Max($beforeBytes * $policy.Tolerances.AllocationPercent / 100, $policy.Tolerances.AllocationFloorBytes)
-    $failed = $afterTime -gt $timeLimit -or $afterBytes -gt $byteLimit
+    $timeExceeded = $afterTime -gt $timeLimit
+    $allocationExceeded = $afterBytes -gt $byteLimit
+    $failed = $allocationExceeded -or ($timeExceeded -and $TimingPolicy -eq 'Enforce')
+    if ($timeExceeded -and $TimingPolicy -eq 'ReportOnly') { $timingWarnings.Add($id) }
     if ($failed) { $failures.Add($id) }
-    $outcome = if ($failed) { 'FAIL' } else { 'PASS' }
+    $outcome = if ($failed) { 'FAIL' } elseif ($timeExceeded) { 'TIMING WARNING' } else { 'PASS' }
     $output = if ($null -eq $before[0].OutputHash) { 'validated' } elseif ($before[0].OutputHash -ceq $after[0].OutputHash) { 'same' } else { '**changed**' }
     $lines.Add("| $id | $(Format-Number $beforeTime) | $(Format-Number $afterTime) | $(Format-Number (100 * ($afterTime / $beforeTime - 1)) 'F1')% | $(Format-Number ($beforeBytes / 1024) 'F1') | $(Format-Number ($afterBytes / 1024) 'F1') | $(Format-Number (100 * ($afterBytes / $beforeBytes - 1)) 'F1')% | $output | $outcome |")
 }
 $lines.Add('')
-$lines.Add("$($measurements.Count / 2) cases compared; $($failures.Count) exceeded a limit. Raw samples and run metadata are retained alongside this report.")
+$lines.Add("$($measurements.Count / 2) cases compared; $($failures.Count) failed enforced limits; $($timingWarnings.Count) report-only timing warnings. Raw samples and run metadata are retained alongside this report.")
 $reportPath = Join-Path $RunDirectory 'PerformanceGate.md'
 $lines | Set-Content -LiteralPath $reportPath -Encoding utf8
 if ($env:GITHUB_STEP_SUMMARY) { $lines | Out-File -LiteralPath $env:GITHUB_STEP_SUMMARY -Append -Encoding utf8 }
 Write-Host "Performance report: $reportPath"
+if ($timingWarnings.Count -gt 0)
+{
+    Write-Warning "Timing limits exceeded (report-only): $($timingWarnings -join ', '). Review timing on the controlled release machine."
+}
 if ($failures.Count -gt 0)
 {
     throw "Performance regression in: $($failures -join ', '). Investigate the report; intentional costs require a reviewed baseline update with a reason."
 }
-Write-Host "Performance gate passed: $($measurements.Count / 2) cases."
+Write-Host "Performance gate passed: $($measurements.Count / 2) cases; timing policy $TimingPolicy; $($timingWarnings.Count) timing warnings."

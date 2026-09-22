@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [ValidateSet('Enforce', 'ReportOnly')][string]$TimingPolicy = 'Enforce'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -53,6 +55,8 @@ try
         BaselineRevision = $policy.Revision
         CurrentRevision = $currentRevision
         CurrentDirty = -not [string]::IsNullOrWhiteSpace($currentStatus)
+        MachineName = [Environment]::MachineName
+        TimingPolicy = $TimingPolicy
         HarnessFiles = @($harnessFiles | ForEach-Object { @{ Name = $_.Name; SHA256 = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash } })
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDirectory 'run.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repoRoot 'Directory.Build.props') -Destination $buildRoot
@@ -88,7 +92,7 @@ try
             }
         }
     }
-    & (Join-Path $PSScriptRoot 'Test-PerformanceReport.ps1') -RunDirectory $runDirectory -BaselinePath $baselinePath
+    & (Join-Path $PSScriptRoot 'Test-PerformanceReport.ps1') -RunDirectory $runDirectory -BaselinePath $baselinePath -TimingPolicy $TimingPolicy
 }
 finally
 {

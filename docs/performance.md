@@ -1,8 +1,27 @@
 # Performance gates
 
-`scripts/Publish-GlobalTool.ps1` runs a mandatory performance gate before packing or pushing. It runs in `-PackOnly` mode and also when `-SkipTests`, `-SkipPack`, or `-SkipPackageValidation` are supplied. There is no performance skip switch. The Build workflow runs it on Windows and Linux; the release workflow runs it before publication.
+`scripts/Publish-GlobalTool.ps1` runs mandatory performance comparisons before packing or pushing. They run in `-PackOnly` mode and also when `-SkipTests`, `-SkipPack`, or `-SkipPackageValidation` are supplied. There is no performance skip switch. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
 
-Run it independently from the repository root:
+## Timing policy and release machine
+
+`Publish-GlobalTool.ps1`, `Test-Performance.ps1`, and `Test-PerformanceReport.ps1` accept `-TimingPolicy`:
+
+| Value | Behavior |
+| --- | --- |
+| `Enforce` (default) | Timing or allocation regressions fail the gate. Use for controlled local validation. |
+| `ReportOnly` | Timing regressions produce warnings and remain visible in the report; allocation regressions and invalid or unstable results still fail. Used explicitly by the hosted Build and Publish workflows. |
+
+The policy is not inferred from environment variables or machine names. Both modes run all 59 cases with the same samples, pinned baseline, and tolerances. Hosted runners can experience changing CPU contention and I/O latency even when baseline and current code run on the same machine. Their timing results are advisory, not a release timing approval.
+
+**VELA**, the maintainer's local Windows machine, is the designated controlled environment. Before creating or pushing a release tag, run the complete validation there on the release candidate:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+```
+
+Leave `-TimingPolicy` at its `Enforce` default and leave all skip switches off. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
+
+Run just the performance comparison independently from the repository root:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-Performance.ps1
@@ -13,6 +32,8 @@ With PowerShell 7, including on Linux, use `./scripts/Test-Performance.ps1`. All
 The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
 
 During alpha.10 release validation, three Windows hosted-runner attempts using the system-volume temporary directory failed serial repository-write comparisons despite identical formatter/CLI source apart from the package version. In the first run, small-project writes measured 1,235 ms for the baseline and 2,556 ms for the current version; the baseline's final round also slowed to 2,778 ms. A second run passed that case at 1,159/1,161 ms but failed mixed-format writes at 1,190/2,675 ms, with the baseline's final round at 2,688 ms. Allocations remained effectively unchanged. These measurements motivated using the runner's scratch directory for both sides of the comparison, without accepting a formatter cost or changing the baseline.
+
+Scratch storage did not eliminate hosted-runner timing variability. The same alpha.10 commit passed Windows validation, then failed three timing comparisons in the master build while allocations and output checks passed. Hosted timing is therefore report-only; VELA retains timing enforcement. Neither the pinned revision nor the tolerance values changed with this policy.
 
 ## What is compared
 
@@ -32,7 +53,7 @@ Managed allocation measurements include all threads. Setup, restoring write inpu
 
 ## Limits and reports
 
-Each case must independently satisfy both limits. Improvements elsewhere cannot compensate for a failing case.
+Each case must independently satisfy allocation limits and, in `Enforce` mode, timing limits. Improvements elsewhere cannot compensate for a failing case. In `ReportOnly` mode the same timing thresholds identify warnings.
 
 | Metric | Allowed increase over baseline |
 | --- | --- |
@@ -44,12 +65,12 @@ Equality passes; comparisons use unrounded numbers. Floors handle small absolute
 
 Each invocation writes fresh files to `artifacts/performance/<run-id>/`:
 
-- `PerformanceGate.md`: baseline/current timings, allocations, percentage changes, output differences, and pass/fail for every case. Retained on threshold failures.
-- `baseline.json` and `run.json`: the exact policy, baseline/current commit IDs, dirty-working-tree flag, start time, and benchmark source hashes.
+- `PerformanceGate.md`: the timing policy, baseline/current timings, allocations, percentage changes, output differences, and `PASS`, `FAIL`, or `TIMING WARNING` for every case. An allocation failure stays `FAIL` even when timing is also advisory. Retained on threshold failures.
+- `baseline.json` and `run.json`: the exact policy, timing mode, machine name, baseline/current commit IDs, dirty-working-tree flag, start time, and benchmark source hashes.
 - Worker JSON reports: runtime metadata, sample arrays, iteration counts, and output fingerprints.
 - Build and worker logs, retained even when a command fails before comparison.
 
-CI adds the table to the GitHub Actions summary and uploads `performance-<os>` or `performance-release` artifacts, including on failure. The published package is blocked when the gate fails. The release workflow validates once in `-PackOnly` mode, then passes the returned package path to `dotnet nuget push` after authentication; it does not rebuild the package or repeat the gate. Direct publish-script invocations with skip switches still perform a fresh comparison. Older reports cannot satisfy a new publish run.
+CI adds the table to the GitHub Actions summary and uploads `performance-<os>` or `performance-release` artifacts, including on failure. Allocation regressions, invalid reports, and correctness or output-stability failures block publication; hosted timing warnings do not. The release workflow validates once in `-PackOnly -TimingPolicy ReportOnly` mode, then passes the returned package path to `dotnet nuget push` after authentication; it does not rebuild the package or repeat the gate. Direct publish-script invocations with skip switches still perform a fresh comparison and default to timing enforcement. Older reports cannot satisfy a new publish run.
 
 The separate standalone [full and quick benchmark runs](../benchmarks/README.md) remain useful for exploration and correctness smoke tests; they do not enforce timing limits. Gate comparison logic has deterministic regression checks:
 

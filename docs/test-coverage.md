@@ -107,7 +107,10 @@ uploads a `coverage-release` artifact, and a failed check prevents publication.
 `-SkipTests` remains an explicit bypass for callers that have already validated
 the same source, such as the Build workflow's later packaging step.
 It does not skip the separate [performance gate](performance.md), which runs on
-every publish-script invocation, including `-PackOnly`.
+every publish-script invocation, including `-PackOnly`. Performance comparisons
+default to `-TimingPolicy Enforce`. Hosted workflows explicitly use `ReportOnly`
+for timing while retaining allocation and correctness gates; coverage enforcement
+is unaffected. Release timing approval remains a required local validation on VELA.
 
 The repository's [Required build checks ruleset](https://github.com/stefanegli/PNFmt/rules/23625522)
 requires these GitHub Actions checks on the default branch to block merges when

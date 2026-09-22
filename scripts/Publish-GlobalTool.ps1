@@ -10,6 +10,7 @@ param(
     [string]$PackagesDirectory = "artifacts/packages",
     [string]$Configuration = "Release",
     [string]$NuGetSource = "https://api.nuget.org/v3/index.json",
+    [ValidateSet('Enforce', 'ReportOnly')][string]$TimingPolicy = 'Enforce',
     [switch]$SkipPack,
     [switch]$SkipTests,
     [switch]$SkipPackageValidation,
@@ -185,7 +186,7 @@ try
 
     Write-Host "Running performance regression checks and benchmarks..."
     & (Join-Path $PSScriptRoot "Test-PerformanceReport.Tests.ps1")
-    & (Join-Path $PSScriptRoot "Test-Performance.ps1")
+    & (Join-Path $PSScriptRoot "Test-Performance.ps1") -TimingPolicy $TimingPolicy
 
     if (-not $SkipPack)
     {
