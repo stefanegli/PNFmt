@@ -10,6 +10,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-Performance.p
 
 With PowerShell 7, including on Linux, use `./scripts/Test-Performance.ps1`. Allow several minutes and avoid other builds, tests, or CPU/disk-heavy work during measurement. A Git checkout with the pinned baseline commit available locally is required. CI checks out full history. The script never fetches or advances the baseline automatically.
 
+The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
+
+During alpha.10 release validation, three Windows hosted-runner attempts using the system-volume temporary directory failed serial repository-write comparisons despite identical formatter/CLI source apart from the package version. In the first run, small-project writes measured 1,235 ms for the baseline and 2,556 ms for the current version; the baseline's final round also slowed to 2,778 ms. A second run passed that case at 1,159/1,161 ms but failed mixed-format writes at 1,190/2,675 ms, with the baseline's final round at 2,688 ms. Allocations remained effectively unchanged. These measurements motivated using the runner's scratch directory for both sides of the comparison, without accepting a formatter cost or changing the baseline.
+
 ## What is compared
 
 The gate builds the **same current benchmark sources** twice in Release: once against the current formatter/CLI source, once against the commit pinned in [`benchmarks/performance-baseline.json`](../benchmarks/performance-baseline.json). Both run on the same machine, runtime, architecture, and logical CPU count. This avoids a fixed millisecond budget tied to one developer's hardware. A missing baseline, failed build, invalid report, missing/duplicate case, incomplete sample set, or non-repeatable formatter output fails the gate.

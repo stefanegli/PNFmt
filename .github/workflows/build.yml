@@ -96,6 +96,9 @@ jobs:
 
       - name: Pack and validate global tool
         shell: pwsh
+        env:
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
         run: >
           ./scripts/Publish-GlobalTool.ps1
           -Version "0.0.0-ci.$env:GITHUB_RUN_NUMBER"
