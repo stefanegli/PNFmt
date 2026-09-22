@@ -15,6 +15,11 @@ using Xunit;
 
 namespace PNFmt.Tests
 {
+    // These tests change the process-wide current directory and console streams.
+    [CollectionDefinition("CLI process state", DisableParallelization = true)]
+    public sealed class ProgramTestCollection { }
+
+    [Collection("CLI process state")]
     public sealed class ProgramTests
     {
         [Theory]

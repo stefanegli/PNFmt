@@ -7,6 +7,10 @@ SnapshotViewer, generated source, and code explicitly marked
 `ExcludeFromCodeCoverage` are excluded. Compiler-generated code is not broadly
 excluded, so async methods and iterators remain measurable.
 
+CLI entry-point tests run in a collection that does not overlap other tests because
+they temporarily change the process-wide current directory and console streams.
+Other test collections retain their normal parallel execution.
+
 ## Run locally
 
 From the repository root on Windows:
