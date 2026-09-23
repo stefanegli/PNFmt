@@ -1,27 +1,21 @@
 # Repository formatting
 
-After making changes, run the repository formatter from the repository root before
-finishing the task:
+After changes, run from the repository root:
 
 ```powershell
 .\scripts\Format-Repository.cmd
+.\scripts\Format-Repository.cmd -Check -NoBuild
 ```
 
-On Linux or with PowerShell 7, use `./scripts/Format-Repository.ps1` instead.
-The command builds the local PNFmt CLI and formats source and configuration files,
-including C# test code.
+On Linux or PowerShell 7, use `./scripts/Format-Repository.ps1` with the same arguments.
 
-Verify the result with `-Check -NoBuild`, and review the diff before finishing.
-Run the tests appropriate to any source changes.
+Use this script for all repository-wide formatting. It builds the local CLI and
+formats source and configuration, including tests, while excluding fixture data
+(`_files`, `_editor`), snapshots (`Snapshots/`), and build output. Never run PNFmt
+recursively over the root: fixture `.editorconfig` files can override exclusions.
 
-Always use this script for repository-wide formatting. Do not run PNFmt recursively
-over the repository root: fixture `.editorconfig` files can explicitly re-enable
-formatting and override the root exclusions. The script excludes fixture data
-(`_files`, `_editor`), expected snapshots (`Snapshots/`), and build output before
-invoking PNFmt.
-
-Keep fixture and snapshot contents unchanged unless the task explicitly requires
-changing them. Do not regenerate expected snapshots to accommodate formatting.
+Review the diff. Preserve fixtures and snapshots unless the task explicitly requires
+changing them; never regenerate snapshots just to accommodate formatting.
 
 # Skill and documentation maintenance
 
@@ -36,33 +30,29 @@ considering the change complete.
 
 # Commits and quality gates
 
-Always commit completed work in useful, coherent increments with descriptive
-commit messages. Keep unrelated changes in separate commits, stage only the
-files belonging to each increment, and run the relevant checks before committing.
+Always commit completed work with descriptive messages after relevant checks.
+Stage only related files and keep unrelated changes in separate commits.
 
-Before finishing source changes, run the publish script's quality gates:
+For source changes, run appropriate tests and the complete validation:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
 ```
 
-Use a short validation version, as above, to keep isolated Windows package paths
-within native library loader limits. `-PackOnly` runs the Release
-tests, coverage thresholds, performance regression comparisons, package build, isolated tool installation, and
-installed-tool checks without publishing. Leave `-SkipTests`, `-SkipPack`, and
-`-SkipPackageValidation` off. Fix failures and rerun until all gates pass;
-do not lower coverage thresholds or bypass checks to make a change pass.
+This runs Release tests, coverage, performance comparisons, packaging, and isolated
+installed-tool checks without publishing. Keep the validation version short to avoid
+Windows native-library path limits. Leave `-SkipTests`, `-SkipPack`, and
+`-SkipPackageValidation` off. Fix failures and rerun until all gates pass; do not
+lower coverage thresholds or bypass checks.
 
-VELA, the maintainer's local Windows machine, is the controlled timing environment.
-Run the complete validation above there before creating or pushing a release tag.
-Keep the default `-TimingPolicy Enforce` locally; do not use `ReportOnly` to approve
-a local release. Hosted Build and Publish workflows explicitly use
-`-TimingPolicy ReportOnly`: timings remain visible as warnings, while allocations,
-correctness, report validity, and output stability remain mandatory gates.
+Keep the default `-TimingPolicy Enforce` locally. Before creating or pushing a
+release tag, run the complete validation on VELA, the maintainer's controlled
+Windows machine. Hosted Build and Publish workflows use `-TimingPolicy ReportOnly`:
+timing regressions warn, but allocation regressions, invalid reports, and incorrect
+or unstable output still fail the gate. Hosted results do not replace local validation.
 
-The performance comparison has no skip switch. Keep the pinned baseline and tolerances
-in `benchmarks/performance-baseline.json` reviewable. Investigate regressions;
-do not widen tolerances to make a failure pass. When accepting an intentional
-feature cost, record the old/new measurements and reason in `docs/performance.md`,
-then update the pinned revision in a separate, descriptive commit. Never advance
-the baseline automatically. See `docs/performance.md` for the comparison method.
+Performance comparisons cannot be skipped. Investigate regressions against
+`benchmarks/performance-baseline.json`; never widen tolerances to pass or advance
+the baseline automatically. For an accepted feature cost, record old/new measurements
+and the reason in `docs/performance.md`, then update the pinned revision in a separate,
+descriptive commit. That document covers the comparison and baseline-update procedure.
