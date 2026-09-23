@@ -34,9 +34,8 @@ values, and preservation limits where they affect usage. Verify examples and
 links, and distinguish defaults for omitted settings from generated configuration.
 Do not consider a user-facing feature complete while its guidance is stale.
 
-Keep the PNFmt skill self-contained: its documentation links must resolve within
-`.agents/skills/pnfmt/`. Bundle needed guidance in its supporting references instead
-of depending on repository documentation or external pages.
+Keep the PNFmt skill self-contained: bundle required guidance and keep all
+documentation links within `.agents/skills/pnfmt/`.
 
 # Commits and quality gates
 
