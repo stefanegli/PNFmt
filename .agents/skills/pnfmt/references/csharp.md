@@ -1,6 +1,6 @@
 # C# formatting
 
-Use this reference when configuring or troubleshooting the `csharp` formatter. The repository's [C# documentation](../../../../docs/formatters/csharp.md) provides examples and detailed ordering rules.
+Use this reference when configuring or troubleshooting the `csharp` formatter. Shared activation, encoding, final-newline rules, and CLI behavior are in [SKILL.md](../SKILL.md).
 
 ## Layout and scope
 
@@ -48,6 +48,20 @@ pnfmt_csharp_sort_members_by_name = true
 ```
 
 Lists accept case-insensitive comma-separated names. Omitted kinds/accessibilities stay in place and split runs; empty, duplicate, or unsupported entries disable member sorting. Missing or `unset` uses defaults. Accessibility `none` ignores that key; name sorting `false` retains source order within a group. Equal keys preserve overload order.
+
+Omitted access modifiers use the C# default: private in classes, structs, and records; public in interfaces. Finalizers rank as protected. Accessor visibility does not change a property's rank. Static and instance members are not separated. Explicit interface implementations sort by qualified name, operators by token, and conversions by `implicit`/`explicit`.
+
+For example, sort only methods, put private methods first, and retain source order within each accessibility:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_csharp_sort_members = true
+pnfmt_csharp_member_order = method
+pnfmt_csharp_member_accessibility_order = private,private_protected,protected,protected_internal,internal,public
+pnfmt_csharp_sort_members_by_name = false
+```
 
 Import sorting retains scope and comment/directive barriers. Member sorting keeps nonconstant storage declarations, auto/initialized/`field` properties, record properties, ordinary comment headers, directives, exclusions, recognized module initializers, and unsupported syntax in place. Attributed interfaces retain member order. XML documentation and attributes travel with movable declarations. Top-level types, statements, local functions, enum values, and accessors are not sorted. This syntax-only transformation cannot resolve aliases of special attributes or account for reflection/source-generator dependencies; retain existing policy for such code.
 

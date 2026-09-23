@@ -7,6 +7,8 @@ description: Check, format, lint, or configure C#, SDK-style and non-SDK MSBuild
 
 Use PNFmt within the requested scope. Formatter selection through EditorConfig can enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
 
+This skill's usage guidance is self-contained in this folder. Keep the bundled `references/` directory with `SKILL.md` when copying or installing it; no repository documentation is required.
+
 ## Invocation
 
 In the PNFmt source repository, replace `pnfmt` in the commands below with:
@@ -44,7 +46,7 @@ Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching 
 
 Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup switches default off. Setting `pnfmt_format = false` allows independently enabled transformations and explicit encoding changes to proceed. C# wrapping, Microsoft blank-line preferences, headers, and XML/MSBuild attribute wrapping and arrangement require layout. The older `pnfmt_csharp_format`, `pnfmt_xml_format`, and `pnfmt_xaml_format` switches are layout fallbacks; `pnfmt_format` takes precedence.
 
-Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. Read the repository's [configuration contracts](../../../docs/configuration-contracts.md) when diagnosing legacy activation or precedence.
+Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. Read the bundled [configuration reference](references/configuration.md) when diagnosing activation, precedence, or legacy migration.
 
 Read only the guidance relevant to the selected formatter:
 
@@ -53,7 +55,9 @@ Read only the guidance relevant to the selected formatter:
 
 ## Encoding and final newlines
 
-All enabled formatters honor `charset`: `utf-8` (no BOM), `utf-8-bom`, `utf-16le`, `utf-16be` (both with BOM), or `latin1` (no BOM). Values are case-insensitive. Missing, invalid, or `unset` values retain formatter-specific encoding behavior. Charset alone never activates processing; it can change encoding with layout disabled, and preview modes detect those changes without writing. For XML-based files, explicit charset updates the encoding declaration. Encoding errors leave the input untouched rather than replacing characters. See [encoding details](../../../README.md#file-encoding).
+All enabled formatters honor `charset`: `utf-8` (no BOM), `utf-8-bom`, `utf-16le`, `utf-16be` (both with BOM), or `latin1` (no BOM). Values are case-insensitive. Missing, invalid, or `unset` values retain formatter-specific encoding behavior. Charset alone never activates processing; it can change encoding with layout disabled, and preview modes detect those changes without writing. For XML-based files, explicit charset updates the encoding declaration, adding one when required for non-UTF-8 output. Encoding errors leave the input untouched rather than replacing characters.
+
+Input BOMs and XML declarations identify the original encoding. BOM-less XML without an encoding declaration is read as UTF-8. Other BOM-less text is read as UTF-8, or as Latin-1 when `charset = latin1`.
 
 With layout enabled, `insert_final_newline` differs by formatter:
 
@@ -86,6 +90,12 @@ Migration adds current names with legacy values in the same sections. Removal is
 
 ## Completion
 
-After formatting, verify with `--check` on the same paths, recursion, and selection options. Review the diff and report changes and diagnostics. For changes to PNFmt itself, follow `AGENTS.md` for documentation maintenance, commits, and applicable quality gates.
+After formatting, verify with `--check` on the same paths, recursion, and selection options. Review the diff and report changes and diagnostics.
 
-The publish script also runs [performance comparisons](../../../docs/performance.md), including in `-PackOnly` mode. `-TimingPolicy Enforce` is the default and gates timing and managed allocations against the pinned revision using the same harness and machine. Hosted workflows explicitly use `ReportOnly`: timing regressions become warnings, but allocations, correctness, report validity, and output stability still fail the gate. Before pushing a release tag, run complete local validation on the designated controlled machine, VELA, with default timing enforcement and no skip switches. Hosted results do not replace this local timing approval. Inspect the per-case report on failure; do not widen tolerances or silently advance the baseline. An intentional feature cost needs before/after measurements and a documented baseline update.
+For changes to PNFmt itself, keep this skill and its bundled references aligned with user-facing behavior. Format with the repository script described above, review the diff, and commit completed work in coherent increments after relevant checks. Before finishing source changes, run the Release tests, coverage, performance, packaging, and installed-tool gates without publishing:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+```
+
+Keep the validation version short for Windows native-library paths and leave all skip switches off. Fix gate failures without lowering coverage thresholds. The publish script runs performance comparisons even in `-PackOnly` mode. `-TimingPolicy Enforce` is the default and gates timing and managed allocations against the pinned revision using the same harness and machine. Hosted workflows explicitly use `ReportOnly`: timing regressions become warnings, but allocations, correctness, report validity, and output stability still fail the gate. Before pushing a release tag, run complete local validation on the designated controlled machine, VELA, with default timing enforcement and no skip switches. Hosted results do not replace this local timing approval. Inspect the per-case report on failure; do not widen tolerances or silently advance the baseline. An intentional feature cost needs before/after measurements and a documented baseline update in a separate commit.

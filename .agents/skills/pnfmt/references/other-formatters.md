@@ -13,7 +13,14 @@ Both SDK-style and non-SDK documents with a `Project` root are supported, includ
 
 Imports, targets, tasks, and groups nested in targets or `Choose` retain order. Forward references, conditions, property functions, nested expansions, item/metadata references, and ambiguous `Include` expressions can block sorting. Preserve sorting disabled when custom tasks depend on item order, even without visible dependencies. `--lint` reports project-structure diagnostics without writing; `CSPROJ005` for implicit default items applies only to .NET SDK projects.
 
-Read [project documentation](../../../../docs/formatters/csproj.md) for sorting boundaries and non-SDK examples.
+To enable layout without sorting for imported or non-SDK MSBuild files:
+
+```ini
+[*.{props,targets,proj}]
+pnfmt_enabled = true
+pnfmt_formatter = csproj
+pnfmt_sort_entries = false
+```
 
 ## Attribute wrapping (`xml`, `xaml`, `csproj`)
 
@@ -27,7 +34,7 @@ These formatters share opt-in layout options using JetBrains XML names. They do 
 
 The XML declaration can wrap with one continuation indent; ordinary processing-instruction data stays untouched. Tag style/alignment settings do not apply to the declaration. The pass preserves attribute order, names, quotes, values, entities, spacing around `=`, and closing-delimiter whitespace. Text/CDATA/whitespace-only leaf subtrees, `xml:space` subtrees, and XAML text containers remain protected. Unknown XAML tags outside protected subtrees can wrap attributes without changing child layout. Width is a target, so long indivisible values can exceed it.
 
-MSBuild serialization and enabled sorting run first; `do_not_touch` does not preserve source layout already normalized by that serializer. Explicit charset declaration changes happen before wrapping so the first result is stable. Projects with DTDs skip wrapping while retaining existing project formatting behavior. See [wrapping examples and details](../../../../docs/formatters/xml-wrapping.md).
+MSBuild serialization and enabled sorting run first; `do_not_touch` does not preserve source layout already normalized by that serializer. Explicit charset declaration changes happen before wrapping so the first result is stable. Projects with DTDs skip wrapping while retaining existing project formatting behavior.
 
 ## Resources (`resx`)
 
@@ -44,7 +51,7 @@ All transformations default off in explicit configurations and work independentl
 
 Without explicit supported charset, serialization follows the declared encoding or defaults to UTF-8 with a BOM. In the legacy activation path, files without layout/charset settings are rewritten only for resource transformations, and missing schema/documentation can be inserted when removal is off. Do not assume those legacy insertion defaults apply to explicit configurations.
 
-Non-RESX XML or unnamed entries are skipped with `RESX001`, failing `--lint`; malformed XML is an execution error (`2`). See [resource documentation](../../../../docs/formatters/resx.md).
+Non-RESX XML or unnamed entries are skipped with `RESX001`, failing `--lint`; malformed XML is an execution error (`2`).
 
 ## INI and EditorConfig (`ini`)
 
@@ -55,17 +62,17 @@ Layout normalizes assignments to `key = value` and collapses repeated blank line
 - `pnfmt_ini_merge_groups = true`: in `.editorconfig`, merge only adjacent sections whose headers match exactly, including case. In `.ini`, merge all same-named sections ignoring case. Contents retain occurrence order.
 - `pnfmt_ini_sort_groups = true`: in `.ini`, sort named sections ordinally ignoring case, keeping the preamble first. `.editorconfig` section order is always retained to preserve glob precedence.
 
-An `.editorconfig` containing `root = true` needs its own matching `[*.editorconfig]` section because it cannot inherit policy. Duplicate property order, including `unset`, is preserved during sorting/grouping. Generated configuration disables section sorting and merging for both file types. General INI consumers differ in repeated-section semantics; retain the task's existing policy. See [configuration formatter documentation](../../../../docs/formatters/ini.md).
+An `.editorconfig` containing `root = true` needs its own matching `[*.editorconfig]` section because it cannot inherit policy. Duplicate property order, including `unset`, is preserved during sorting/grouping. Generated configuration disables section sorting and merging for both file types. General INI consumers differ in repeated-section semantics; retain the task's existing policy.
 
 ## Response files (`rsp`)
 
 `pnfmt_sort_entries = true` sorts nonempty physical lines ordinally ignoring case, with an ordinal tie-breaker. It does not tokenize/rearrange arguments within a line. Blank lines do not split sortable content; a line whose first non-whitespace character is `#` is a fixed barrier. `pnfmt_format = false` sorts without normalizing whitespace/final newlines.
 
-Later compiler arguments may override earlier ones. Enable sorting only when line order is safe; comment barriers keep order-sensitive blocks separate. See [response-file documentation](../../../../docs/formatters/rsp.md).
+Later compiler arguments may override earlier ones. Enable sorting only when line order is safe; comment barriers keep order-sensitive blocks separate.
 
 ## Solutions (`slnx`)
 
-Layout uses two-space indentation independently of `pnfmt_sort_entries`, which orders recognized solution elements. Unknown extension elements are fixed barriers and their subtrees retain character data, whitespace-only values, and carriage-return character references. Containers with character data or inherited `xml:space="preserve"` retain their entire subtree, including order. `pnfmt_format = false` permits sorting without re-indenting. See [solution documentation](../../../../docs/formatters/slnx.md).
+Layout uses two-space indentation independently of `pnfmt_sort_entries`, which orders recognized solution elements. Unknown extension elements are fixed barriers and their subtrees retain character data, whitespace-only values, and carriage-return character references. Containers with character data or inherited `xml:space="preserve"` retain their entire subtree, including order. `pnfmt_format = false` permits sorting without re-indenting.
 
 ## XML and XAML (`xml`, `xaml`)
 
@@ -75,4 +82,4 @@ Text/CDATA-containing elements preserve their entire subtree, including mixed co
 
 XAML additionally protects text-oriented types such as `TextBlock`, `Run`, `Span`, and `FlowDocument`, and `.Inlines` property elements. Only recognized WPF/WinUI, Avalonia, and MAUI structural containers get child indentation. Unknown/custom/namespace-free elements retain their own whitespace; known descendants can still format outside protected subtrees. Bindings and markup extensions remain intact; runtime type/resource resolution is not validated.
 
-Without explicit supported charset, UTF-8 and BOM-marked UTF-16/UTF-32 encodings and the declaration are preserved. Malformed XML, DTDs, and nesting beyond 256 levels are skipped with `XML001` or `XAML001`; external entities/schemas are never loaded. These diagnostics fail `--lint` but do not alone fail `--check`. Read [XML/XAML documentation](../../../../docs/formatters/xml-xaml.md) for preservation boundaries and layout limits.
+Without explicit supported charset, UTF-8 and BOM-marked UTF-16/UTF-32 encodings and the declaration are preserved. Malformed XML, DTDs, and nesting beyond 256 levels are skipped with `XML001` or `XAML001`; external entities/schemas are never loaded. These diagnostics fail `--lint` but do not alone fail `--check`.

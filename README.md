@@ -153,6 +153,10 @@ PNFmt reads optional tool settings from `.pnfmt` at each target's Git repository
 
 ## Contributing
 
+The optional [PNFmt skill](.agents/skills/pnfmt/SKILL.md) includes its own usage and
+configuration references. Copy the entire `.agents/skills/pnfmt/` folder when
+installing it elsewhere; the skill does not require this repository's documentation.
+
 See the [formatter architecture](docs/architecture.md) for module responsibilities and verification.
 
 Run `./scripts/Format-Repository.cmd` on Windows, or `./scripts/Format-Repository.ps1` in PowerShell 7, to format the repository with PNFmt. Add `-Check` to verify without writing. The command includes C# test code but excludes fixture data (`_files`, `_editor`), expected snapshots (`Snapshots/`), and build output. Use this command for repository-wide formatting: fixture `.editorconfig` files deliberately enable transformations and can override exclusions during a direct recursive PNFmt run.
