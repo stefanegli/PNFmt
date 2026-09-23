@@ -25,17 +25,14 @@ changing them. Do not regenerate expected snapshots to accommodate formatting.
 
 # Skill and documentation maintenance
 
-Keep `.agents/skills/pnfmt/SKILL.md`, its supporting references, `README.md`, and
-the relevant `docs/` pages aligned with the implementation. When changing a
-formatter feature, CLI option, configuration setting, default, diagnostic, or
-compatibility behavior, update the affected skill guidance and documentation in
-the same coherent increment. Include activation requirements, defaults, supported
-values, and preservation limits where they affect usage. Verify examples and
-links, and distinguish defaults for omitted settings from generated configuration.
-Do not consider a user-facing feature complete while its guidance is stale.
-
-Keep the PNFmt skill self-contained: bundle required guidance and keep all
-documentation links within `.agents/skills/pnfmt/`.
+Keep the PNFmt skill (`.agents/skills/pnfmt/SKILL.md` and its supporting references)
+self-contained: bundle required guidance and keep all its documentation links
+within `.agents/skills/pnfmt/`. When formatter features, CLI options, configuration,
+defaults, diagnostics, or compatibility behavior change, update this skill,
+`README.md`, and relevant `docs/` pages in the same change. Include activation
+requirements, supported values, and preservation limits; distinguish defaults for
+omitted settings from generated configuration. Verify examples and links before
+considering the change complete.
 
 # Commits and quality gates
 
