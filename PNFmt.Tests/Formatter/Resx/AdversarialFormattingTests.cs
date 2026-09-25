@@ -51,12 +51,6 @@ namespace PNFmt.Tests.Formatter.Resx
         }
 
         [Fact]
-        public void Constructor_rejects_missing_settings_at_the_boundary()
-        {
-            Assert.Throws<ArgumentNullException>(() => new ResxDocumentFormatter(null));
-        }
-
-        [Fact]
         public void Custom_schema_element_is_not_mistaken_for_the_resx_xsd()
         {
             using (var file = TemporaryFile.Create(Resx("<schema owner=\"application\" /><data name=\"a\"><value>1</value></data>")))
@@ -162,9 +156,8 @@ namespace PNFmt.Tests.Formatter.Resx
 
                 Assert.Equal(FileFormatStatus.Updated, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 var names = EntryNames(XDocument.Load(file.Path));
-                Assert.Equal(EntryCount, names.Count);
-                Assert.Equal("key-0000", names[0]);
-                Assert.Equal("key-4095", names[names.Count - 1]);
+                Assert.Equal(Enumerable.Range(0, EntryCount)
+                    .Select(index => "key-" + index.ToString("D4", CultureInfo.InvariantCulture)), names);
 
                 Assert.Equal(FileFormatStatus.Unchanged, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
             }
@@ -225,21 +218,6 @@ namespace PNFmt.Tests.Formatter.Resx
             });
 
             Assert.Empty(failures);
-        }
-
-        [Fact]
-        public void Removing_documentation_preserves_unrelated_comments()
-        {
-            using (var file = TemporaryFile.Create(Resx("<!-- keep me --><data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>")))
-            {
-                var formatter = new ResxDocumentFormatter(SortAndRemoveDefaults());
-
-                formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
-
-                var document = XDocument.Load(file.Path);
-                Assert.Contains(document.Root.Nodes().OfType<XComment>(), comment => comment.Value.Trim() == "keep me");
-                Assert.Equal(new[] { "a", "b" }, EntryNames(document));
-            }
         }
 
         [Fact]

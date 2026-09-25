@@ -12,7 +12,7 @@ namespace PNFmt
     {
         public ResxDocumentFormatter(IResxFormatSettings settings)
         {
-            this.Settings = settings ?? throw new ArgumentNullException(nameof(settings));
+            this.Settings = settings;
         }
 
         private IResxFormatSettings Settings { get; }

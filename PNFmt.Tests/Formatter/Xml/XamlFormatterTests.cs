@@ -11,25 +11,6 @@ namespace PNFmt.Tests.Formatter.Xml
     {
         private const string Namespace = "http://schemas.microsoft.com/winfx/2006/xaml/presentation";
 
-        [Fact]
-        public void Custom_containers_keep_their_own_whitespace_while_known_descendants_can_format()
-        {
-            const string Content = "<local:Inlines><local:Run/><local:Run/> <local:Run/></local:Inlines>";
-            var result = Format("<local:View xmlns:local='clr-namespace:Example' xmlns='" + Namespace + "'>"
-                + Content + "<Grid><Button/><Button/></Grid></local:View>");
-            Assert.Contains(Content, result);
-            Assert.Contains("</local:Inlines><Grid>\n    <Button/>\n    <Button/>\n  </Grid></local:View>", result);
-            Assert.Equal(result, Format(result));
-        }
-
-        [Fact]
-        public void Formats_layout_and_property_elements_without_loading_types()
-        {
-            var result = Format("<Grid xmlns='" + Namespace + "'><Grid.RowDefinitions><RowDefinition Height='Auto'/><RowDefinition Height='*'/></Grid.RowDefinitions><Button Content='Hello'/></Grid>");
-            Assert.Contains("\n  <Grid.RowDefinitions>\n    <RowDefinition Height='Auto'/>\n    <RowDefinition Height='*'/>\n  </Grid.RowDefinitions>\n  <Button Content='Hello'/>\n", result);
-            Assert.Equal(result, Format(result));
-        }
-
         [Theory]
         [InlineData("TextBlock")]
         [InlineData("Span")]

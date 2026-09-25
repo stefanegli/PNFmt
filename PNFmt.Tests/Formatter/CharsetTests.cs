@@ -266,8 +266,15 @@ namespace PNFmt.Tests.Formatter
                 foreach (var write in new[] { false, true })
                 {
                     var exception = Record.Exception(() => file.Run(write));
-                    Assert.True(exception is DecoderFallbackException || exception is System.Xml.XmlException,
-                        "Expected an encoding error, got: " + exception);
+                    if (IsXml(extension))
+                    {
+                        Assert.True(exception is DecoderFallbackException || exception is System.Xml.XmlException,
+                            "Expected an encoding error, got: " + exception);
+                    }
+                    else
+                    {
+                        Assert.IsType<DecoderFallbackException>(exception);
+                    }
                     Assert.Equal(invalid, File.ReadAllBytes(file.Path));
                 }
             }

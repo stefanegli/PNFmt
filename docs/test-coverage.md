@@ -11,6 +11,9 @@ CLI entry-point tests run in a collection that does not overlap other tests beca
 they temporarily change the process-wide current directory and console streams.
 Other test collections retain their normal parallel execution.
 
+The [2026-09-25 formatter test audit](test-audit.md) records the complete xUnit
+inventory, test ownership decisions, assertion repairs and preservation checks.
+
 ## Run locally
 
 From the repository root on Windows:

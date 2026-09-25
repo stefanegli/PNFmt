@@ -75,7 +75,8 @@ namespace PNFmt.Tests.Formatter.CSharp
             const string Input = "using Z;\nusing A;\nusing A;\nclass C\n{\nstatic int Z = 1;\nstatic int A = Z + 1;\n}\n";
             var result = Format(Input);
             Assert.Equal(new[] { "A", "A", "Z" }, Imports(result));
-            Assert.True(result.IndexOf("int Z") < result.IndexOf("int A"));
+            Assert.Equal(new[] { "Z", "A" }, CSharpSyntaxTree.ParseText(result).GetRoot().DescendantNodes()
+                .OfType<VariableDeclaratorSyntax>().Select(variable => variable.Identifier.ValueText));
         }
 
         [Fact]

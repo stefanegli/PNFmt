@@ -7,6 +7,7 @@ using System.Linq;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using Xunit;
 
@@ -212,7 +213,8 @@ namespace PNFmt.Tests.Formatter.CSharp
             Assert.StartsWith("using A;\nusing Z;\n", result);
             Assert.DoesNotContain("#region", result);
             Assert.Contains("Execute(\n", result);
-            Assert.True(result.IndexOf("void A", StringComparison.Ordinal) < result.IndexOf("void Z", StringComparison.Ordinal));
+            Assert.Equal(new[] { "A", "Z" }, CSharpSyntaxTree.ParseText(result).GetRoot().DescendantNodes()
+                .OfType<MethodDeclarationSyntax>().Select(method => method.Identifier.ValueText).Where(name => name == "A" || name == "Z"));
             Assert.Equal(result, CSharpFormatterTests.Format(result, options));
         }
 

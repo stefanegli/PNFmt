@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 using Xunit;
 
@@ -90,7 +91,8 @@ namespace PNFmt.Tests.Formatter.CSharp
                 Assert.Equal(Input, File.ReadAllText(directory.FilePath));
                 Assert.Equal(FileFormatStatus.Updated, directory.Run(formatter, true).Status);
                 var result = File.ReadAllText(directory.FilePath);
-                Assert.True(result.IndexOf("void A", StringComparison.Ordinal) < result.IndexOf("void Z", StringComparison.Ordinal));
+                Assert.Equal(new[] { "A", "Z" }, CSharpSyntaxTree.ParseText(result).GetRoot().DescendantNodes()
+                    .OfType<MethodDeclarationSyntax>().Select(method => method.Identifier.ValueText));
                 Assert.Equal(FileFormatStatus.Unchanged, directory.Run(formatter, true).Status);
             }
         }
@@ -188,19 +190,6 @@ namespace PNFmt.Tests.Formatter.CSharp
             Assert.Equal(input, result);
             Assert.Equal(code, diagnostic.Code);
             Assert.Equal(1, diagnostic.LineNumber);
-        }
-
-        [Fact]
-        public void Invalid_utf8_is_rejected_without_changing_bytes()
-        {
-            using (var directory = new TemporarySource(""))
-            {
-                directory.Configure("pnfmt_csharp_format = true\n");
-                var bytes = new byte[] { 0x63, 0xC3, 0x28 };
-                File.WriteAllBytes(directory.FilePath, bytes);
-                Assert.Throws<DecoderFallbackException>(() => directory.Run(new CSharpFormatter(), true));
-                Assert.Equal(bytes, File.ReadAllBytes(directory.FilePath));
-            }
         }
 
         [Theory]

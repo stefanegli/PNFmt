@@ -4,11 +4,6 @@ namespace PNFmt
 {
     internal sealed class IniEditorConfigSettings
     {
-        public IniEditorConfigSettings(string targetFile, IFormatterLog log)
-            : this(FileFormattingConfiguration.Load(targetFile, log))
-        {
-        }
-
         internal IniEditorConfigSettings(FileFormattingConfiguration configuration)
         {
             var settings = configuration.Properties;

@@ -76,7 +76,9 @@ namespace PNFmt.Tests
                 var withBom = File.ReadAllBytes(path);
 
                 Assert.Equal(1, Run("--all", "--check", path).ExitCode);
-                Assert.Equal(0, Run("--all", "--dry-run", path).ExitCode);
+                var preview = Run("--all", "--dry-run", path);
+                Assert.Equal(0, preview.ExitCode);
+                Assert.Contains("Would update 1", preview.Output);
                 Assert.Equal(withBom, File.ReadAllBytes(path));
                 Assert.Equal(0, Run("--all", path).ExitCode);
                 Assert.Equal(formatted, File.ReadAllBytes(path));
@@ -362,23 +364,6 @@ namespace PNFmt.Tests
         }
 
         [Fact]
-        public void Dry_run_succeeds_without_writing()
-        {
-            using (var directory = new TemporaryDirectory())
-            {
-                directory.EnableFormatting();
-                var file = directory.WriteResx("dry.resx", "b", "a");
-                var original = File.ReadAllText(file);
-
-                var result = Run("--dry-run", file);
-
-                Assert.Equal(0, result.ExitCode);
-                Assert.Equal(original, File.ReadAllText(file));
-                Assert.Contains("Would update 1", result.Output);
-            }
-        }
-
-        [Fact]
         public void Duplicate_targets_are_processed_once()
         {
             using (var directory = new TemporaryDirectory())
@@ -473,9 +458,8 @@ namespace PNFmt.Tests
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Processed 1 file(s)", result.Output);
                 Assert.Contains("Updated 1", result.Output);
-                Assert.True(
-                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
-                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(new[] { "Alpha", "Zeta" }, XDocument.Load(project).Root
+                    .Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
                 Assert.Equal(originalResource, File.ReadAllText(resource));
             }
         }
@@ -498,9 +482,8 @@ namespace PNFmt.Tests
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Processed 1 file(s)", result.Output);
                 Assert.Contains("Updated 1", result.Output);
-                Assert.True(
-                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
-                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(new[] { "Alpha", "Zeta" }, XDocument.Load(project).Root
+                    .Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
                 Assert.Equal(originalResource, File.ReadAllText(resource));
             }
         }
@@ -688,48 +671,32 @@ namespace PNFmt.Tests
         }
 
         [Theory]
-        [InlineData("[]", "root value")]
         [InlineData("{\"maxCpuCount\":0}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":-1}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":1.5}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":2147483648}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":\"4\"}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":true}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":false}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":null}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":[]}", "positive integer")]
+        [InlineData("{\"maxCpuCount\":{}}", "positive integer")]
+        [InlineData("[]", "root value")]
         [InlineData("{\"threads\":4}", "Unknown setting")]
         [InlineData("not-json", "Unable to read")]
-        public void Invalid_repository_configuration_is_rejected(
-            string contents,
-            string expectedMessage)
-        {
-            using (var directory = new TemporaryDirectory())
-            {
-                directory.Write(".pnfmt", contents);
-
-                var exception = Assert.Throws<PNFmtConfigurationException>(
-                    () => PNFmtConfiguration.Load(directory.Path));
-
-                Assert.Contains(expectedMessage, exception.Message);
-            }
-        }
-
-        [Theory]
-        [InlineData("0")]
-        [InlineData("-1")]
-        [InlineData("1.5")]
-        [InlineData("2147483648")]
-        [InlineData("\"4\"")]
-        [InlineData("true")]
-        [InlineData("false")]
-        [InlineData("null")]
-        [InlineData("[]")]
-        [InlineData("{}")]
-        public void Invalid_repository_configuration_is_reported_by_the_command(string value)
+        public void Invalid_repository_configuration_is_reported_by_the_command(string contents, string expectedMessage)
         {
             using (var directory = new TemporaryDirectory())
             {
                 Repository.Init(directory.Path);
-                directory.Write(".pnfmt", "{\"maxCpuCount\":" + value + "}");
+                directory.Write(".pnfmt", contents);
 
                 var result = RunInDirectory(directory.Path);
 
                 Assert.Equal(2, result.ExitCode);
-                Assert.Contains("Invalid PNFmt configuration", result.Error);
-                Assert.Contains("positive integer", result.Error);
+                Assert.Contains(contents == "not-json" ? "Unable to read PNFmt configuration" : "Invalid PNFmt configuration", result.Error);
+                Assert.Contains(expectedMessage, result.Error);
+                Assert.Contains(Path.Combine(directory.Path, ".pnfmt"), result.Error);
             }
         }
 
@@ -791,12 +758,10 @@ namespace PNFmt.Tests
                     "<Project Sdk=\"Microsoft.NET.Sdk\"><PropertyGroup>"
                     + "<Zeta>z</Zeta><Alpha>a</Alpha></PropertyGroup></Project>");
                 var result = Run(project);
-                var formatted = File.ReadAllText(project);
 
                 Assert.Equal(0, result.ExitCode);
-                Assert.True(
-                    formatted.IndexOf("<Zeta>", StringComparison.Ordinal)
-                    < formatted.IndexOf("<Alpha>", StringComparison.Ordinal));
+                Assert.Equal(new[] { "Zeta", "Alpha" }, XDocument.Load(project).Root
+                    .Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
                 Assert.Contains("warning PNFMT001", result.Error);
                 Assert.Contains("csproj_formatter_sort_entries", result.Error);
                 Assert.Contains("pnfmt_sort_entries", result.Error);
@@ -932,9 +897,7 @@ namespace PNFmt.Tests
                 Assert.Equal(0, formatResult.ExitCode);
                 Assert.Contains("Updated 2", formatResult.Output);
                 Assert.Contains("<Alpha>a</Alpha>", File.ReadAllText(projectPath));
-                Assert.True(
-                    File.ReadAllText(resourcePath).IndexOf("name=\"a\"", StringComparison.Ordinal)
-                    < File.ReadAllText(resourcePath).IndexOf("name=\"b\"", StringComparison.Ordinal));
+                Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(resourcePath));
 
                 var secondCheckResult = Run("--check", projectPath, resourcePath);
 
@@ -986,7 +949,7 @@ namespace PNFmt.Tests
         }
 
         [Fact]
-        public void Recursive_directory_processing_uses_all_registered_extensions()
+        public void Recursive_directory_processing_formats_multiple_file_types()
         {
             using (var directory = new TemporaryDirectory())
             {
@@ -1017,13 +980,11 @@ namespace PNFmt.Tests
                 Assert.Equal(0, result.ExitCode);
                 Assert.Contains("Processed 6", result.Output);
                 Assert.Contains("Updated 5", result.Output);
-                Assert.True(
-                    File.ReadAllText(project).IndexOf("<Alpha>", StringComparison.Ordinal)
-                    < File.ReadAllText(project).IndexOf("<Zeta>", StringComparison.Ordinal));
+                Assert.Equal(new[] { "Alpha", "Zeta" }, XDocument.Load(project).Root
+                    .Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
                 Assert.Equal(new[] { "a", "b" }, TemporaryDirectory.ReadNames(resource));
-                Assert.True(
-                    File.ReadAllText(solution).IndexOf("A.csproj", StringComparison.Ordinal)
-                    < File.ReadAllText(solution).IndexOf("Z.csproj", StringComparison.Ordinal));
+                Assert.Equal(new[] { "A.csproj", "Z.csproj" }, XDocument.Load(solution).Root
+                    .Elements("Project").Select(element => (string)element.Attribute("Path")));
                 Assert.Equal("a = 1\r\nz = 2\r\n", File.ReadAllText(ini));
                 Assert.Equal("alpha.cs\r\nzeta.cs\r\n", File.ReadAllText(response));
             }

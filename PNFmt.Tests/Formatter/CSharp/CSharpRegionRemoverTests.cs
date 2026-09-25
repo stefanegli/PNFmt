@@ -95,7 +95,6 @@ namespace PNFmt.Tests.Formatter.CSharp
         [InlineData("// pnfmt: off\n#region Keep\nclass C { }\n#endregion\n// pnfmt: on\n")]
         public void Preserves_both_directives_when_either_is_excluded(string input)
         {
-            Assert.Equal(input, Remove(input));
             Assert.Equal(input, Format(input));
         }
 

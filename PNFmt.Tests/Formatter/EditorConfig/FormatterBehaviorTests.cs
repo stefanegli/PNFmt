@@ -99,6 +99,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             Assert.Null(result.Error);
             Assert.Equal(FileFormatStatus.Updated, result.Result.Status);
+            Assert.Contains(first, formatted);
+            Assert.Contains(second, formatted);
             Assert.True(formatted.IndexOf(first, StringComparison.Ordinal) < formatted.IndexOf(second, StringComparison.Ordinal));
             Assert.Equal(FileFormatStatus.Unchanged, Run(path).Result.Status);
         }
@@ -194,6 +196,8 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             Assert.Null(result.Error);
             Assert.Equal(FileFormatStatus.Updated, result.Result.Status);
+            Assert.Contains(first, formatted);
+            Assert.Contains(second, formatted);
             Assert.True(formatted.IndexOf(first, StringComparison.Ordinal) < formatted.IndexOf(second, StringComparison.Ordinal));
             Assert.DoesNotContain("\n", formatted);
             Assert.Equal(FileFormatStatus.Unchanged, Run(path).Result.Status);

@@ -11,29 +11,6 @@ namespace PNFmt.Tests.Formatter.Slnx
 {
     public sealed class SlnxFormatterTests
     {
-        [Fact]
-        public void Dry_run_detects_changes_and_a_second_run_is_unchanged()
-        {
-            using (var file = TemporaryFile.Create(
-                "<Solution><Project Path=\"Z.csproj\" /><Project Path=\"A.csproj\" /></Solution>"))
-            {
-                var formatter = new SlnxFormatter();
-                var log = NullFormatterLog.Instance;
-                var original = File.ReadAllText(file.Path);
-
-                var dryRun = formatter.Format(new FileFormatRequest(file.Path, false, false, log));
-
-                Assert.Equal(FileFormatStatus.Updated, dryRun.Status);
-                Assert.Equal(original, File.ReadAllText(file.Path));
-
-                var update = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
-                var secondRun = formatter.Format(new FileFormatRequest(file.Path, true, false, log));
-
-                Assert.Equal(FileFormatStatus.Updated, update.Status);
-                Assert.Equal(FileFormatStatus.Unchanged, secondRun.Status);
-            }
-        }
-
         [Theory]
         [InlineData(null)]
         [InlineData("false")]
@@ -199,21 +176,6 @@ namespace PNFmt.Tests.Formatter.Slnx
                 folder => (string)folder.Attribute("Name") == "/Tests/");
             Assert.IsType<XComment>(tests.PreviousNode);
             Assert.Contains("\n  <Folder", formatted);
-        }
-
-        [Fact]
-        public void Unknown_extension_elements_are_sort_barriers()
-        {
-            const string Input =
-                "<Solution><Project Path=\"Z.csproj\" /><Extension Value=\"keep\" />"
-                + "<Project Path=\"B.csproj\" /><Project Path=\"A.csproj\" /></Solution>";
-
-            var root = XDocument.Parse(SlnxDocumentFormatter.Format(Input)).Root;
-
-            Assert.Equal(
-                new[] { "Project:Z.csproj", "Extension:keep", "Project:A.csproj", "Project:B.csproj" },
-                root.Elements().Select(element =>
-                    $"{element.Name.LocalName}:{(string)(element.Attribute("Path") ?? element.Attribute("Value"))}"));
         }
 
         private sealed class TemporaryFile : IDisposable

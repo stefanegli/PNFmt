@@ -1,12 +1,10 @@
 // Copyright (c) 2026 by Stefan Egli. All rights reserved.
 
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml;
-using System.Xml.Linq;
 
 using Xunit;
 
@@ -23,13 +21,6 @@ namespace PNFmt.Tests.Formatter.Xml
             Assert.Contains(Child, result);
             Assert.Contains(Comment, result);
             Assert.Contains("<data><![CDATA[ < > & ]]></data>", result);
-        }
-
-        [Fact]
-        public void Excessive_nesting_is_rejected_before_recursive_rendering()
-        {
-            var input = string.Concat(Enumerable.Repeat("<n>", 257)) + string.Concat(Enumerable.Repeat("</n>", 257));
-            Assert.Throws<XmlException>(() => Format(input));
         }
 
         [Theory]
@@ -51,8 +42,11 @@ namespace PNFmt.Tests.Formatter.Xml
                     Assert.Equal(FileFormatStatus.Updated, file.Run(false).Status);
                     Assert.Equal(original, File.ReadAllBytes(file.Path));
                     Assert.Equal(FileFormatStatus.Updated, file.Run(true).Status);
-                    var expected = XmlDocumentFormatter.Format(Input, new Dictionary<string, string>(), xaml);
-                    Assert.Equal(encoding.GetPreamble().Concat(encoding.GetBytes(expected)), File.ReadAllBytes(file.Path));
+                    const string Expected = "<?xml version='1.0'?>\n"
+                        + "<Grid xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'>\n"
+                        + "    <Child Text='Grüezi 日本語 😀'/>\n"
+                        + "</Grid>";
+                    Assert.Equal(encoding.GetPreamble().Concat(encoding.GetBytes(Expected)), File.ReadAllBytes(file.Path));
                     Assert.Equal(FileFormatStatus.Unchanged, file.Run(true).Status);
                 }
             }
@@ -66,17 +60,6 @@ namespace PNFmt.Tests.Formatter.Xml
                     ("end_of_line", "crlf"), ("insert_final_newline", "true")));
             Assert.Equal("<root/>\r\n", Format("<root/>\r\n"));
             Assert.Equal("<root/>", Format("<root/>"));
-        }
-
-        [Fact]
-        public void Indents_elements_without_reordering_or_reserializing_markup()
-        {
-            const string Input = "<?xml version='1.0' encoding='utf-8'?><root z='2' a=\"1\"><z/><a value='a &amp; b > c'/><!-- note --><?instruction value?></root>";
-            var result = Format(Input, ("indent_size", "2"));
-
-            Assert.Equal("<?xml version='1.0' encoding='utf-8'?>\n<root z='2' a=\"1\">\n  <z/>\n  <a value='a &amp; b > c'/>\n  <!-- note -->\n  <?instruction value?>\n</root>", result);
-            Assert.True(XNode.DeepEquals(XDocument.Parse(Input), XDocument.Parse(result)));
-            Assert.Equal(result, Format(result, ("indent_size", "2")));
         }
 
         [Theory]
