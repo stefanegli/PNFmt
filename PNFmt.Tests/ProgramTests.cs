@@ -743,16 +743,6 @@ namespace PNFmt.Tests
                 directory.EnableFormatting();
                 var path = directory.Write("Invalid.resx", input);
                 var original = File.ReadAllBytes(path);
-                var formatter = new ResxFormatter();
-                foreach (var write in new[] { false, true })
-                {
-                    var result = formatter.Format(new FileFormatRequest(path, write, false,
-                        NullFormatterLog.Instance));
-                    Assert.Equal(FileFormatStatus.Skipped, result.Status);
-                    Assert.Equal("RESX001", Assert.Single(result.Diagnostics).Code);
-                    Assert.Equal(original, File.ReadAllBytes(path));
-                }
-
                 foreach (var mode in new[] { "--check", "--dry-run", "--lint", "--all" })
                 {
                     var result = Run("--all", "--verbose", mode, path);

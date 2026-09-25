@@ -17,31 +17,6 @@ namespace PNFmt
 
         private IResxFormatSettings Settings { get; }
 
-        public static bool HasDocumentationComment(XDocument document)
-        {
-            if (document is null)
-            {
-                throw new ArgumentNullException(nameof(document));
-            }
-
-            var schema = RemoveWhiteSpace(ResxSchemaDefaults.OriginalComment);
-            return document.Root?.Nodes()
-                .OfType<XComment>()
-                .Any(comment => RemoveWhiteSpace(comment.ToString()) == schema) == true;
-
-            string RemoveWhiteSpace(string text) => string.Join("", text.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
-        }
-
-        public static bool HasSchemaNode(XDocument document)
-        {
-            if (document is null)
-            {
-                throw new ArgumentNullException(nameof(document));
-            }
-
-            return document.Root?.Elements().Any(IsXsdSchema) == true;
-        }
-
         public FileFormatResult Run(FileFormatRequest request, bool formatLayout = true, bool hasExplicitLayout = false)
         {
             return TextFileFormatPipeline.Format(request, true,
@@ -235,7 +210,8 @@ namespace PNFmt
             private bool InsertMissingMetadata(XDocument document)
             {
                 var changed = false;
-                if (this.settings.InsertDocumentationComment && !this.settings.RemoveDocumentationComment && !HasDocumentationComment(document))
+                if (this.settings.InsertDocumentationComment && !this.settings.RemoveDocumentationComment
+                    && !document.Root.Nodes().OfType<XComment>().Any(IsDocumentationComment))
                 {
                     // Match XML readers' normalized comment line endings so a second
                     // rewrite produces the same bytes.
@@ -244,7 +220,7 @@ namespace PNFmt
                     changed = true;
                 }
 
-                if (this.settings.InsertXsdSchema && !this.settings.RemoveXsdSchema && !HasSchemaNode(document))
+                if (this.settings.InsertXsdSchema && !this.settings.RemoveXsdSchema && !document.Root.Elements().Any(IsXsdSchema))
                 {
                     this.preserved.Insert(Math.Min(1, this.preserved.Count), XElement.Parse(ResxSchemaDefaults.OriginalSchema));
                     changed = true;

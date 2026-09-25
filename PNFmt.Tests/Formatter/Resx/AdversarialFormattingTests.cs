@@ -39,7 +39,6 @@ namespace PNFmt.Tests.Formatter.Resx
         {
             const string Schema = "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\"><xs:element name=\"custom\" /></xs:schema>";
             var document = XDocument.Parse(Resx(Schema + "<data name=\"a\"><value>1</value></data>"));
-            Assert.True(ResxDocumentFormatter.HasSchemaNode(document));
 
             using (var file = TemporaryFile.Create(document.ToString()))
             {
@@ -47,7 +46,7 @@ namespace PNFmt.Tests.Formatter.Resx
                 Assert.Equal(FileFormatStatus.Updated, formatter.Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance)).Status);
                 var formatted = XDocument.Load(file.Path);
                 Assert.NotNull(formatted.Root.Element("schema"));
-                Assert.False(ResxDocumentFormatter.HasSchemaNode(formatted));
+                Assert.Empty(formatted.Root.Elements(XName.Get("schema", "http://www.w3.org/2001/XMLSchema")));
             }
         }
 
@@ -70,13 +69,6 @@ namespace PNFmt.Tests.Formatter.Resx
         }
 
         [Fact]
-        public void Detection_helpers_reject_a_missing_document()
-        {
-            Assert.Throws<ArgumentNullException>(() => ResxDocumentFormatter.HasDocumentationComment(null));
-            Assert.Throws<ArgumentNullException>(() => ResxDocumentFormatter.HasSchemaNode(null));
-        }
-
-        [Fact]
         public void Documentation_is_found_and_removed_even_after_an_unrelated_comment()
         {
             var standard = XDocument.Load(Path.Combine(
@@ -87,14 +79,12 @@ namespace PNFmt.Tests.Formatter.Resx
                 "Sort.resx"));
             var documentation = standard.Root.Nodes().OfType<XComment>().First();
             var document = XDocument.Parse(Resx("<!-- keep me -->" + documentation + "<data name=\"a\"><value>1</value></data>"));
-            Assert.True(ResxDocumentFormatter.HasDocumentationComment(document));
 
             using (var file = TemporaryFile.Create(document.ToString()))
             {
                 new ResxDocumentFormatter(SortAndRemoveDefaults()).Run(new FileFormatRequest(file.Path, true, false, NullFormatterLog.Instance));
                 var formatted = XDocument.Load(file.Path);
 
-                Assert.False(ResxDocumentFormatter.HasDocumentationComment(formatted));
                 Assert.Single(formatted.Root.Nodes().OfType<XComment>());
                 Assert.Equal("keep me", formatted.Root.Nodes().OfType<XComment>().Single().Value.Trim());
             }

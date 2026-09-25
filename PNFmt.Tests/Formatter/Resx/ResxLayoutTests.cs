@@ -33,8 +33,9 @@ namespace PNFmt.Tests.Formatter.Resx
                 Assert.Equal(FileFormatStatus.Updated, Format(file, false).Status);
                 Assert.Equal(original, File.ReadAllBytes(file.Path));
                 Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-                Assert.True(ResxDocumentFormatter.HasDocumentationComment(XDocument.Load(file.Path)));
-                Assert.True(ResxDocumentFormatter.HasSchemaNode(XDocument.Load(file.Path)));
+                var root = XDocument.Load(file.Path).Root;
+                Assert.Contains("Microsoft ResX Schema", Assert.Single(root.Nodes().OfType<XComment>()).Value);
+                Assert.Single(root.Elements(XName.Get("schema", "http://www.w3.org/2001/XMLSchema")));
                 var formatted = File.ReadAllBytes(file.Path);
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
                 Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
