@@ -68,7 +68,7 @@ With layout enabled, `insert_final_newline` differs by formatter:
 | Resource | End with one newline. | Omit the final newline. |
 | INI, response, solution | End with one newline. | End with one newline. |
 
-Protected content can prevent whitespace changes. C#, project, resource, XML, and XAML honor explicit layout settings; INI, response, and solution use the detected line ending instead. Solution indentation is fixed at two spaces.
+Protected content can prevent whitespace changes. RESX layout normalizes physical line endings while preserving parsed values and explicit carriage-return references; see the [resource guidance](references/other-formatters.md#resources-resx). C#, project, resource, XML, and XAML honor explicit layout settings; INI, response, and solution use the detected line ending instead. Solution indentation is fixed at two spaces.
 
 ## Repository and generated configuration
 

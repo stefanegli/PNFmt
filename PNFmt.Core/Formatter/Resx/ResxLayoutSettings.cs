@@ -115,7 +115,18 @@ namespace PNFmt
                     stream.Write(newline, 0, newline.Length);
                 }
 
-                return stream.ToArray();
+                var bytes = stream.ToArray();
+                if (!formatLayout || this.NewLine == "\n")
+                {
+                    return bytes;
+                }
+
+                // Entitize has already protected significant carriage returns as XML
+                // character references. Normalize only physical line breaks so a Git
+                // checkout cannot reintroduce formatting changes inside multiline values.
+                var serialized = writerSettings.Encoding.GetString(bytes);
+                var normalized = serialized.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", this.NewLine);
+                return serialized == normalized ? bytes : writerSettings.Encoding.GetBytes(normalized);
             }
         }
     }

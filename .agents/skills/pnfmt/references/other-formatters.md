@@ -47,7 +47,7 @@ MSBuild serialization and enabled sorting run first; `do_not_touch` does not pre
 | `pnfmt_resx_insert_xsd_schema` | Insert missing schema when `true`. |
 | `pnfmt_resx_insert_documentation_comment` | Insert missing documentation when `true`. |
 
-All transformations default off in explicit configurations and work independently of layout. Removal wins over insertion for the same content. Standard XML layout settings apply; defaults are two-space indentation, platform newlines, and no final newline. Resource values retain their parsed XML text and significant whitespace.
+All transformations default off in explicit configurations and work independently of layout. Removal wins over insertion for the same content. Standard XML layout settings apply; defaults are two-space indentation, platform newlines, and no final newline. With layout enabled, the configured or platform line ending applies to physical line breaks throughout the serialized XML, including multiline values, metadata, comments, and CDATA. Parsed resource text and significant whitespace remain unchanged; explicit carriage returns such as `&#xD;` stay protected as character references. This makes output stable after a Git checkout using the same line-ending convention. `pnfmt_format = false` disables this physical line-ending normalization.
 
 Without explicit supported charset, serialization follows the declared encoding or defaults to UTF-8 with a BOM. In the legacy activation path, files without layout/charset settings are rewritten only for resource transformations, and missing schema/documentation can be inserted when removal is off. Do not assume those legacy insertion defaults apply to explicit configurations.
 

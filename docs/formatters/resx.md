@@ -38,7 +38,7 @@ Layout settings apply when `pnfmt_format` is on, including when entries are alre
 
 An explicit `charset` takes precedence over the XML declaration's encoding, and the declaration is updated to match. Without a supported charset, serialization uses the declared encoding or defaults to UTF-8 with a BOM. See [file encoding](../../README.md#file-encoding) for the shared rules.
 
-Line-ending settings control XML layout. Line breaks and significant whitespace inside resource values retain their parsed XML values.
+With layout enabled, `end_of_line` controls physical line endings throughout the serialized XML, including multiline resource values, metadata, comments, and CDATA. The platform line ending applies when the setting is omitted. Parsed resource values and significant whitespace remain unchanged: explicit carriage returns such as `&#xD;` stay protected as character references. This keeps formatting stable after a Git checkout using the same line-ending convention. With `pnfmt_format = false`, physical line endings are not normalized by this layout pass.
 
 Well-formed XML that is not a RESX resource document, or contains an unnamed data or metadata entry, is skipped without rewriting and reports `RESX001`. The diagnostic appears in all modes; `--lint` returns exit code 1. Malformed XML remains an execution error with exit code 2.
 
