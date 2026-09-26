@@ -60,9 +60,11 @@ do not lower coverage thresholds or bypass checks to make a change pass.
 VELA, the maintainer's local Windows machine, is the controlled timing environment.
 Run the complete validation above there before creating or pushing a release tag.
 Keep the default `-TimingPolicy Enforce` locally; do not use `ReportOnly` to approve
-a local release. Hosted Build and Publish workflows explicitly use
-`-TimingPolicy ReportOnly`: timings remain visible as warnings, while allocations,
-correctness, report validity, and output stability remain mandatory gates.
+a local release. Hosted Build uses `-TimingPolicy ReportOnly`: timings remain
+visible as warnings, while allocations, correctness, report validity, and output
+stability remain mandatory gates. Tag publication reuses the successful Build's
+validated package for the exact commit; do not create release branches or repeat
+validation in the tag workflow. Follow `docs/releases.md`.
 
 The performance comparison has no skip switch. Keep the pinned baseline and tolerances
 in `benchmarks/performance-baseline.json` reviewable. Investigate regressions;

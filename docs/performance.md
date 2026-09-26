@@ -9,7 +9,7 @@
 | Value | Behavior |
 | --- | --- |
 | `Enforce` (default) | Timing or allocation regressions fail the gate. Use for controlled local validation. |
-| `ReportOnly` | Timing regressions produce warnings and remain visible in the report; allocation regressions and invalid or unstable results still fail. Used explicitly by the hosted Build and Publish workflows. |
+| `ReportOnly` | Timing regressions produce warnings and remain visible in the report; allocation regressions and invalid or unstable results still fail. Used explicitly by the hosted Build workflow. Tag publication reuses that successful validation for the exact commit. |
 
 The policy is not inferred from environment variables or machine names. Both modes run all 67 cases with the same samples, pinned baseline, and tolerances. Hosted runners can experience changing CPU contention and I/O latency even when baseline and current code run on the same machine. Their timing results are advisory, not a release timing approval.
 
@@ -29,7 +29,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-Performance.p
 
 With PowerShell 7, including on Linux, use `./scripts/Test-Performance.ps1`. Allow several minutes and avoid other builds, tests, or CPU/disk-heavy work during measurement. A Git checkout with the pinned baseline commit available locally is required. CI checks out full history. The script never fetches or advances the baseline automatically.
 
-The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
+The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for performance comparisons and installed-package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
 
 During alpha.10 release validation, three Windows hosted-runner attempts using the system-volume temporary directory failed serial repository-write comparisons despite identical formatter/CLI source apart from the package version. In the first run, small-project writes measured 1,235 ms for the baseline and 2,556 ms for the current version; the baseline's final round also slowed to 2,778 ms. A second run passed that case at 1,159/1,161 ms but failed mixed-format writes at 1,190/2,675 ms, with the baseline's final round at 2,688 ms. Allocations remained effectively unchanged. These measurements motivated using the runner's scratch directory for both sides of the comparison, without accepting a formatter cost or changing the baseline.
 
@@ -71,7 +71,7 @@ Each invocation writes fresh files to `artifacts/performance/<run-id>/`:
 - Worker JSON reports: runtime metadata, sample arrays, iteration counts, and output fingerprints.
 - Build and worker logs, retained even when a command fails before comparison.
 
-CI adds the table to the GitHub Actions summary and uploads `performance-<os>` or `performance-release` artifacts, including on failure. Allocation regressions, invalid reports, and correctness or output-stability failures block publication; hosted timing warnings do not. The release workflow validates once in `-PackOnly -TimingPolicy ReportOnly` mode, then passes the returned package path to `dotnet nuget push` after authentication; it does not rebuild the package or repeat the gate. Direct publish-script invocations with skip switches still perform a fresh comparison and default to timing enforcement. Older reports cannot satisfy a new publish run.
+CI adds the table to the GitHub Actions summary and uploads `performance-<os>` artifacts, including on failure. Allocation regressions, invalid reports, and correctness or output-stability failures block publication; hosted timing warnings do not. Build creates a single versioned `release-package` artifact and runs all gates on Windows and Linux, including installing the same package on both systems. A release tag selects a successful default-branch Build for the exact tagged commit and publishes its retained package after verifying package identity, version, and source commit. It does not rebuild or repeat the gates. A different commit, a PR build, a failed or incomplete run, or a missing/expired package cannot satisfy publication. See [releasing PNFmt](releases.md) for recovery. Direct publish-script invocations with skip switches still perform a fresh comparison and default to timing enforcement.
 
 The separate standalone [full and quick benchmark runs](../benchmarks/README.md) remain useful for exploration and correctness smoke tests; they do not enforce timing limits. Gate comparison logic has deterministic regression checks:
 

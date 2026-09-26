@@ -3,7 +3,7 @@ name: Build
 on:
   push:
     branches:
-      - "**"
+      - master
   pull_request:
 
 permissions:
@@ -14,8 +14,55 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  package:
+    name: Build versioned package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.package.outputs.version }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Test release validation
+        shell: pwsh
+        run: |
+          node --test .github/scripts/select-release-build.test.cjs
+          if ($LASTEXITCODE -ne 0) { throw 'Release build selection tests failed.' }
+          ./scripts/Test-ReleasePackage.Tests.ps1
+
+      - name: Pack release candidate
+        id: package
+        shell: pwsh
+        run: |
+          $version = (dotnet msbuild PNFmt.Cli/PNFmt.Cli.csproj -getProperty:Version -nologo | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not read the package version.' }
+          dotnet pack PNFmt.Cli/PNFmt.Cli.csproj --configuration Release --output artifacts/release-package "-p:RepositoryCommit=$env:GITHUB_SHA"
+          if ($LASTEXITCODE -ne 0) { throw 'Package build failed.' }
+          ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $version -Commit $env:GITHUB_SHA
+          "version=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Upload release candidate
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-package
+          path: artifacts/release-package/*.nupkg
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
   build:
     name: Build, test, and validate package (${{ matrix.os }})
+    needs: package
+    # These are required checks: a failed package job must fail them, not skip them.
+    if: always()
     strategy:
       fail-fast: false
       matrix:
@@ -28,6 +75,11 @@ jobs:
       DOTNET_NOLOGO: "1"
 
     steps:
+      - name: Require package build to pass
+        if: needs.package.result != 'success'
+        shell: pwsh
+        run: throw 'The release candidate package job did not pass.'
+
       - name: Check out source
         uses: actions/checkout@v6
         with:
@@ -94,18 +146,30 @@ jobs:
       - name: Validate benchmark scenarios
         run: dotnet run --project benchmarks/PNFmt.Benchmarks.csproj --configuration Release --no-build -- --quick
 
-      - name: Pack and validate global tool
+      - name: Compare performance with pinned baseline
         shell: pwsh
         env:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
-        run: >
-          ./scripts/Publish-GlobalTool.ps1
-          -Version "0.0.0-ci.$env:GITHUB_RUN_NUMBER"
-          -Configuration Release
-          -TimingPolicy ReportOnly
-          -SkipTests
-          -PackOnly
+        run: |
+          ./scripts/Test-PerformanceReport.Tests.ps1
+          ./scripts/Test-Performance.ps1 -TimingPolicy ReportOnly
+
+      - name: Download release candidate
+        uses: actions/download-artifact@v8
+        with:
+          name: release-package
+          path: artifacts/release-package
+
+      - name: Validate installed package
+        shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ needs.package.outputs.version }}
+          TEMP: ${{ runner.temp }}
+          TMP: ${{ runner.temp }}
+        run: |
+          $package = ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:GITHUB_SHA
+          ./scripts/Test-ToolPackage.ps1 -PackagePath $package -Version $env:PACKAGE_VERSION
 
       - name: Upload performance reports
         if: always()
