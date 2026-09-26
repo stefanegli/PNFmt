@@ -11,7 +11,7 @@
 | `Enforce` (default) | Timing or allocation regressions fail the gate. Use for controlled local validation. |
 | `ReportOnly` | Timing regressions produce warnings and remain visible in the report; allocation regressions and invalid or unstable results still fail. Used explicitly by the hosted Build and Publish workflows. |
 
-The policy is not inferred from environment variables or machine names. Both modes run all 59 cases with the same samples, pinned baseline, and tolerances. Hosted runners can experience changing CPU contention and I/O latency even when baseline and current code run on the same machine. Their timing results are advisory, not a release timing approval.
+The policy is not inferred from environment variables or machine names. Both modes run all 67 cases with the same samples, pinned baseline, and tolerances. Hosted runners can experience changing CPU contention and I/O latency even when baseline and current code run on the same machine. Their timing results are advisory, not a release timing approval.
 
 **VELA**, the maintainer's local Windows machine, is the designated controlled environment. Before creating or pushing a release tag, run the complete validation there on the release candidate:
 
@@ -39,12 +39,13 @@ Scratch storage did not eliminate hosted-runner timing variability. The same alp
 
 The gate builds the **same current benchmark sources** twice in Release: once against the current formatter/CLI source, once against the commit pinned in [`benchmarks/performance-baseline.json`](../benchmarks/performance-baseline.json). Both run on the same machine, runtime, architecture, and logical CPU count. This avoids a fixed millisecond budget tied to one developer's hardware. A missing baseline, failed build, invalid report, missing/duplicate case, incomplete sample set, or non-repeatable formatter output fails the gate.
 
-There are 59 individually checked cases:
+There are 67 individually checked cases:
 
 | Family | Cases |
 | --- | --- |
 | XML, XAML, MSBuild | 1,000 attribute-rich elements: default layout, 120-column wrapping, and one attribute per line; initial preview and already formatted check for each |
 | C# | 200 methods with long lists: defaults, 120-column wrapping, `wrap_if_long`, `chop_always`, the three Microsoft blank-line preferences, and file headers; preview and already formatted check |
+| RESX | 1,000 resources: LF and CRLF layout with single-line values, CRLF with multiline values, and CRLF with longer multiline values; preview and already formatted check |
 | Repository | Dependency sorting at 500/1,000/2,000/4,000 entries, plus discovery and serial/parallel preview/write/unchanged checks for small projects, mixed formats, and nested configuration |
 
 Repository cases use 128 files, at least three operations/300 ms of warm-up, and seven measured samples. Read-only samples batch operations to target 100 ms; writes remain individual operations so input restoration stays outside the timed section. Formatter cases warm up for at least ten operations and 300 ms, then collect nine batches targeting 100 ms each. Each family runs in its own process. Three rounds alternate baseline/current order; the gate uses each run's median, then the median of all three runs. One interrupted process therefore cannot dominate the result, while a slowdown repeated in two runs still fails. Tiered JIT compilation is disabled for the measurement processes to reduce optimization/warm-up variance; this is a controlled comparison, not a promise of exact production throughput. The environment setting is restored afterward.
@@ -88,6 +89,8 @@ Keep the baseline fixed across ordinary commits so small costs cannot accumulate
 4. Rerun the complete publish validation against the new baseline.
 
 Adding or substantially changing a scenario also requires reviewing the fixture and comparison semantics. Changes to the report schema/case contract must update `SuiteVersion`, the runner/comparator, and their regression tests together. The harness must build against the pinned source revision; if API compatibility changes, document and review the necessary baseline migration explicitly.
+
+Suite version 2 adds eight RESX cases without changing the pinned source revision or tolerances. Previous mixed-repository fixtures use LF and do not exercise CRLF-specific serialization costs. The RESX cases compare both revisions using the same current harness; multiline output fingerprints intentionally differ because resource newlines are now protected with character references. Runtime-value preservation and real Git checkout behavior are verified separately by resource tests, since the old baseline does not preserve all resource newline values.
 
 ## Initial baseline and optimization
 

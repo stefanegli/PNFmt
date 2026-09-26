@@ -12,13 +12,14 @@ namespace PNFmt.Benchmarks
     {
         public static IEnumerable<PerformanceCaseResult> Run(string kind, string directory)
         {
-            if (!new[] { "xml", "xaml", "csproj", "csharp" }.Contains(kind))
+            if (!new[] { "xml", "xaml", "csproj", "csharp", "resx" }.Contains(kind))
             {
                 throw new ArgumentException("Unknown performance family: " + kind);
             }
             var count = kind == "csharp" ? 200 : 1000;
             var modes = kind == "csharp"
                 ? new[] { "default", "width120", "wrap_if_long", "chop", "preferences", "header" }
+                : kind == "resx" ? new[] { "lf", "crlf", "crlf-multiline", "crlf-long" }
                 : new[] { "default", "width120", "chop" };
             foreach (var mode in modes)
             {
@@ -31,9 +32,10 @@ namespace PNFmt.Benchmarks
                     "xml" => new XmlFormatter(),
                     "xaml" => new XamlFormatter(),
                     "csproj" => new CsProjFormatter(),
+                    "resx" => new ResxFormatter(),
                     _ => new CSharpFormatter(),
                 };
-                var original = Encoding.UTF8.GetBytes(Input(kind, count));
+                var original = Encoding.UTF8.GetBytes(Input(kind, count, mode));
                 File.WriteAllBytes(path, original);
                 Validate(formatter.Format(new FileFormatRequest(path, true, false, new Log())), FileFormatStatus.Updated);
                 var formatted = File.ReadAllBytes(path);
@@ -93,7 +95,8 @@ namespace PNFmt.Benchmarks
         private static string Configuration(string kind, string mode)
         {
             return "root = true\n[*]\npnfmt_enabled = true\npnfmt_formatter = " + kind
-                + "\npnfmt_format = true\npnfmt_sort_entries = true\nindent_style = space\nindent_size = 4\nend_of_line = lf\ninsert_final_newline = true\n"
+                + "\npnfmt_format = true\npnfmt_sort_entries = true\nindent_style = space\nindent_size = 4\nend_of_line = "
+                + (kind == "resx" && mode != "lf" ? "crlf" : "lf") + "\ninsert_final_newline = true\n"
                 + (mode switch
                 {
                     "width120" => "max_line_length = 120\nxml_wrap_tags_and_pi = true\n",
@@ -106,9 +109,20 @@ namespace PNFmt.Benchmarks
                 });
         }
 
-        private static string Input(string kind, int count)
+        private static string Input(string kind, int count, string mode)
         {
             var output = new StringBuilder();
+            if (kind == "resx")
+            {
+                output.Append("<root><resheader name='resmimetype'><value>text/microsoft-resx</value></resheader>");
+                var value = new string('x', mode == "crlf-long" ? 1000 : 100)
+                    + (mode == "crlf-multiline" || mode == "crlf-long" ? "\r\nsecond&#xD;third" : "");
+                for (var index = 0; index < count; index++)
+                {
+                    output.Append($"<data name='Key{index:D4}' xml:space='preserve'><value>{value}</value></data>");
+                }
+                return output.Append("</root>").ToString();
+            }
             if (kind == "csharp")
             {
                 output.Append("namespace Example { public class Worker {\n");

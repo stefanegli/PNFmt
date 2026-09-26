@@ -1,5 +1,5 @@
 {
-  "SuiteVersion": 1,
+  "SuiteVersion": 2,
   "Revision": "09b320fd07321f65cd341d58b38f1d22be670c8b",
   "Reason": "Initial publish baseline after removing the redundant XML/XAML wrapping parse; retain the measured time and allocation improvements. See docs/performance.md.",
   "Tolerances": {

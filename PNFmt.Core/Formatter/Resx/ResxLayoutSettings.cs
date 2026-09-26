@@ -80,7 +80,7 @@ namespace PNFmt
             if (formatLayout && (this.HasOverrides || encoding is not null))
             {
                 foreach (var entry in document.Root.Elements()
-                    .Where(element => element.Name == "data" || element.Name == "metadata"))
+                    .Where(element => (element.Name == "data" || element.Name == "metadata") && element.HasElements))
                 {
                     var textNodes = entry.Nodes().Where(node => node.NodeType == XmlNodeType.Text).Cast<XText>().ToList();
                     if (textNodes.All(node => string.IsNullOrWhiteSpace(node.Value)))
@@ -104,7 +104,7 @@ namespace PNFmt
             };
             using (var stream = new MemoryStream())
             {
-                using (var writer = XmlWriter.Create(stream, writerSettings))
+                using (var writer = new ResxXmlWriter(XmlWriter.Create(stream, writerSettings), formatLayout ? this.NewLine : null, document.Root))
                 {
                     document.Save(writer);
                 }

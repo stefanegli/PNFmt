@@ -13,14 +13,14 @@ function Write-Fixture([scriptblock]$Change = {})
 {
     $fixture = @{
         Policy = @{
-            SuiteVersion = 1
+            SuiteVersion = 2
             Revision = 'd3ac668e7eefa4d2480c874c0164a4c710658961'
             Reason = 'Regression test fixture'
             Tolerances = @{ TimePercent = 20; WriteTimePercent = 50; AllocationPercent = 10; TimeFloorMilliseconds = 0.1; AllocationFloorBytes = 4096 }
         }
         Reports = @{}
     }
-    $counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; repository = 29 }
+    $counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; resx = 8; repository = 29 }
     foreach ($family in $counts.Keys)
     {
         foreach ($revision in @('baseline', 'current'))
@@ -29,7 +29,7 @@ function Write-Fixture([scriptblock]$Change = {})
             {
                 $sampleCount = if ($family -eq 'repository') { 7 } else { 9 }
                 $fixture.Reports["$revision-$family-$round"] = @{
-                    SuiteVersion = 1; Family = $family; TieredCompilation = '0'
+                    SuiteVersion = 2; Family = $family; TieredCompilation = '0'
                     Runtime = '.NET 10 test'; OS = 'test OS'; Architecture = 'X64'; ProcessorCount = 4
                     Cases = @(0..($counts[$family] - 1) | ForEach-Object {
                         @{
@@ -131,8 +131,13 @@ try
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Runtime = 'another runtime' }
     Assert-Gate 'Different environments fail' $false
     Assert-Gate 'Different environments still fail in report-only mode' $false 'ReportOnly'
-    Write-Fixture { param($f) $f.Reports['current-xml-1'].SuiteVersion = 2 }
+    Write-Fixture { param($f) $f.Reports['current-xml-1'].SuiteVersion = 1 }
     Assert-Gate 'Incompatible suite versions fail' $false
+    Write-Fixture
+    Remove-Item -LiteralPath (Join-Path $directory 'current-resx-1.json')
+    Assert-Gate 'RESX reports are required' $false
+    Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-resx-$r"].Cases[0].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 }) } }
+    Assert-Gate 'RESX allocation regressions are enforced' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].TieredCompilation = '1' }
     Assert-Gate 'Wrong timing configuration fails' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].OutputHash = 'B' * 64 }
