@@ -47,9 +47,12 @@ lower coverage thresholds or bypass checks.
 
 Keep the default `-TimingPolicy Enforce` locally. Before creating or pushing a
 release tag, run the complete validation on VELA, the maintainer's controlled
-Windows machine. Hosted Build and Publish workflows use `-TimingPolicy ReportOnly`:
+Windows machine. Hosted Build uses `-TimingPolicy ReportOnly`:
 timing regressions warn, but allocation regressions, invalid reports, and incorrect
 or unstable output still fail the gate. Hosted results do not replace local validation.
+Tag publication reuses the successful Build's validated package for the exact
+commit. Do not create release branches or repeat validation in the tag workflow;
+follow `docs/releases.md`.
 
 Performance comparisons cannot be skipped. Investigate regressions against
 `benchmarks/performance-baseline.json`; never widen tolerances to pass or advance

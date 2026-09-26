@@ -165,6 +165,8 @@ Run `./scripts/Test-Coverage.ps1` in PowerShell to test with coverage and genera
 
 Run `./scripts/Test-Performance.ps1` to compare Release performance with the pinned Git baseline on the same machine. The publish script runs this comparison before packing or pushing, including `-PackOnly` and invocations with other skip switches. `-TimingPolicy Enforce` is the default: timing and allocation regressions fail. Hosted CI explicitly uses `-TimingPolicy ReportOnly`, which reports timing warnings while still enforcing allocations, correctness, and output stability. Release timing approval requires complete local validation on the maintainer's controlled machine, VELA. Intentional baseline updates require a committed explanation. See [performance gates](docs/performance.md) for the release procedure, limits, reports, and baseline maintenance.
 
+Releases use tags on already validated `master` commits, without release branches. Build creates one versioned package and runs all checks, including installing that same package on Windows and Linux. The tag workflow publishes the retained package from the successful Build for that exact commit; it does not rebuild or repeat tests and benchmarks. The tag version must match the package version. See [releasing PNFmt](docs/releases.md) for preparation, tagging, artifact retention, and recovery.
+
 Use the [HTML snapshot viewer](tools/SnapshotViewer/README.md) to inspect test inputs, expected cleanup, and configuration by formatter.
 
 Please use the [issue tracker](https://github.com/stefanegli/PNFmt/issues) for bug reports and feature requests.

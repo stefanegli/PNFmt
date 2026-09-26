@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 concurrency:
@@ -18,32 +19,62 @@ jobs:
     name: Publish PetchNaka.PNFmt.Cli
     runs-on: ubuntu-latest
     environment: nuget
-    timeout-minutes: 30
+    timeout-minutes: 10
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
       DOTNET_NOLOGO: "1"
 
     steps:
-      - name: Check out source
+      - name: Check out tagged source
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Require a commit on the default branch
+        shell: pwsh
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          $commit = (git rev-parse HEAD | Out-String).Trim()
+          if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the tagged commit.' }
+          git merge-base --is-ancestor $commit "origin/$env:DEFAULT_BRANCH"
+          if ($LASTEXITCODE -ne 0) { throw 'Release tags must point to a commit on the default branch.' }
+          "RELEASE_COMMIT=$commit" >> $env:GITHUB_ENV
+
+      - name: Find successful Build for this commit
+        id: build
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const select = require('./.github/scripts/select-release-build.cjs');
+            const result = await select({ github, context, commit: process.env.RELEASE_COMMIT });
+            core.setOutput('run-id', result.runId);
+            core.setOutput('artifact-id', result.artifactId);
+            core.setOutput('version', result.version);
+            core.info(`Reusing validated package from ${result.url}`);
+
+      - name: Download validated release package
+        uses: actions/download-artifact@v8
+        with:
+          artifact-ids: ${{ steps.build.outputs.artifact-id }}
+          path: artifacts/release-package
+          merge-multiple: true
+          github-token: ${{ github.token }}
+          run-id: ${{ steps.build.outputs.run-id }}
+
+      - name: Verify package version and source commit
+        shell: pwsh
+        env:
+          PACKAGE_VERSION: ${{ steps.build.outputs.version }}
+        run: |
+          $package = ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:RELEASE_COMMIT
+          "VALIDATED_PACKAGE_PATH=$package" >> $env:GITHUB_ENV
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: "10.0.x"
-
-      - name: Resolve package version
-        shell: pwsh
-        run: |
-          $tag = $env:GITHUB_REF_NAME
-          if ($tag -notmatch '^v(?<version>\d+\.\d+\.\d+(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?)$') {
-              throw "Tag '$tag' must use the form v<major>.<minor>.<patch>[-prerelease]."
-          }
-
-          "PACKAGE_VERSION=$($Matches.version)" >> $env:GITHUB_ENV
 
       - name: Validate trusted publishing configuration
         shell: pwsh
@@ -51,30 +82,8 @@ jobs:
           NUGET_USER: ${{ vars.NUGET_USER }}
         run: |
           if ([string]::IsNullOrWhiteSpace($env:NUGET_USER)) {
-              throw "Set the repository variable 'NUGET_USER' to the nuget.org profile name."
+            throw "Set the repository variable 'NUGET_USER' to the nuget.org profile name."
           }
-
-      - name: Test, pack, and validate tool
-        shell: pwsh
-        run: |
-          ./scripts/Publish-GlobalTool.ps1 `
-            -Version $env:PACKAGE_VERSION `
-            -Configuration Release `
-            -TimingPolicy ReportOnly `
-            -PackOnly | Tee-Object -Variable validationOutput
-          $validatedPackage = $validationOutput | Select-Object -Last 1
-          if (-not (Test-Path -LiteralPath $validatedPackage -PathType Leaf)) {
-            throw 'Validation did not return a package path.'
-          }
-          "VALIDATED_PACKAGE_PATH=$validatedPackage" >> $env:GITHUB_ENV
-
-      - name: Upload coverage reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-release
-          path: artifacts/coverage/
-          if-no-files-found: warn
 
       - name: Log in to NuGet.org with trusted publishing
         id: nuget_login
@@ -82,7 +91,7 @@ jobs:
         with:
           user: ${{ vars.NUGET_USER }}
 
-      - name: Publish tool package
+      - name: Publish validated package
         shell: pwsh
         env:
           NUGET_API_KEY: ${{ steps.nuget_login.outputs.NUGET_API_KEY }}
@@ -90,11 +99,3 @@ jobs:
           dotnet nuget push "$env:VALIDATED_PACKAGE_PATH"
           --api-key "$env:NUGET_API_KEY"
           --source https://api.nuget.org/v3/index.json
-
-      - name: Upload performance reports
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: performance-release
-          path: artifacts/performance/
-          if-no-files-found: warn
