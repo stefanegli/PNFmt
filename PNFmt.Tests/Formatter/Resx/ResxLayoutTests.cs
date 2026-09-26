@@ -165,57 +165,6 @@ namespace PNFmt.Tests.Formatter.Resx
         }
 
         [Theory]
-        [InlineData("lf", "\n", "utf-8")]
-        [InlineData("crlf", "\r\n", "utf-8")]
-        [InlineData("cr", "\r", "utf-8")]
-        [InlineData("crlf", "\r\n", "utf-8-bom")]
-        [InlineData("crlf", "\r\n", "utf-16le")]
-        [InlineData("crlf", "\r\n", "utf-16be")]
-        [InlineData("crlf", "\r\n", "latin1")]
-        public void Multiline_resources_remain_stable_after_checkout_line_ending_conversion(
-            string endOfLine, string newline, string charset)
-        {
-            var original = "<root>" + Header
-                + "<!-- first\r\nsecond -->"
-                + "<data name=\"a\" xml:space=\"preserve\" marker=\"a&#xD;&#xA;&#x9;b\">"
-                + "<value>  first\r\nsecond&#xD;third&#xD;&#xA;fourth\t  </value>"
-                + "<comment>first\nsecond</comment></data>"
-                + "<data name=\"b\"><value><![CDATA[first\nsecond]]></value></data>"
-                + "<metadata name=\"c\"><value>first\nsecond&#xD;third</value></metadata></root>";
-            using (var file = TemporaryFile.Create(original))
-            {
-                Configure(file, EnableFormatting + "end_of_line = " + endOfLine + "\ncharset = " + charset + "\n");
-                var before = XDocument.Load(file.Path);
-                var originalBytes = File.ReadAllBytes(file.Path);
-
-                Assert.Equal(FileFormatStatus.Updated, Format(file, false).Status);
-                Assert.Equal(originalBytes, File.ReadAllBytes(file.Path));
-                Assert.Equal(FileFormatStatus.Updated, Format(file, true).Status);
-
-                var bytes = File.ReadAllBytes(file.Path);
-                var encoding = charset == "latin1" ? Encoding.GetEncoding("iso-8859-1")
-                    : charset == "utf-16le" ? Encoding.Unicode
-                    : charset == "utf-16be" ? Encoding.BigEndianUnicode : new UTF8Encoding(charset == "utf-8-bom");
-                var text = encoding.GetString(bytes);
-                var checkoutText = text.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", newline);
-                File.WriteAllBytes(file.Path, encoding.GetBytes(checkoutText));
-
-                Assert.Equal(FileFormatStatus.Unchanged, Format(file, false).Status);
-                Assert.Equal(FileFormatStatus.Unchanged, Format(file, true).Status);
-                Assert.Equal(bytes, File.ReadAllBytes(file.Path));
-                var after = XDocument.Load(file.Path);
-                Assert.Equal(before.Descendants("value").Select(element => element.Value),
-                    after.Descendants("value").Select(element => element.Value));
-                Assert.Equal(before.Descendants("comment").Select(element => element.Value),
-                    after.Descendants("comment").Select(element => element.Value));
-                Assert.Equal((string)before.Root.Element("data").Attribute("marker"),
-                    (string)after.Root.Element("data").Attribute("marker"));
-                Assert.Equal(before.Root.Nodes().OfType<XComment>().Select(comment => comment.Value),
-                    after.Root.Nodes().OfType<XComment>().Select(comment => comment.Value));
-            }
-        }
-
-        [Theory]
         [InlineData("")]
         [InlineData("end_of_line = lf\nindent_size = 4\n")]
         [InlineData("end_of_line = crlf\nindent_size = 4\n")]

@@ -7,10 +7,7 @@
     <value>  leading and trailing  </value>
   </data>
   <data name="Zebra" xml:space="preserve">
-    <value>first&#xD;second&#xD;
-third
-  fourth</value>
-    <comment>Keep
-  this explanation.</comment>
+    <value>first&#xD;second&#xD;&#xA;third&#xA;  fourth</value>
+    <comment>Keep&#xA;  this explanation.</comment>
   </data>
 </root>

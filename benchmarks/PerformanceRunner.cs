@@ -35,7 +35,7 @@ namespace PNFmt.Benchmarks
 
                 var report = new
                 {
-                    SuiteVersion = 1,
+                    SuiteVersion = 2,
                     Family = family,
                     Runtime = RuntimeInformation.FrameworkDescription,
                     OS = RuntimeInformation.OSDescription,

@@ -80,7 +80,7 @@ namespace PNFmt
             if (formatLayout && (this.HasOverrides || encoding is not null))
             {
                 foreach (var entry in document.Root.Elements()
-                    .Where(element => element.Name == "data" || element.Name == "metadata"))
+                    .Where(element => (element.Name == "data" || element.Name == "metadata") && element.HasElements))
                 {
                     var textNodes = entry.Nodes().Where(node => node.NodeType == XmlNodeType.Text).Cast<XText>().ToList();
                     if (textNodes.All(node => string.IsNullOrWhiteSpace(node.Value)))
@@ -104,7 +104,7 @@ namespace PNFmt
             };
             using (var stream = new MemoryStream())
             {
-                using (var writer = XmlWriter.Create(stream, writerSettings))
+                using (var writer = new ResxXmlWriter(XmlWriter.Create(stream, writerSettings), formatLayout ? this.NewLine : null, document.Root))
                 {
                     document.Save(writer);
                 }
@@ -115,18 +115,7 @@ namespace PNFmt
                     stream.Write(newline, 0, newline.Length);
                 }
 
-                var bytes = stream.ToArray();
-                if (!formatLayout || this.NewLine == "\n")
-                {
-                    return bytes;
-                }
-
-                // Entitize has already protected significant carriage returns as XML
-                // character references. Normalize only physical line breaks so a Git
-                // checkout cannot reintroduce formatting changes inside multiline values.
-                var serialized = writerSettings.Encoding.GetString(bytes);
-                var normalized = serialized.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", this.NewLine);
-                return serialized == normalized ? bytes : writerSettings.Encoding.GetBytes(normalized);
+                return stream.ToArray();
             }
         }
     }

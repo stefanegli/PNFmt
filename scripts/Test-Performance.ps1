@@ -28,7 +28,7 @@ function Invoke-Dotnet([string[]]$Arguments, [string]$LogPath)
 Push-Location $repoRoot
 try
 {
-    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.SuiteVersion -ne 1 -or
+    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.SuiteVersion -ne 2 -or
         [string]::IsNullOrWhiteSpace($policy.Reason))
     {
         throw 'The performance baseline must pin a full commit ID and describe why it was chosen.'
@@ -80,7 +80,7 @@ try
     $env:DOTNET_TieredCompilation = '0'
     foreach ($round in 1..3)
     {
-        foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'repository'))
+        foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'resx', 'repository'))
         {
             $revisions = if ($round % 2 -eq 1) { @('baseline', 'current') } else { @('current', 'baseline') }
             foreach ($revision in $revisions)
