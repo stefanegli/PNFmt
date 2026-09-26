@@ -8,10 +8,14 @@ a release branch or push another commit just to trigger publication.
 Set the intended version in `PNFmt.Cli/PNFmt.Cli.csproj` and update the installation
 examples in `README.md` as part of the normal contribution flow. Merge the changes
 into `master` through the required checks. An ordinary development PR is separate
-from the release operation; no temporary `release/*` branch is needed.
+from the release operation; no temporary `release/*` branch is needed. A PR is
+optional: maintainers can push a `ci/*` change branch, wait for both required
+platform checks, then fast-forward `master` to that exact tested commit. Use
+ordinary feature branches for PRs and reserve `ci/*` for this direct-push path,
+so the same change does not trigger both branch-push and PR validation.
 
-Build runs on pull requests and pushes to `master`, rather than on every branch
-push as well. It packs the project version once, records the source commit in the
+Build runs on pull requests and pushes to `master` or `ci/*`, rather than on every
+feature-branch push as well. It packs the project version once, records the source commit in the
 package manifest, and uploads `release-package`. Both platform jobs download that
 same package. Each platform must pass formatting, tests, coverage, benchmark
 correctness, the full performance comparison, and isolated installed-tool checks.
