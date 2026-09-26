@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $policy = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
-$counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; repository = 29 }
+$counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; resx = 8; repository = 29 }
 
 function Assert-Number($Value, [bool]$AllowZero = $false)
 {
@@ -34,10 +34,10 @@ function Format-Number([double]$Value, [string]$Pattern = "F3")
     return $Value.ToString($Pattern, $culture)
 }
 
-if ($policy.SuiteVersion -ne 1 -or $policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or
+if ($policy.SuiteVersion -ne 2 -or $policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or
     [string]::IsNullOrWhiteSpace($policy.Reason))
 {
-    throw "The performance baseline requires suite version 1, a full commit ID, and a reason."
+    throw "The performance baseline requires suite version 2, a full commit ID, and a reason."
 }
 foreach ($property in @('TimePercent', 'WriteTimePercent', 'AllocationPercent', 'TimeFloorMilliseconds', 'AllocationFloorBytes'))
 {
@@ -46,7 +46,7 @@ foreach ($property in @('TimePercent', 'WriteTimePercent', 'AllocationPercent', 
 
 $measurements = @{}
 $environmentIdentity = $null
-foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'repository'))
+foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'resx', 'repository'))
 {
     $expectedIds = $null
     foreach ($revision in @('baseline', 'current'))

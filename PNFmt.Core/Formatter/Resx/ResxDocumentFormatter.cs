@@ -51,18 +51,20 @@ namespace PNFmt
         private DocumentFormatResult FormatResx(string originalText, Encoding encoding, bool formatLayout, bool hasExplicitLayout)
         {
             XDocument document;
-            var readerSettings = new XmlReaderSettings
-            {
-                DtdProcessing = DtdProcessing.Prohibit,
-                IgnoreWhitespace = false,
-                XmlResolver = null
-            };
-
             using (var textReader = new StringReader(originalText))
-            using (var reader = XmlReader.Create(textReader, readerSettings))
+            // MSBuild and ResXResourceReader retain physical newlines in resource
+            // strings. A normalizing XML reader would silently discard their CRs.
+            using (var resourceReader = new XmlTextReader(textReader)
             {
-                document = XDocument.Load(reader, LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
+                Normalization = false,
+                DtdProcessing = DtdProcessing.Prohibit,
+                XmlResolver = null
+            })
+            {
+                document = XDocument.Load(resourceReader, LoadOptions.PreserveWhitespace | LoadOptions.SetLineInfo);
             }
+
+            ValidateCharacterReferences(originalText);
 
             var root = document.Root;
             var diagnostic = GetRootDiagnostic(root);
@@ -149,6 +151,7 @@ namespace PNFmt
             var layout = document.DescendantNodes().OfType<XText>()
                 .Where(text => text.NodeType == XmlNodeType.Text
                     && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n')
+                    && !(text.Parent is not null && IsResourceEntry(text.Parent) && !text.Parent.HasElements)
                     && !text.Ancestors().Any(element => element.Parent is not null
                         && IsResourceEntry(element.Parent))
                     && (string)text.Ancestors().Attributes(XNamespace.Xml + "space").FirstOrDefault() != "preserve")
@@ -162,6 +165,48 @@ namespace PNFmt
         private static string RemoveWhiteSpace(string text)
         {
             return string.Join("", text.Split(default(string[]), StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private static void ValidateCharacterReferences(string source)
+        {
+            // Non-normalizing XmlTextReader accepts invalid numeric references.
+            // Inspect just their spellings instead of rescanning every decoded
+            // value and attribute. Also reject references to surrogate code units,
+            // even if two adjacent references happen to form a valid UTF-16 pair.
+            for (var reference = source.IndexOf("&#", StringComparison.Ordinal); reference >= 0;
+                reference = source.IndexOf("&#", reference + 2, StringComparison.Ordinal))
+            {
+                var position = reference + 2;
+                var hex = position < source.Length && source[position] == 'x';
+                if (hex) position++;
+                var scalar = 0;
+                for (; position < source.Length; position++)
+                {
+                    var character = source[position];
+                    var digit = character >= '0' && character <= '9' ? character - '0'
+                        : hex && character >= 'a' && character <= 'f' ? character - 'a' + 10
+                        : hex && character >= 'A' && character <= 'F' ? character - 'A' + 10 : -1;
+                    if (digit < 0) break;
+                    scalar = scalar * (hex ? 16 : 10) + digit;
+                    if (scalar > 0x10FFFF) break;
+                }
+                if (scalar == 9 || scalar == 10 || scalar == 13
+                    || (scalar >= 0x20 && scalar <= 0xD7FF)
+                    || (scalar >= 0xE000 && scalar <= 0xFFFD)
+                    || (scalar >= 0x10000 && scalar <= 0x10FFFF))
+                {
+                    continue;
+                }
+
+                // A suspicious spelling can be literal text inside a comment or
+                // CDATA. Let a strict reader decide; do not reject those literals.
+                using (var input = new StringReader(source))
+                using (var reader = XmlReader.Create(input, new XmlReaderSettings { DtdProcessing = DtdProcessing.Prohibit, XmlResolver = null }))
+                {
+                    while (reader.Read()) { }
+                }
+                return;
+            }
         }
 
         // Owns the association between resource entries and their leading comments,
