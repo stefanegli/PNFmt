@@ -16,3 +16,4 @@ csharp_wrap_object_and_collection_initializer_style = chop_always
 csharp_wrap_list_pattern = chop_always
 csharp_wrap_ternary_expr_style = chop_if_long
 csharp_wrap_before_ternary_opsigns = true
+csharp_wrap_property_pattern = chop_if_long

@@ -50,6 +50,30 @@ and exclusions are preserved. Protected boundaries can prevent breaks. The pass
 does not add commas or convert initializer syntax. Indentation, tabs, and newline
 settings still apply; `wrap_if_long` requires a positive width.
 
+Property patterns opt into `csharp_wrap_property_pattern`, with alias
+`resharper_csharp_wrap_property_pattern`. These JetBrains names accept
+case-insensitive `wrap_if_long` (fit whole properties at a positive width),
+`chop_if_long` (one property per line when long or already multiline), and
+`chop_always` (one property per line without requiring a width). An existing
+multiline pattern can also be chopped without a width. Missing, invalid, or unset
+styles leave ordinary Roslyn layout even with a width. The unprefixed C# name wins
+even when invalid; `unset` allows alias fallback. File activation and layout are
+required; both current and legacy layout controls apply. Generated defaults omit
+this setting.
+
+Chopping separates properties and the closing brace. Opening braces follow
+Roslyn's `csharp_new_line_before_open_brace` preference. Empty patterns stay compact;
+short patterns stay compact with either width-dependent style. Nested property
+patterns are measured after outer wrapping. Existing breaks, extended property
+paths, positional components, logical patterns, designations, trailing commas,
+literal tokens, comments, directives, inactive code, interpolated-string contents,
+and excluded regions are preserved. Only ordinary whitespace can be split, and
+protected boundaries or indivisible properties can prevent reaching the width.
+Indentation, tabs, and newline settings apply. This option does not wrap positional
+or logical pattern components; list patterns use their separate setting. Other
+JetBrains property-pattern arrangement controls are not implemented, and existing
+multiline patterns are not joined.
+
 Ternaries opt into `csharp_wrap_ternary_expr_style`: `wrap_if_long` adds only needed
 breaks with a positive width; `chop_if_long` breaks both branches when too long or
 already multiline; `chop_always` breaks both regardless of width. Exactly fitting

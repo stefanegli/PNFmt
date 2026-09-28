@@ -64,19 +64,25 @@ namespace PNFmt.Tests.Snapshots
                 var root = repository.Info.WorkingDirectory;
                 var cases = SnapshotReviewExporter.ReadCases(root);
                 var review = cases.Where(item => item.review is not null).ToArray();
-                Assert.Equal(9, review.Count(item => item.review.status == "processed"));
-                Assert.Equal(10, review.Count(item => item.review.status == "pending"));
+                Assert.Equal(12, review.Count(item => item.review.status == "processed"));
+                Assert.Equal(9, review.Count(item => item.review.status == "pending"));
                 Assert.Equal(4, review.Count(item => item.review.status == "reference"));
                 Assert.All(cases.Where(item => item.name.StartsWith("WrappingReview/", StringComparison.Ordinal)),
                     item => Assert.NotNull(item.review));
                 var previous = review.Where(item => item.review.before is not null).ToArray();
-                Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs", "WrappingReview/ConditionalExpressions.cs" },
+                Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs", "WrappingReview/ConditionalExpressions.cs", "WrappingReview/Patterns.cs" },
                     previous.Select(item => item.name).ToArray());
                 Assert.All(previous, item =>
                 {
-                    Assert.Equal(item.input, item.review.before);
                     Assert.NotEqual(item.result, item.review.before);
                 });
+                Assert.All(previous.Where(item => item.name != "WrappingReview/Patterns.cs"),
+                    item => Assert.Equal(item.input, item.review.before));
+                var pattern = previous.Single(item => item.name == "WrappingReview/Patterns.cs");
+                Assert.Equal("class Example\n{\n    bool M(\n        object input) => input is { FirstCustomerReferenceIdentifier: true, "
+                    + "SecondCustomerReferenceIdentifier: true, ThirdCustomerReferenceIdentifier: true };\n}\n", pattern.review.before);
+                Assert.NotEqual(pattern.input, pattern.review.before);
+                Assert.Equal("processed", pattern.review.status);
                 Assert.Equal("pending", review.Single(item => item.name == "WrappingReview/SwitchExpressions.cs").review.status);
                 var output = directory.GetPath("wrapping.html");
                 SnapshotReviewExporter.Write(root, output, wrappingReviewOnly: true);

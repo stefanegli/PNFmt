@@ -138,6 +138,61 @@ convert one initializer syntax into another. Indentation, tabs, and line endings
 follow the ordinary layout settings. `wrap_if_long` requires a positive width and
 fits whole elements where possible; long indivisible elements can still exceed it.
 
+### Property patterns
+
+Use the [JetBrains property-pattern wrapping setting](https://www.jetbrains.com/help/rider/EditorConfig_CSHARP_LineBreaksPageSchema.html)
+to expand long property patterns while keeping short ones compact:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_format = true
+max_line_length = 80
+csharp_wrap_property_pattern = chop_if_long
+```
+
+```csharp
+class Example
+{
+    bool M(object input) => input is
+    {
+        FirstCustomerReferenceIdentifier: true,
+        SecondCustomerReferenceIdentifier: true,
+        ThirdCustomerReferenceIdentifier: true
+    };
+}
+```
+
+`csharp_wrap_property_pattern` accepts `wrap_if_long` (fit whole properties per line
+at a positive width), `chop_if_long` (one property per line when long or already
+multiline), and `chop_always` (one property per line regardless of width). Values
+are case-insensitive. `chop_if_long` also completes existing multiline patterns
+without a width. Both width-dependent styles keep short, including exactly fitting,
+single-line patterns compact. Empty patterns stay compact in every mode.
+
+`resharper_csharp_wrap_property_pattern` is an alias. The unprefixed C# name wins
+when both are present, even when invalid; `unset` removes that spelling and allows
+alias fallback. Missing, invalid, or unset styles leave ordinary Roslyn layout,
+even with a configured width. The setting requires file activation and enabled
+layout; `pnfmt_format = false` or its legacy layout fallback disables it.
+`--write-default-config` does not add it.
+
+Chopping separates properties and the closing brace; opening braces follow Roslyn's
+`csharp_new_line_before_open_brace` preference. Nested property patterns are measured
+after their enclosing pattern wraps, allowing short inner patterns to stay compact.
+Indentation, tabs, and newlines use the ordinary settings. Existing line breaks are
+retained. Extended property paths, positional components, logical patterns, variable
+designations, trailing commas, literals, comments, directives, inactive source,
+interpolated-string contents, and excluded regions are preserved. Only ordinary
+whitespace is changed; protected boundaries and indivisible properties can still
+exceed the target width.
+
+This option wraps property clauses, including those combined with positional or
+logical patterns; it does not add breaks between the positional or logical components.
+List patterns use `csharp_wrap_list_pattern`. Other JetBrains property-pattern
+arrangement controls are not implemented, and existing multiline patterns are not joined.
+
 ### Conditional (ternary) expressions
 
 Use the JetBrains ternary settings to keep short expressions compact and put each

@@ -138,7 +138,7 @@ test("provider selection, navigation, search, and display controls work together
 test("review status keeps open decisions separate and offers the previous snapshot comparison", () => {
     const { elements, cases } = load();
     const get = (id) => elements.get(id);
-    for (const [status, count] of [["processed", 9], ["pending", 10], ["reference", 4]]) {
+    for (const [status, count] of [["processed", 12], ["pending", 9], ["reference", 4]]) {
         get("show-" + status).onclick();
         assert.equal(get("tests").children.length, count);
         for (const button of get("tests").children) {
@@ -161,6 +161,13 @@ test("review status keeps open decisions separate and offers the previous snapsh
     assert.equal(get("review-label").textContent, "Processed");
     assert.equal(get("input-label").textContent, "Previous snapshot");
     assert.ok(get("review-question").textContent.includes("chop_if_long"));
+    assert.ok(get("stats").textContent.includes("Content changes"));
+    get("search").value = "WrappingReview/Patterns.cs";
+    get("search").oninput();
+    assert.equal(get("tests").children.length, 1);
+    assert.equal(get("review-label").textContent, "Processed");
+    assert.equal(get("input-label").textContent, "Previous snapshot");
+    assert.ok(get("review-question").textContent.includes("csharp_wrap_property_pattern"));
     assert.ok(get("stats").textContent.includes("Content changes"));
     get("show-pending").onclick();
     get("search").value = "SwitchExpressions.cs";

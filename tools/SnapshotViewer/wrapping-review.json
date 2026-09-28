@@ -65,8 +65,21 @@
   {
     "provider": "C#",
     "name": "WrappingReview/Patterns.cs",
-    "status": "pending",
-    "note": "Decide: should long property patterns expand their members? Currently the short method signature wraps while the long pattern stays together. This is separate from the implemented list-pattern setting."
+    "status": "processed",
+    "note": "Implemented: csharp_wrap_property_pattern = chop_if_long puts each property of a long pattern on its own line. Compare the previous snapshot: the short method signature now stays together. List patterns have their own setting.",
+    "before": "class Example\n{\n    bool M(\n        object input) => input is { FirstCustomerReferenceIdentifier: true, SecondCustomerReferenceIdentifier: true, ThirdCustomerReferenceIdentifier: true };\n}\n"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortPattern.cs",
+    "status": "processed",
+    "note": "New coverage: chop_if_long keeps this short property pattern on one line. An identical input and result is intentional."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/NestedPatterns.cs",
+    "status": "processed",
+    "note": "New coverage: the long outer property pattern wraps first. The short Address pattern stays compact, while the long Account pattern also expands."
   },
   {
     "provider": "C#",

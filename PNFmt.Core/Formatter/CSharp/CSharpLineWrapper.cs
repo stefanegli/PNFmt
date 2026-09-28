@@ -23,10 +23,11 @@ namespace PNFmt
             var arrayStyle = ResolveStyle(settings, "csharp_wrap_array_initializer_style");
             var initializerStyle = ResolveStyle(settings, "csharp_wrap_object_and_collection_initializer_style");
             var listStyle = ResolveStyle(settings, "csharp_wrap_list_pattern");
+            var propertyPatternStyle = ResolveStyle(settings, "csharp_wrap_property_pattern");
             var ternaryStyle = ResolveStyle(settings, "csharp_wrap_ternary_expr_style");
             var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle)
                 || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle)
-                || CanChopWithoutWidth(ternaryStyle);
+                || CanChopWithoutWidth(ternaryStyle) || CanChopWithoutWidth(propertyPatternStyle);
             if (width == 0 && !canChopWithoutWidth)
             {
                 return source.ToString();
@@ -64,7 +65,7 @@ namespace PNFmt
                 var changes = new Dictionary<int, TextChange>();
                 var occupiedLines = new HashSet<int>();
                 foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle, arrayStyle, initializerStyle, listStyle,
-                    ternaryStyle, ternaryOperatorsAtEnd)
+                    propertyPatternStyle, ternaryStyle, ternaryOperatorsAtEnd)
                     .OrderByDescending(item => item.Owner.Span.Length))
                 {
                     if (exclusions.Intersects(group.Owner.Span))
@@ -248,7 +249,8 @@ namespace PNFmt
 
         private static IEnumerable<WrapGroup> Groups(
             SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle,
-            WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle, WrapStyle ternaryStyle, bool ternaryOperatorsAtEnd)
+            WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle, WrapStyle propertyPatternStyle,
+            WrapStyle ternaryStyle, bool ternaryOperatorsAtEnd)
         {
             foreach (var node in root.DescendantNodes(descendIntoChildren: node => !(node is InterpolatedStringExpressionSyntax)))
             {
@@ -270,6 +272,14 @@ namespace PNFmt
                 {
                     yield return new WrapGroup(node, pattern.Patterns.Select(element => element.GetFirstToken())
                         .Append(pattern.CloseBracketToken).ToArray(), listStyle, closeToken: pattern.CloseBracketToken);
+                }
+                else if (node is PropertyPatternClauseSyntax propertyPattern && propertyPatternStyle != WrapStyle.Default
+                    && propertyPattern.Subpatterns.Count > 0)
+                {
+                    yield return new WrapGroup(node, new[] { propertyPattern.OpenBraceToken }
+                        .Concat(propertyPattern.Subpatterns.Select(property => property.GetFirstToken()))
+                        .Append(propertyPattern.CloseBraceToken).ToArray(), propertyPatternStyle,
+                        propertyPattern.OpenBraceToken, propertyPattern.CloseBraceToken);
                 }
                 else if (node is InitializerExpressionSyntax initializer && initializer.Expressions.Count > 0)
                 {
