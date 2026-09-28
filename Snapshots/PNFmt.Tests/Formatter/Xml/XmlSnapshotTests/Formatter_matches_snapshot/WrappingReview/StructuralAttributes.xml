@@ -1,0 +1,5 @@
+<Root>
+    <Entry FirstCustomerReferenceIdentifier="first-value"
+        SecondCustomerReferenceIdentifier="second-value"
+        ThirdCustomerReferenceIdentifier="third-value" />
+</Root>

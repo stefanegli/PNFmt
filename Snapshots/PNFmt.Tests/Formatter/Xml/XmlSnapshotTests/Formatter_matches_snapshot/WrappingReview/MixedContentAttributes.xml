@@ -1,0 +1,3 @@
+<Root>
+    <Paragraph FirstCustomerReferenceIdentifier="first-value" SecondCustomerReferenceIdentifier="second-value">Keep <Strong Emphasis="high">this exact</Strong> spacing.</Paragraph>
+</Root>

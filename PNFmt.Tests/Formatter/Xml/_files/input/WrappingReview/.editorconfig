@@ -1,0 +1,24 @@
+root = true
+
+[*]
+pnfmt_enabled = true
+pnfmt_format = true
+max_line_length = 80
+xml_wrap_tags_and_pi = true
+indent_style = space
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+insert_final_newline = true
+
+[*.xml]
+pnfmt_formatter = xml
+
+[*.xaml]
+pnfmt_formatter = xaml
+
+[AttributesOnDifferentLines.xml]
+xml_attribute_style = on_different_lines
+
+[AttributesOnSingleLine.xml]
+xml_attribute_style = on_single_line

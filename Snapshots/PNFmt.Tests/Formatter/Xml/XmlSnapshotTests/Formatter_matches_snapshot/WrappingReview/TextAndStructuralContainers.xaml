@@ -1,0 +1,6 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+    <TextBlock AutomationProperties.Name="A long accessible customer reference label" Foreground="DarkSlateGray">Keep this exact text.</TextBlock>
+    <Border
+        AutomationProperties.Name="A long accessible customer reference label"
+        Background="DarkSlateGray" />
+</Grid>
