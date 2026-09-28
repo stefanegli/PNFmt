@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>PNFmt × CSharpier — remaining gaps, September 2026</title>
+<style>
+:root{color-scheme:light;--bg:#f7f6f2;--paper:#fff;--text:#233236;--muted:#52656a;--line:#dce2df;--accent:#196d60;--wash:#eaf3ed;--amber:#885614;--amberwash:#faf0da;--code:#eff2f1}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:25px}body{margin:0;background:var(--bg);color:var(--text);font:17px/1.65 "Segoe UI",system-ui,sans-serif}main{max-width:1180px;margin:auto;padding:34px 40px 65px}a{color:var(--accent);text-underline-offset:3px}a:hover{text-decoration-thickness:2px}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var(--accent);outline-offset:4px}.top{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--line);padding-bottom:17px;font-size:14px}.top b{letter-spacing:.07em}.top span{color:var(--muted);margin-left:12px}button{font:inherit;font-size:13px;padding:7px 12px;background:transparent;color:var(--muted);border:1px solid var(--line);border-radius:5px;cursor:pointer}header{padding:39px 0 27px}.eyebrow{font-size:12px;text-transform:uppercase;font-weight:700;letter-spacing:.15em;color:var(--accent);margin:0 0 12px}h1{font-size:clamp(32px,4.6vw,49px);line-height:1.13;letter-spacing:-.035em;max-width:920px;margin:0 0 21px;font-weight:650}.lede{font-size:20px;max-width:920px;margin:0 0 18px}.meta{font-size:13px;color:var(--muted);margin:0}nav{display:flex;flex-wrap:wrap;gap:9px 23px;border-block:1px solid var(--line);padding:16px 0;font-size:14px}nav a{text-decoration:none}section{margin-top:38px}h2{font-size:26px;line-height:1.3;letter-spacing:-.025em;margin:0 0 14px}h3{font-size:19px;line-height:1.4;margin:0 0 10px}h4{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 7px}p{margin:0 0 15px}.muted{color:var(--muted)}.prose{max-width:890px}.callout{padding:19px 23px;border-left:3px solid var(--accent);background:var(--wash);border-radius:0 6px 6px 0;margin:23px 0}.callout p:last-child{margin:0}.callout.amber{background:var(--amberwash);border-color:var(--amber)}.table-wrap{background:var(--paper);border:1px solid var(--line);border-radius:7px;overflow:hidden;margin-top:20px}table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.6}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:16px 18px}th{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);background:var(--wash)}tr:last-child td{border-bottom:0}td:first-child{width:23%}td:nth-child(2){width:44%}.small{font-size:13px}.status{font-weight:650;color:var(--accent)}code{font: .87em Consolas,"Cascadia Code",monospace;padding:2px 5px;background:var(--code);border-radius:3px;overflow-wrap:anywhere}pre{font:13px/1.65 Consolas,"Cascadia Code",monospace;background:var(--code);padding:17px;margin:0;border-radius:5px;overflow:auto;tab-size:4}pre code{font:inherit;padding:0;background:none;overflow-wrap:normal}.cols{display:grid;grid-template-columns:1fr 1fr;gap:27px;margin-top:20px}.cols article{padding-top:16px;border-top:2px solid var(--line)}.cols p{font-size:15px}ol.plan{list-style:none;counter-reset:steps;padding:0;margin:20px 0}ol.plan li{counter-increment:steps;display:grid;grid-template-columns:37px 1fr;gap:13px;padding:16px 0;border-bottom:1px solid var(--line)}ol.plan li::before{content:counter(steps,decimal-leading-zero);font-size:14px;font-weight:700;color:var(--accent);padding-top:2px}.plan strong{display:block}.plan p{font-size:15px;color:var(--muted);margin:3px 0 0}details{background:var(--paper);border:1px solid var(--line);border-radius:5px;margin:10px 0}summary{padding:13px 17px;cursor:pointer;font-size:15px;font-weight:600}summary .measure{float:right;font-weight:400;font-size:12px;color:var(--muted);margin-top:3px}.example{padding:3px 17px 20px}.outputs{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:19px}.sources{font-size:14px;padding-left:21px}.sources li{margin:7px 0}footer{border-top:1px solid var(--line);margin-top:36px;padding-top:18px;font-size:12px;color:var(--muted)}
+.outputs>div{min-width:0}
+@media(prefers-color-scheme:dark){:root{color-scheme:dark;--bg:#182225;--paper:#1e2b2e;--text:#e7efec;--muted:#afc0bb;--line:#364a4d;--accent:#95d9bd;--wash:#223b33;--amber:#e4b96b;--amberwash:#3a3325;--code:#26383b}}
+@media(max-width:760px){main{padding:24px 19px 45px}.top span{display:none}.lede{font-size:18px}.cols,.outputs{grid-template-columns:1fr}.table-wrap{overflow:visible}table,tbody,tr,td{display:block}thead{display:none}tr{padding:13px 17px;border-bottom:1px solid var(--line)}tr:last-child{border-bottom:0}td,td:first-child,td:nth-child(2){width:auto;border:0;padding:6px 0}td[data-label]::before{content:attr(data-label);display:block;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:4px}summary .measure{float:none;display:block;margin-left:16px}pre{font-size:12px}}
+@media print{:root{color-scheme:light;--bg:#fff;--paper:#fff;--text:#111;--muted:#444;--line:#ccc;--accent:#21584b;--wash:#f0f5f1;--amber:#77531a;--amberwash:#fff8e8;--code:#f4f4f4}main{max-width:none;padding:0}body{font-size:10pt}.top button,nav{display:none}header{padding:23px 0}h1{font-size:29pt}.lede{font-size:13pt}table{font-size:9pt}th,td{padding:10px}h2,h3{break-after:avoid}.callout,tr,.plan li{break-inside:avoid}pre{font-size:8pt;white-space:pre-wrap;overflow-wrap:anywhere}summary .measure{float:none;margin-left:10px}section{margin-top:26px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body><main>
+<div class="top"><div><b>PNFmt</b><span>Engineering comparison · revised</span></div><button id="print" type="button">Print / Save PDF</button></div>
+<header><p class="eyebrow">28 September 2026 · Updated assessment</p><h1>The remaining gaps are narrower.<br>Targeted improvements are worth pursuing.</h1><p class="lede">PNFmt now covers the two largest omissions from the first review: <strong>C# width-based wrapping</strong> and <strong>XML/MSBuild attribute layout</strong>. The next useful work is better wrapping decisions and syntax coverage, XML exclusions, and stronger comment validation.</p><p class="meta">PNFmt <a href="../../README.md">0.1.0-alpha.11</a> at 00d5185 · CSharpier source <a href="https://github.com/belav/csharpier/tree/619c8ac4064728be9d8354777ea6e4a04f4b6f61/">619c8ac</a> · Executable comparison against CSharpier 1.3.0</p></header>
+<nav aria-label="Contents"><a href="#covered">Already covered</a><a href="#gaps">Worth pursuing</a><a href="#choices">Intentional differences</a><a href="#examples">Observed examples</a><a href="#plan">Recommended order</a><a href="#method">Method & sources</a></nav>
+
+<section id="covered"><h2>What changed since the first comparison</h2><p class="prose muted">The earlier report understated what the current implementation can do. These are implemented capabilities; their activation and limits still matter.</p>
+<div class="table-wrap"><table><thead><tr><th>Area</th><th>PNFmt now has</th><th>Assessment</th></tr></thead><tbody>
+<tr><td><strong>C# width wrapping</strong></td><td data-label="Implemented">Calls, object creation, element access, parameters, fluent chains including <code>?.</code>, and binary operators. Width counts tab stops.</td><td data-label="Assessment"><span class="status">Substantially covered.</span> The gap is additional constructs and break selection, not the absence of a wrapping engine.</td></tr>
+<tr><td><strong>List styles</strong></td><td data-label="Implemented">Independent argument/parameter <code>wrap_if_long</code>, <code>chop_if_long</code> and <code>chop_always</code> styles, with JetBrains aliases.</td><td data-label="Assessment">Useful control beyond CSharpier’s largely fixed layout policy.</td></tr>
+<tr><td><strong>XML/MSBuild attributes</strong></td><td data-label="Implemented">Width wrapping, explicit attribute arrangement, single/double indentation and first-attribute alignment. XML declarations can wrap too.</td><td data-label="Assessment"><span class="status">Substantially covered.</span> General XML, XAML and MSBuild share the pass; protected text subtrees remain excluded.</td></tr>
+<tr><td><strong>Blank lines & file headers</strong></td><td data-label="Implemented">Microsoft blank-line preferences and <code>file_header_template</code>, alongside member/import/modifier sorting and region removal.</td><td data-label="Assessment">These are reasons to retain PNFmt’s existing configurable pipeline.</td></tr>
+<tr><td><strong>Extension mapping</strong></td><td data-label="Implemented"><code>pnfmt_formatter</code> can select a formatter independently of the file extension, including configured XML/MSBuild variants.</td><td data-label="Assessment">Do not count <code>.props</code>, <code>.targets</code>, <code>.config</code> or a configured <code>.axaml</code> mapping as missing engines. C# script parsing is a separate capability.</td></tr>
+</tbody></table></div>
+<p class="small muted" style="margin-top:12px">Local references: <a href="../../docs/formatters/csharp.md">C# behavior</a> · <a href="../../docs/formatters/xml-wrapping.md">XML/MSBuild wrapping</a> · <a href="../../PNFmt.Core/Formatter/EditorConfig/FileFormattingConfiguration.cs">formatter selection</a>.</p>
+<div class="callout prose"><p><strong>Configuration matters:</strong> the repository’s root <code>.editorconfig</code> does not currently set <code>max_line_length</code> or the XML wrapping options. Both capabilities are opt-in and omitted from generated defaults. Before implementing more, try the existing settings on representative files and review the output. This review did not change repository formatting policy.</p></div>
+</section>
+
+<section id="gaps"><h2>The gaps worth pursuing</h2><p class="prose muted">Priorities and effort below are engineering judgments from source inspection and focused examples, not project estimates or benchmark results.</p>
+<div class="table-wrap"><table><thead><tr><th>Gap</th><th>Evidence and practical benefit</th><th>Recommendation</th></tr></thead><tbody>
+<tr><td><strong>Better break selection</strong><br><span class="small">High value · medium effort</span></td><td data-label="Evidence">In the switch example, a long expression caused PNFmt to break the short <code>M(int value)</code> parameter list while leaving the expression long. Wrapping is triggered by the containing line, even when the list itself is short. <a href="#case-Switch-cs">See actual output</a>.</td><td data-label="Recommendation"><strong>Pursue first.</strong> Prefer a break that meaningfully shortens the overlong expression; avoid chopping an unrelated short list just because it shares that line.</td></tr>
+<tr><td><strong>Broader C# syntax coverage</strong><br><span class="small">High value · incremental effort</span></td><td data-label="Evidence">Collection/array initializers, tuples, ternaries, patterns, query syntax and switch expressions remained 107–158 columns in the probes at an 80-column target. CSharpier broke these to 36–56 columns. Nested supported calls can still wrap inside such constructs.</td><td data-label="Recommendation"><strong>Pursue in stages.</strong> Start with collections/initializers and ternary/switch expressions. Add tuple, pattern and query handling according to actual usage. <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxPrinter/SyntaxNodePrinters/CollectionExpression.cs">CSharpier collection printer</a>.</td></tr>
+<tr><td><strong>XML formatting exclusions</strong><br><span class="small">High practical value · moderate effort</span></td><td data-label="Evidence">CSharpier supports node and range ignore comments in XML. PNFmt has whole-file activation and text-preservation rules, but no XML formatting-control comments.</td><td data-label="Recommendation"><strong>Pursue.</strong> Support PNFmt-style XML exclusions so users can preserve hand-laid-out fragments without changing XML meaning through <code>xml:space</code>. Specify whether they also block sorting in dedicated XML formatters. <a href="https://csharpier.com/docs/Ignore#xml">Upstream behavior</a>.</td></tr>
+<tr><td><strong>Ordinary comment validation</strong><br><span class="small">High robustness value · moderate effort</span></td><td data-label="Evidence">PNFmt’s final C# guard compares token text, directives, inactive text and exclusions. It does not explicitly compare ordinary comment contents. CSharpier’s comparer checks non-whitespace trivia too.</td><td data-label="Recommendation"><strong>Pursue before broader rewrites.</strong> Allow intentional header replacement and permitted indentation changes, while detecting unintended comment loss or edits. This is a guardrail gap, not an observed comment-corruption bug. <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxNodeComparer.cs">Upstream comparer</a>.</td></tr>
+<tr><td><strong>Attributes on text-bearing elements</strong><br><span class="small">Medium value · moderate effort</span></td><td data-label="Evidence">PNFmt preserves the entire subtree when it contains text, including the opening tag. The probe stayed 136 columns; CSharpier wrapped the attributes to 56 columns while keeping the text. The same blanket rule covers XAML text containers. <a href="#case-TextAttributes-xml">See actual output</a>.</td><td data-label="Recommendation"><strong>Worth a focused extension.</strong> Separate opening-tag layout from child-content preservation for ordinary text-bearing elements. Keep attribute values, text, explicit exclusions and existing <code>xml:space</code> guarantees intact.</td></tr>
+<tr><td><strong>Single-node C# exclusions</strong><br><span class="small">Medium convenience value · moderate effort</span></td><td data-label="Evidence">CSharpier’s next-node marker avoids enclosing a single statement/member in an off/on pair. PNFmt currently recognizes only exact standalone off/on markers.</td><td data-label="Recommendation"><strong>Useful, but behind XML exclusions.</strong> Existing ranges already solve the core need. Coordinate any new marker with header detection and sorting barriers. <a href="https://csharpier.com/docs/Ignore#c">Upstream behavior</a>.</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="choices"><h2>Differences that do not automatically justify new work</h2><div class="cols">
+<article><h3>Canonical compaction</h3><p>CSharpier can collapse an unnecessarily expanded short call; PNFmt retains existing line breaks. Our compact and expanded inputs therefore remain different under PNFmt, while CSharpier produces the same result.</p><p><strong>Defer unless one canonical layout is the goal.</strong> Both outputs can be stable on a second run. Stability does not imply identical output for all equivalent starting layouts. <a href="#case-Expanded-cs">Compare the short-call example</a>.</p></article>
+<article><h3>Trailing commas and closing delimiters</h3><p>CSharpier adds trailing commas in supported multiline constructs and often gives closing delimiters their own line. PNFmt preserves comma tokens and typically keeps call/parameter closing delimiters with the last item.</p><p><strong>Style choices, not urgent gaps.</strong> Trailing-comma cleanup requires an explicit allowance in our token-preservation checks. <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxPrinter/TrailingComma.cs">Upstream comma printer</a>.</p></article>
+<article><h3>Inactive preprocessor branches</h3><p>CSharpier derives symbol sets and formats additional branches. PNFmt intentionally preserves inactive code; the probe confirmed that distinction.</p><p><strong>Defer until conditional-compilation-heavy projects need it.</strong> Multiple parses, branch-specific errors and validation make this substantially more complex than adding an ordinary break point. <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/PreprocessorSymbols.cs">Symbol-set logic</a>.</p></article>
+<article><h3>XML spelling and text whitespace</h3><p>CSharpier normalizes quotes, spaces around <code>=</code> and empty-tag spacing, and offers strict/ignore text-whitespace modes. PNFmt intentionally retains those spellings in generic XML; the MSBuild serializer already normalizes its own output.</p><p><strong>Keep the conservative defaults.</strong> Optional tag-spacing normalization could be useful if users request it. Broad text-whitespace normalization is a poor fit for PNFmt’s preservation rules. <a href="https://csharpier.com/docs/Configuration#xml-whitespace-sensitivity">Whitespace modes</a>.</p></article>
+<article><h3>Raw strings, DTDs and scripts</h3><p>CSharpier can reindent raw string literals and supports XML containing a DOCTYPE; the simple DOCTYPE probe formatted successfully. PNFmt preserves literal token text and skips DTD-bearing generic XML. Its C# parser uses regular C# 14 rather than script mode.</p><p><strong>Demand-driven additions.</strong> Preserve current contracts until a real input set warrants the added handling. These restrictions are documented, not accidental omissions. <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxPrinter/Token.cs">Literal handling</a>.</p></article>
+<article><h3>Editor integration and caching</h3><p>CSharpier exposes stdin/stdout formatting, persistent server/pipe modes and a content/config/version cache. PNFmt’s CLI is file-based and already limits normal Git runs to changed files.</p><p><strong>Start with stdin/stdout if editor integration is next.</strong> A server or cache is worth adding only after measuring that workflow. These are delivery features, separate from formatting quality. <a href="https://csharpier.com/docs/CLI">CLI capabilities</a>.</p></article>
+</div>
+<div class="callout prose"><p><strong>Retain the current engine.</strong> A wholesale CSharpier backend is less compelling now that wrapping exists. PNFmt’s EditorConfig controls, independent cleanup switches, member ordering, file headers, dedicated project/resource formatting and exact-preservation rules remain useful. Borrow selected printer ideas and regression cases; importing the whole engine also imports its formatting policies.</p></div>
+</section>
+
+<section id="examples"><h2>Observed outputs, not just feature lists</h2><p class="prose">Fifteen deliberately selected inputs were run through both CLIs with an <strong>80-column target</strong>, four spaces and LF newlines. Optional PNFmt sorting was off. These are gap-focused examples, not a representative scorecard. Expand a case to inspect the exact input and outputs.</p><p class="small muted">Line lengths include indentation. Shorter is not inherently better; the table tests where wrapping can operate. PNFmt skipped the DOCTYPE case with XML001. Second-pass check commands exited 0 for both tools; a skipped PNFmt file does not make that check fail.</p>
+<details id="case-Calls-cs"><summary><span>Calls.cs</span><span class="measure">Longest line: PNFmt 37 · CSharpier 37</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    void M()
+    {
+        ProcessCustomerOrder(firstCustomerIdentifier, secondCustomerIdentifier, thirdCustomerIdentifier);
+    }
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    void M()
+    {
+        ProcessCustomerOrder(
+            firstCustomerIdentifier,
+            secondCustomerIdentifier,
+            thirdCustomerIdentifier);
+    }
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    void M()
+    {
+        ProcessCustomerOrder(
+            firstCustomerIdentifier,
+            secondCustomerIdentifier,
+            thirdCustomerIdentifier
+        );
+    }
+}</code></pre></div></div></div></details>
+<details id="case-Collection-cs"><summary><span>Collection.cs</span><span class="measure">Longest line: PNFmt 107 · CSharpier 36</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    string[] items = [&quot;first-customer-reference&quot;, &quot;second-customer-reference&quot;, &quot;third-customer-reference&quot;];
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    string[] items = [&quot;first-customer-reference&quot;, &quot;second-customer-reference&quot;, &quot;third-customer-reference&quot;];
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    string[] items =
+    [
+        &quot;first-customer-reference&quot;,
+        &quot;second-customer-reference&quot;,
+        &quot;third-customer-reference&quot;,
+    ];
+}</code></pre></div></div></div></details>
+<details id="case-Array-cs"><summary><span>Array.cs</span><span class="measure">Longest line: PNFmt 115 · CSharpier 36</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    string[] items = new[] { &quot;first-customer-reference&quot;, &quot;second-customer-reference&quot;, &quot;third-customer-reference&quot; };
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    string[] items = new[] { &quot;first-customer-reference&quot;, &quot;second-customer-reference&quot;, &quot;third-customer-reference&quot; };
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    string[] items = new[]
+    {
+        &quot;first-customer-reference&quot;,
+        &quot;second-customer-reference&quot;,
+        &quot;third-customer-reference&quot;,
+    };
+}</code></pre></div></div></div></details>
+<details id="case-Tuple-cs"><summary><span>Tuple.cs</span><span class="measure">Longest line: PNFmt 122 · CSharpier 46</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    object M() =&gt; (firstCustomerReferenceIdentifier, secondCustomerReferenceIdentifier, thirdCustomerReferenceIdentifier);
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    object M() =&gt; (firstCustomerReferenceIdentifier, secondCustomerReferenceIdentifier, thirdCustomerReferenceIdentifier);
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    object M() =&gt;
+        (
+            firstCustomerReferenceIdentifier,
+            secondCustomerReferenceIdentifier,
+            thirdCustomerReferenceIdentifier
+        );
+}</code></pre></div></div></div></details>
+<details id="case-Conditional-cs"><summary><span>Conditional.cs</span><span class="measure">Longest line: PNFmt 122 · CSharpier 45</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    object M() =&gt; customerAccountIsEligibleForDiscount ? preferredCustomerDiscountAmount : standardCustomerDiscountAmount;
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    object M() =&gt; customerAccountIsEligibleForDiscount ? preferredCustomerDiscountAmount : standardCustomerDiscountAmount;
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    object M() =&gt;
+        customerAccountIsEligibleForDiscount
+            ? preferredCustomerDiscountAmount
+            : standardCustomerDiscountAmount;
+}</code></pre></div></div></div></details>
+<details id="case-Pattern-cs"><summary><span>Pattern.cs</span><span class="measure">Longest line: PNFmt 158 · CSharpier 56</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    bool M(object input) =&gt; input is { FirstCustomerReferenceIdentifier: true, SecondCustomerReferenceIdentifier: true, ThirdCustomerReferenceIdentifier: true };
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    bool M(
+        object input) =&gt; input is { FirstCustomerReferenceIdentifier: true, SecondCustomerReferenceIdentifier: true, ThirdCustomerReferenceIdentifier: true };
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    bool M(object input) =&gt;
+        input
+            is {
+                FirstCustomerReferenceIdentifier: true,
+                SecondCustomerReferenceIdentifier: true,
+                ThirdCustomerReferenceIdentifier: true
+            };
+}</code></pre></div></div></div></details>
+<details id="case-Query-cs"><summary><span>Query.cs</span><span class="measure">Longest line: PNFmt 154 · CSharpier 44</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    object M() =&gt; from customer in customerAccounts where customer.IsEligibleForDiscount orderby customer.DisplayName select customer.ReferenceIdentifier;
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    object M() =&gt; from customer in customerAccounts where customer.IsEligibleForDiscount orderby customer.DisplayName select customer.ReferenceIdentifier;
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    object M() =&gt;
+        from customer in customerAccounts
+        where customer.IsEligibleForDiscount
+        orderby customer.DisplayName
+        select customer.ReferenceIdentifier;
+}</code></pre></div></div></div></details>
+<details id="case-Switch-cs"><summary><span>Switch.cs</span><span class="measure">Longest line: PNFmt 156 · CSharpier 51</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    object M(int value) =&gt; value switch { 1 =&gt; firstCustomerReferenceIdentifier, 2 =&gt; secondCustomerReferenceIdentifier, _ =&gt; thirdCustomerReferenceIdentifier };
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    object M(
+        int value) =&gt; value switch { 1 =&gt; firstCustomerReferenceIdentifier, 2 =&gt; secondCustomerReferenceIdentifier, _ =&gt; thirdCustomerReferenceIdentifier };
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    object M(int value) =&gt;
+        value switch
+        {
+            1 =&gt; firstCustomerReferenceIdentifier,
+            2 =&gt; secondCustomerReferenceIdentifier,
+            _ =&gt; thirdCustomerReferenceIdentifier,
+        };
+}</code></pre></div></div></div></details>
+<details id="case-Compact-cs"><summary><span>Compact.cs</span><span class="measure">Longest line: PNFmt 31 · CSharpier 31</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(first, second);
+    }
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(first, second);
+    }
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(first, second);
+    }
+}</code></pre></div></div></div></details>
+<details id="case-Expanded-cs"><summary><span>Expanded.cs</span><span class="measure">Longest line: PNFmt 18 · CSharpier 31</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(
+            first,
+            second
+        );
+    }
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(
+            first,
+            second
+        );
+    }
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+    void M()
+    {
+        Process(first, second);
+    }
+}</code></pre></div></div></div></details>
+<details id="case-ConditionalBranch-cs"><summary><span>ConditionalBranch.cs</span><span class="measure">Longest line: PNFmt 57 · CSharpier 36</span></summary><div class="example"><div><h4>Input</h4><pre><code>class Example
+{
+#if CUSTOM_BUILD
+    void    SelectedOnlyInCustomBuild( ) {var  value= 1;}
+#else
+    void    SelectedByDefault( ) {var  value= 2;}
+#endif
+}</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>class Example
+{
+#if CUSTOM_BUILD
+    void    SelectedOnlyInCustomBuild( ) {var  value= 1;}
+#else
+    void SelectedByDefault() { var value = 2; }
+#endif
+}</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>class Example
+{
+#if CUSTOM_BUILD
+    void SelectedOnlyInCustomBuild()
+    {
+        var value = 1;
+    }
+#else
+    void SelectedByDefault()
+    {
+        var value = 2;
+    }
+#endif
+}</code></pre></div></div></div></details>
+<details id="case-Attributes-xml"><summary><span>Attributes.xml</span><span class="measure">Longest line: PNFmt 57 · CSharpier 56</span></summary><div class="example"><div><h4>Input</h4><pre><code>&lt;Root&gt;&lt;Entry FirstCustomerReferenceIdentifier=&quot;first-value&quot; SecondCustomerReferenceIdentifier=&quot;second-value&quot; ThirdCustomerReferenceIdentifier=&quot;third-value&quot; /&gt;&lt;/Root&gt;</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>&lt;Root&gt;
+    &lt;Entry FirstCustomerReferenceIdentifier=&quot;first-value&quot;
+        SecondCustomerReferenceIdentifier=&quot;second-value&quot;
+        ThirdCustomerReferenceIdentifier=&quot;third-value&quot; /&gt;
+&lt;/Root&gt;</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>&lt;Root&gt;
+    &lt;Entry
+        FirstCustomerReferenceIdentifier=&quot;first-value&quot;
+        SecondCustomerReferenceIdentifier=&quot;second-value&quot;
+        ThirdCustomerReferenceIdentifier=&quot;third-value&quot;
+    /&gt;
+&lt;/Root&gt;</code></pre></div></div></div></details>
+<details id="case-TextAttributes-xml"><summary><span>TextAttributes.xml</span><span class="measure">Longest line: PNFmt 136 · CSharpier 56</span></summary><div class="example"><div><h4>Input</h4><pre><code>&lt;Root&gt;&lt;Entry FirstCustomerReferenceIdentifier=&quot;first-value&quot; SecondCustomerReferenceIdentifier=&quot;second-value&quot;&gt;Keep this exact text.&lt;/Entry&gt;&lt;/Root&gt;</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>&lt;Root&gt;
+    &lt;Entry FirstCustomerReferenceIdentifier=&quot;first-value&quot; SecondCustomerReferenceIdentifier=&quot;second-value&quot;&gt;Keep this exact text.&lt;/Entry&gt;
+&lt;/Root&gt;</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>&lt;Root&gt;
+    &lt;Entry
+        FirstCustomerReferenceIdentifier=&quot;first-value&quot;
+        SecondCustomerReferenceIdentifier=&quot;second-value&quot;
+        &gt;Keep this exact text.&lt;/Entry&gt;
+&lt;/Root&gt;</code></pre></div></div></div></details>
+<details id="case-Quotes-xml"><summary><span>Quotes.xml</span><span class="measure">Longest line: PNFmt 45 · CSharpier 38</span></summary><div class="example"><div><h4>Input</h4><pre><code>&lt;Root&gt;&lt;Entry  First = &#39;one&#39;    Second = &#39;two&#39;/&gt;&lt;/Root&gt;</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>&lt;Root&gt;
+    &lt;Entry  First = &#39;one&#39;    Second = &#39;two&#39;/&gt;
+&lt;/Root&gt;</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>&lt;Root&gt;
+    &lt;Entry First=&quot;one&quot; Second=&quot;two&quot; /&gt;
+&lt;/Root&gt;</code></pre></div></div></div></details>
+<details id="case-Doctype-xml"><summary><span>Doctype.xml</span><span class="measure">Longest line: PNFmt 22 · CSharpier 15</span></summary><div class="example"><div><h4>Input</h4><pre><code>&lt;!DOCTYPE Root&gt;
+&lt;Root&gt;&lt;Entry /&gt;&lt;/Root&gt;</code></pre></div><div class="outputs"><div><h4>PNFmt · current local build</h4><pre><code>&lt;!DOCTYPE Root&gt;
+&lt;Root&gt;&lt;Entry /&gt;&lt;/Root&gt;</code></pre></div><div><h4>CSharpier · 1.3.0</h4><pre><code>&lt;!DOCTYPE Root&gt;
+&lt;Root&gt;
+    &lt;Entry /&gt;
+&lt;/Root&gt;</code></pre></div></div></div></details>
+</section>
+
+<section id="plan" class="prose"><h2>Recommended order</h2><ol class="plan">
+<li><div><strong>Exercise the existing wrapping options on representative files</strong><p>Use a width that suits the repository, then inspect diffs. The root configuration currently leaves the new wrapping features disabled.</p></div></li>
+<li><div><strong>Improve break selection, then add collections and ternary/switch wrapping</strong><p>These changes address visible shortcomings from the probes without committing to a new printing engine or globally reflowing existing layouts.</p></div></li>
+<li><div><strong>Add XML exclusion comments and strengthen C# comment validation</strong><p>Users gain control, and future formatting changes gain a better preservation check. Keep approved header changes separate from accidental edits.</p></div></li>
+<li><div><strong>Allow safe opening-tag wrapping around preserved text</strong><p>Useful especially for text-bearing XML and XAML controls. Scope the change tightly and verify that text/value content is unchanged.</p></div></li>
+<li><div><strong>Revisit convenience and policy features only with a concrete need</strong><p>Single-node C# ignores, trailing commas, compaction, inactive-branch formatting and editor transport are separate choices. They need not block the core improvements.</p></div></li>
+</ol></section>
+
+<section id="method" class="prose"><h2>Method and source references</h2><p>Reviewed the current PNFmt source, documentation and existing wrapping tests; built the local Release CLI successfully; inspected CSharpier main at <code>619c8ac</code> dated 26 September 2026; installed the current stable CSharpier <code>1.3.0</code> into a temporary tool directory for the examples. Source observations about main and executed behavior from 1.3.0 are distinguished above.</p><p>Probe commands used isolated temporary directories, explicit activation, <code>max_line_length = 80</code> and <code>xml_wrap_tags_and_pi = true</code>. PNFmt ran with <code>--all --recursive</code> only on that isolated probe directory. CSharpier ran with <code>format --no-cache</code>; both then ran check mode. No performance conclusion is drawn from the tiny run times. No production formatter, fixture, snapshot or repository policy was changed for this review.</p>
+<ul class="sources">
+<li><a href="../../PNFmt.Core/Formatter/CSharp/CSharpLineWrapper.cs">PNFmt C# wrapping groups and break selection</a> · <a href="../../docs/formatters/csharp.md">C# configuration and preservation contract</a></li>
+<li><a href="../../PNFmt.Core/Formatter/CSharp/CSharpDocumentFormatter.cs">PNFmt final C# preservation check</a> · <a href="../../PNFmt.Core/Formatter/CSharp/CSharpFormattingExclusions.cs">C# exclusion parser</a></li>
+<li><a href="../../PNFmt.Core/Formatter/Xml/XmlDocumentFormatter.cs">PNFmt XML subtree protection</a> · <a href="../../PNFmt.Core/Formatter/Xml/XmlAttributeWrapper.cs">attribute wrapper</a> · <a href="../../docs/formatters/xml-wrapping.md">XML wrapping options</a></li>
+<li><a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxPrinter/SyntaxNodePrinters/ConditionalExpression.cs">CSharpier conditional-expression printer</a> · <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/CSharp/SyntaxPrinter/SyntaxNodePrinters/SwitchExpression.cs">switch printer</a> · <a href="https://github.com/belav/csharpier/blob/619c8ac4064728be9d8354777ea6e4a04f4b6f61/Src/CSharpier.Core/Xml/XNodePrinters/Attributes.cs">XML attribute printer</a></li>
+<li><a href="https://csharpier.com/docs/Configuration">CSharpier configuration</a> · <a href="https://csharpier.com/docs/Ignore">ignores</a> · <a href="https://csharpier.com/docs/CLI">CLI and validation</a></li>
+</ul></section>
+<footer>PNFmt · Revised CSharpier comparison · 28 September 2026 · Recommendation based on source review and focused behavioral probes</footer>
+</main>
+<script>
+function revealHash(){const element=document.getElementById(decodeURIComponent(location.hash.slice(1)));if(element&&element.tagName==='DETAILS'){element.open=true;requestAnimationFrame(()=>element.scrollIntoView({block:'start'}));}}
+addEventListener('hashchange',revealHash);revealHash();
+document.getElementById('print').addEventListener('click',()=>{const closed=[...document.querySelectorAll('details:not([open])')];closed.forEach(x=>x.open=true);const restore=()=>{closed.forEach(x=>x.open=false);removeEventListener('afterprint',restore);};addEventListener('afterprint',restore);window.print();});
+</script>
+</body></html>
