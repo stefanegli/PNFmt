@@ -787,7 +787,7 @@
                 const showBefore = hasBefore && $("comparison-source").value === "before";
                 const before = showBefore ? item.review.before : item.input;
                 $("input-label").textContent = showBefore ? "Previous snapshot" : "Fixture input";
-                $("input-path").textContent = showBefore ? "Saved result before initializer wrapping" : item.inputPath;
+                $("input-path").textContent = showBefore ? "Saved result before this case was processed" : item.inputPath;
                 $("output-path").textContent = item.id;
                 $("input-info").textContent = lineInfo(before);
                 $("output-info").textContent = lineInfo(item.result);

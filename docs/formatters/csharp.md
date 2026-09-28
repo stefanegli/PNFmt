@@ -138,6 +138,51 @@ convert one initializer syntax into another. Indentation, tabs, and line endings
 follow the ordinary layout settings. `wrap_if_long` requires a positive width and
 fits whole elements where possible; long indivisible elements can still exceed it.
 
+### Conditional (ternary) expressions
+
+Use the JetBrains ternary settings to keep short expressions compact and put each
+branch of a long or already multiline expression on its own line:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_format = true
+max_line_length = 80
+csharp_wrap_ternary_expr_style = chop_if_long
+csharp_wrap_before_ternary_opsigns = true
+```
+
+```csharp
+object M() => customerAccountIsEligibleForDiscount
+    ? preferredCustomerDiscountAmount
+    : standardCustomerDiscountAmount;
+```
+
+`csharp_wrap_ternary_expr_style` accepts `wrap_if_long` (add only the breaks needed
+to fit a positive width), `chop_if_long` (break at both branches when long or already
+multiline), and `chop_always` (break at both branches regardless of width). A short
+expression exactly at the width remains compact. `chop_if_long` can complete an
+existing multiline expression without a width; `chop_always` also works without one.
+Missing, invalid, or unset styles leave ternary layout to ordinary Roslyn formatting.
+
+`csharp_wrap_before_ternary_opsigns` accepts `true` (break before `?` and `:`, the
+default for omitted or invalid values) or `false` (break after them). It does not
+enable wrapping on its own and is independent of the binary-expression setting
+`dotnet_style_operator_placement_when_wrapping`. Both ternary settings accept
+case-insensitive values and their `resharper_` aliases, with the same precedence
+and `unset` fallback as the list styles. Neither is added to generated defaults.
+File activation and layout are required; `pnfmt_format = false` or the applicable
+legacy layout fallback disables the feature.
+
+Continuation lines use one extra indentation level. Nested expressions are
+measured again after outer wrapping, so a short inner ternary can remain compact.
+Existing breaks are preserved rather than moved to the other side of an operator.
+Comments, directives, literals, interpolated-string contents, inactive code, and
+formatting exclusions remain protected; protected boundaries can prevent a break.
+The pass changes whitespace only, preserving tokens, parentheses, and evaluation
+order. Long indivisible conditions or branch values can still exceed the width.
+
 ## Region removal
 
 `pnfmt_csharp_remove_regions = true` removes matching `#region` and `#endregion` directive lines, including their labels and any text on those lines. Enclosed code, ordinary comments, and XML documentation remain. Nested regions and regions inside method bodies are supported. Region-like text in strings and comments is never treated as a directive.

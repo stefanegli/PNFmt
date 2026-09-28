@@ -64,13 +64,13 @@ namespace PNFmt.Tests.Snapshots
                 var root = repository.Info.WorkingDirectory;
                 var cases = SnapshotReviewExporter.ReadCases(root);
                 var review = cases.Where(item => item.review is not null).ToArray();
-                Assert.Equal(6, review.Count(item => item.review.status == "processed"));
-                Assert.Equal(11, review.Count(item => item.review.status == "pending"));
+                Assert.Equal(9, review.Count(item => item.review.status == "processed"));
+                Assert.Equal(10, review.Count(item => item.review.status == "pending"));
                 Assert.Equal(4, review.Count(item => item.review.status == "reference"));
                 Assert.All(cases.Where(item => item.name.StartsWith("WrappingReview/", StringComparison.Ordinal)),
                     item => Assert.NotNull(item.review));
                 var previous = review.Where(item => item.review.before is not null).ToArray();
-                Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs" },
+                Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs", "WrappingReview/ConditionalExpressions.cs" },
                     previous.Select(item => item.name).ToArray());
                 Assert.All(previous, item =>
                 {

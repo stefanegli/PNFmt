@@ -23,8 +23,10 @@ namespace PNFmt
             var arrayStyle = ResolveStyle(settings, "csharp_wrap_array_initializer_style");
             var initializerStyle = ResolveStyle(settings, "csharp_wrap_object_and_collection_initializer_style");
             var listStyle = ResolveStyle(settings, "csharp_wrap_list_pattern");
+            var ternaryStyle = ResolveStyle(settings, "csharp_wrap_ternary_expr_style");
             var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle)
-                || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle);
+                || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle)
+                || CanChopWithoutWidth(ternaryStyle);
             if (width == 0 && !canChopWithoutWidth)
             {
                 return source.ToString();
@@ -37,6 +39,8 @@ namespace PNFmt
             var useTabs = string.Equals(indentStyle, "tab", StringComparison.OrdinalIgnoreCase);
             settings.TryGetValue("dotnet_style_operator_placement_when_wrapping", out var operatorPlacement);
             var operatorsAtEnd = string.Equals(operatorPlacement, "end_of_line", StringComparison.OrdinalIgnoreCase);
+            var ternaryOperatorsAtEnd = bool.TryParse(ResolveValue(settings, "csharp_wrap_before_ternary_opsigns"), out var wrapBefore)
+                && !wrapBefore;
             settings.TryGetValue("end_of_line", out var endOfLine);
             var newLine = endOfLine == "crlf" ? "\r\n" : endOfLine == "lf" ? "\n" : endOfLine == "cr" ? "\r"
                 : TextFileFormatting.DetectNewLine(source.ToString());
@@ -59,7 +63,8 @@ namespace PNFmt
                 var exclusions = CSharpFormattingExclusions.Parse(root);
                 var changes = new Dictionary<int, TextChange>();
                 var occupiedLines = new HashSet<int>();
-                foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle, arrayStyle, initializerStyle, listStyle)
+                foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle, arrayStyle, initializerStyle, listStyle,
+                    ternaryStyle, ternaryOperatorsAtEnd)
                     .OrderByDescending(item => item.Owner.Span.Length))
                 {
                     if (exclusions.Intersects(group.Owner.Span))
@@ -243,7 +248,7 @@ namespace PNFmt
 
         private static IEnumerable<WrapGroup> Groups(
             SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle,
-            WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle)
+            WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle, WrapStyle ternaryStyle, bool ternaryOperatorsAtEnd)
         {
             foreach (var node in root.DescendantNodes(descendIntoChildren: node => !(node is InterpolatedStringExpressionSyntax)))
             {
@@ -277,6 +282,12 @@ namespace PNFmt
                             .Concat(initializer.Expressions.Select(element => element.GetFirstToken()))
                             .Append(initializer.CloseBraceToken).ToArray(), style, initializer.OpenBraceToken, initializer.CloseBraceToken);
                     }
+                }
+                else if (node is ConditionalExpressionSyntax ternary && ternaryStyle != WrapStyle.Default)
+                {
+                    yield return new WrapGroup(node, ternaryOperatorsAtEnd
+                        ? new[] { ternary.WhenTrue.GetFirstToken(), ternary.WhenFalse.GetFirstToken() }
+                        : new[] { ternary.QuestionToken, ternary.ColonToken }, ternaryStyle);
                 }
                 else if (node is BinaryExpressionSyntax binary && !(node.Parent is BinaryExpressionSyntax))
                 {
@@ -322,6 +333,17 @@ namespace PNFmt
 
         private static WrapStyle ResolveStyle(IReadOnlyDictionary<string, string> settings, string name)
         {
+            switch (ResolveValue(settings, name)?.Trim().ToLowerInvariant())
+            {
+                case "wrap_if_long": return WrapStyle.WrapIfLong;
+                case "chop_if_long": return WrapStyle.ChopIfLong;
+                case "chop_always": return WrapStyle.ChopAlways;
+                default: return WrapStyle.Default;
+            }
+        }
+
+        private static string ResolveValue(IReadOnlyDictionary<string, string> settings, string name)
+        {
             // The C# name wins over its vendor-prefixed alias. EditorConfig's unset
             // removes only that property, allowing the other spelling to apply.
             if (!settings.TryGetValue(name, out var value) || string.Equals(value, "unset", StringComparison.OrdinalIgnoreCase))
@@ -329,13 +351,7 @@ namespace PNFmt
                 settings.TryGetValue("resharper_" + name, out value);
             }
 
-            switch (value?.Trim().ToLowerInvariant())
-            {
-                case "wrap_if_long": return WrapStyle.WrapIfLong;
-                case "chop_if_long": return WrapStyle.ChopIfLong;
-                case "chop_always": return WrapStyle.ChopAlways;
-                default: return WrapStyle.Default;
-            }
+            return value;
         }
 
         private static IEnumerable<(SyntaxToken Token, TextSpan Span, int Line)> SelectFittingBreaks(

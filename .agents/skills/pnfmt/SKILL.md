@@ -50,7 +50,7 @@ Normal inheritance applies independently to each setting. `unset` removes an inh
 
 Read only the guidance relevant to the selected formatter:
 
-- [C# reference](references/csharp.md): Roslyn layout, line width, parameter/argument chopping, opt-in initializer/collection/list-pattern wrapping, import/modifier/member sorting, region removal, both blank-line mechanisms, file headers, exclusions, generated files, and parse diagnostics.
+- [C# reference](references/csharp.md): Roslyn layout, line width, parameter/argument chopping, opt-in initializer/collection/list-pattern and ternary wrapping, import/modifier/member sorting, region removal, both blank-line mechanisms, file headers, exclusions, generated files, and parse diagnostics.
 - [Other formatters](references/other-formatters.md): XML/MSBuild attribute wrapping, MSBuild sorting/linting, RESX insertion/removal, INI and EditorConfig precedence, response files, solutions, and XML/XAML preservation.
 
 ## Encoding and final newlines

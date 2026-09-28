@@ -138,7 +138,7 @@ test("provider selection, navigation, search, and display controls work together
 test("review status keeps open decisions separate and offers the previous snapshot comparison", () => {
     const { elements, cases } = load();
     const get = (id) => elements.get(id);
-    for (const [status, count] of [["processed", 6], ["pending", 11], ["reference", 4]]) {
+    for (const [status, count] of [["processed", 9], ["pending", 10], ["reference", 4]]) {
         get("show-" + status).onclick();
         assert.equal(get("tests").children.length, count);
         for (const button of get("tests").children) {
@@ -156,6 +156,12 @@ test("review status keeps open decisions separate and offers the previous snapsh
     get("comparison-source").value = "input";
     get("comparison-source").onchange();
     assert.equal(get("input-label").textContent, "Fixture input");
+    get("search").value = "ConditionalExpressions.cs";
+    get("search").oninput();
+    assert.equal(get("review-label").textContent, "Processed");
+    assert.equal(get("input-label").textContent, "Previous snapshot");
+    assert.ok(get("review-question").textContent.includes("chop_if_long"));
+    assert.ok(get("stats").textContent.includes("Content changes"));
     get("show-pending").onclick();
     get("search").value = "SwitchExpressions.cs";
     get("search").oninput();

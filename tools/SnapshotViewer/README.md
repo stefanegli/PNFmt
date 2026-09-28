@@ -26,7 +26,7 @@ questions), and **Reference** (previously supported behavior). These statuses ar
 explicit review notes, not inferred from whether the input differs from its result.
 Processed does not mean the user has approved the output.
 
-The array-initializer and collection-expression cases default to comparing the
+The array-initializer, collection-expression, and conditional-expression cases default to comparing the
 previous snapshot with the current snapshot. Use **Compare with** to switch back
 to the fixture input. New cases compare their fixture input with the saved result.
 The previous snapshots and the questions/statuses are retained in
@@ -39,12 +39,14 @@ configuration explicitly enables layout and an 80-column width with four-space
 indentation; XML/XAML also enables attribute wrapping. The two attribute-arrangement
 cases select their styles by filename. C# explicitly selects `chop_always` for
 array initializers, object/collection initializers, and collection expressions/list
-patterns. Optional C# sorting and cleanup remain off.
+patterns. Ternaries use `csharp_wrap_ternary_expr_style = chop_if_long` and
+`csharp_wrap_before_ternary_opsigns = true`; short and nested examples make the
+width-dependent behavior visible. Optional C# sorting and cleanup remain off.
 
 The saved outputs describe current behavior, including limitations, rather than a
-proposed target style. Review the processed collection/initializer/list-pattern
+proposed target style. Review the processed collection/initializer/list-pattern and ternary
 cases, then compare the supported call and structural-attribute cases with tuples,
-ternaries, property patterns, queries, switch expressions, and text-bearing
+property patterns, queries, switch expressions, and text-bearing
 XML/XAML that still need decisions. The short single-line and multiline call
 cases show how existing line breaks affect the result. Cases with identical input
 and output are intentional: they make preserved layouts and unwrapped constructs

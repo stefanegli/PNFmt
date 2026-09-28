@@ -46,8 +46,21 @@
   {
     "provider": "C#",
     "name": "WrappingReview/ConditionalExpressions.cs",
-    "status": "pending",
-    "note": "Decide: should a long conditional expression break around ? and : so its branches are easier to scan?"
+    "status": "processed",
+    "note": "Implemented: csharp_wrap_ternary_expr_style = chop_if_long and csharp_wrap_before_ternary_opsigns = true split long ternaries before ? and :. Compare the previous snapshot with the new layout; short expressions stay compact.",
+    "before": "class Example\n{\n    object M() => customerAccountIsEligibleForDiscount ? preferredCustomerDiscountAmount : standardCustomerDiscountAmount;\n}\n"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortConditional.cs",
+    "status": "processed",
+    "note": "New coverage: the same chop_if_long policy keeps this short ternary on one line. An identical input and result is intentional."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/NestedConditional.cs",
+    "status": "processed",
+    "note": "New coverage: the long outer ternary wraps before ? and :. After that, the inner ternary fits on its line and stays compact; the short method parameter list also stays together."
   },
   {
     "provider": "C#",

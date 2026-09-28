@@ -1,4 +1,6 @@
 class Example
 {
-    object M() => customerAccountIsEligibleForDiscount ? preferredCustomerDiscountAmount : standardCustomerDiscountAmount;
+    object M() => customerAccountIsEligibleForDiscount
+        ? preferredCustomerDiscountAmount
+        : standardCustomerDiscountAmount;
 }
