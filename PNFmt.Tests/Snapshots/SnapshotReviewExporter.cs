@@ -15,9 +15,13 @@ namespace PNFmt.Tests.Snapshots
 {
     public static class SnapshotReviewExporter
     {
-        public static void Write(string repositoryRoot, string outputPath)
+        public static void Write(string repositoryRoot, string outputPath, bool wrappingReviewOnly = false)
         {
             var cases = ReadCases(repositoryRoot);
+            if (wrappingReviewOnly)
+            {
+                cases = cases.Where(item => item.review is not null).ToArray();
+            }
             var template = File.ReadAllText(Path.Combine(repositoryRoot, "tools", "SnapshotViewer", "viewer.html"));
             var json = JsonSerializer.Serialize(new { generated = DateTimeOffset.UtcNow, cases });
             var html = Regex.Replace(template, @"/\*SNAPSHOT_DATA\*/\s*null", _ => json);
@@ -27,6 +31,17 @@ namespace PNFmt.Tests.Snapshots
 
         internal static IReadOnlyList<ReviewCase> ReadCases(string root)
         {
+            var review = JsonSerializer.Deserialize<ReviewDecision[]>(File.ReadAllText(
+                Path.Combine(root, "tools", "SnapshotViewer", "wrapping-review.json")))
+                .ToDictionary(item => (item.provider, item.name));
+            foreach (var decision in review.Values)
+            {
+                if ((decision.status != "processed" && decision.status != "pending" && decision.status != "reference")
+                    || string.IsNullOrWhiteSpace(decision.note))
+                {
+                    throw new InvalidOperationException("Invalid wrapping review decision: " + decision.name);
+                }
+            }
             var snapshotRoot = Path.Combine(root, "Snapshots", "PNFmt.Tests", "Formatter");
             var results = new List<ReviewCase>();
             foreach (var snapshot in Directory.GetFiles(Path.Combine(root, "Snapshots"), "*", SearchOption.AllDirectories).OrderBy(path => path, StringComparer.Ordinal))
@@ -131,16 +146,27 @@ namespace PNFmt.Tests.Snapshots
                     "Xml" => name.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase) ? "XAML" : "XML",
                     _ => throw new InvalidOperationException("Unmapped provider: " + provider),
                 };
+                review.Remove((label, snapshotName), out var decision);
+                if (snapshotName.StartsWith("WrappingReview/", StringComparison.Ordinal) && decision is null)
+                {
+                    throw new InvalidOperationException("Missing wrapping review decision: " + label + "/" + snapshotName);
+                }
                 results.Add(new ReviewCase(Relative(root, snapshot), label, snapshotName, testClass + "." + testMethod,
-                    description, inputPath, input, File.ReadAllText(snapshot), settings));
+                    description, inputPath, input, File.ReadAllText(snapshot), settings, decision));
             }
 
+            if (review.Count != 0)
+            {
+                throw new InvalidOperationException("Wrapping review refers to missing snapshots: " + string.Join(", ", review.Keys));
+            }
             return results;
         }
 
         private static string Relative(string root, string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
 
         internal sealed record ReviewCase(string id, string provider, string name, string test, string description,
-            string inputPath, string input, string result, string settings);
+            string inputPath, string input, string result, string settings, ReviewDecision review);
+
+        internal sealed record ReviewDecision(string provider, string name, string status, string note, string before);
     }
 }

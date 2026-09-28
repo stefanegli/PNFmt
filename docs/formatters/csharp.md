@@ -99,6 +99,45 @@ The aliases `resharper_csharp_wrap_parameters_style` and `resharper_csharp_wrap_
 
 Missing, `unset`, or unrecognized styles retain PNFmt's original behavior: chop lists only when their code exceeds a configured width, and preserve shorter multiline layouts. No list style is added by `--write-default-config`.
 
+### Initializers, collection expressions, and list patterns
+
+These additional JetBrains properties opt into wrapping the corresponding constructs:
+
+| Setting | Applies to |
+| --- | --- |
+| `csharp_wrap_array_initializer_style` | Explicit and implicit array initializers, including nested array initializers. |
+| `csharp_wrap_object_and_collection_initializer_style` | Object and traditional collection initializers, including `with` initializers. Dictionary entry pairs such as `{ key, value }` remain together. |
+| `csharp_wrap_list_pattern` | Collection expressions (`[first, second]`) and list patterns (`values is [first, .. rest]`). |
+
+Each accepts `wrap_if_long`, `chop_if_long`, and `chop_always` with the meanings above,
+and supports its `resharper_` alias with the same precedence and `unset` handling.
+Unlike argument/parameter wrapping, missing or invalid styles leave these constructs
+to ordinary Roslyn formatting even when a width is configured. Generated defaults
+do not add these settings. File activation and layout must be enabled.
+
+For one element per line, including short nonempty collections:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_format = true
+csharp_wrap_array_initializer_style = chop_always
+csharp_wrap_object_and_collection_initializer_style = chop_always
+csharp_wrap_list_pattern = chop_always
+```
+
+Chopping places initializer/collection elements and their closing delimiter on
+separate lines. Collection-expression opening brackets also start on a separate
+line; list-pattern opening brackets stay with the pattern. Initializer opening
+braces follow Roslyn's `csharp_new_line_before_open_brace` preference. Empty lists
+stay compact. Existing line breaks remain; trailing commas, spread elements,
+comments, strings, directives, and excluded regions are preserved. A protected
+boundary may prevent a requested break. Whitespace changes never add commas or
+convert one initializer syntax into another. Indentation, tabs, and line endings
+follow the ordinary layout settings. `wrap_if_long` requires a positive width and
+fits whole elements where possible; long indivisible elements can still exceed it.
+
 ## Region removal
 
 `pnfmt_csharp_remove_regions = true` removes matching `#region` and `#endregion` directive lines, including their labels and any text on those lines. Enclosed code, ordinary comments, and XML documentation remain. Nested regions and regions inside method bodies are supported. Region-like text in strings and comments is never treated as a directive.

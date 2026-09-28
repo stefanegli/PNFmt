@@ -14,16 +14,38 @@ Results come from the current files under `Snapshots/`; they are not regenerated
 
 ## Wrapping review cases
 
+Generate the focused decision review with:
+
+```powershell
+dotnet run --project tools/SnapshotViewer/PNFmt.SnapshotViewer.csproj --configuration Release -- --wrapping-review
+```
+
+Open `artifacts/wrapping-review.html`. The status buttons separate **Processed**
+(implemented and ready for your review), **Needs decision** (open formatting
+questions), and **Reference** (previously supported behavior). These statuses are
+explicit review notes, not inferred from whether the input differs from its result.
+Processed does not mean the user has approved the output.
+
+The array-initializer and collection-expression cases default to comparing the
+previous snapshot with the current snapshot. Use **Compare with** to switch back
+to the fixture input. New cases compare their fixture input with the saved result.
+The previous snapshots and the questions/statuses are retained in
+`wrapping-review.json`; update that manifest deliberately as decisions are made.
+Every `WrappingReview/` snapshot must have an entry, and stale entries fail export.
+
 Search for `WrappingReview` to inspect the C#, XML, and XAML cases added after the
 [CSharpier comparison](../../docs/reviews/csharpier-comparison.html). Their fixture
 configuration explicitly enables layout and an 80-column width with four-space
 indentation; XML/XAML also enables attribute wrapping. The two attribute-arrangement
-cases select their styles by filename. Optional C# sorting and cleanup remain off.
+cases select their styles by filename. C# explicitly selects `chop_always` for
+array initializers, object/collection initializers, and collection expressions/list
+patterns. Optional C# sorting and cleanup remain off.
 
 The saved outputs describe current behavior, including limitations, rather than a
-proposed target style. Compare the supported call and structural-attribute cases
-with collection/array initializers, tuples, ternaries, patterns, queries, switch
-expressions, and text-bearing XML/XAML. The short single-line and multiline call
+proposed target style. Review the processed collection/initializer/list-pattern
+cases, then compare the supported call and structural-attribute cases with tuples,
+ternaries, property patterns, queries, switch expressions, and text-bearing
+XML/XAML that still need decisions. The short single-line and multiline call
 cases show how existing line breaks affect the result. Cases with identical input
 and output are intentional: they make preserved layouts and unwrapped constructs
 visible in the review. Update these baselines deliberately if formatting policy

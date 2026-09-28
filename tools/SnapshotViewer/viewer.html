@@ -18,6 +18,9 @@
             * {
                 box-sizing: border-box;
             }
+            [hidden] {
+                display: none !important;
+            }
             body {
                 margin: 0;
                 background: var(--paper);
@@ -100,8 +103,26 @@
             .layout {
                 display: grid;
                 grid-template-columns: 280px minmax(0, 1fr);
-                height: calc(100vh - 77px);
+                height: calc(100vh - 145px);
             }
+            .review-summary {
+                padding: 10px 28px;
+                border-bottom: 1px solid var(--line);
+                background: #f0f3ef;
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                flex-wrap: wrap;
+            }
+            .review-summary p { margin: 0; font-size: 12px; color: var(--muted); }
+            .review-note { padding: 12px 15px; margin-top: 16px; border-left: 4px solid var(--accent); background: #e9f3ec; }
+            .review-note.pending { border-color: #aa7618; background: #fff4db; }
+            .review-note.reference { border-color: #8c9b95; background: #edf0ed; }
+            .review-note p { margin: 5px 0 0; }
+            .review-badge { display: inline-block; margin-top: 5px; font-size: 10px; font-weight: 700; color: var(--accent); }
+            .review-badge.pending { color: #845809; }
+            .review-badge.reference { color: var(--muted); }
+            #comparison-source { width: auto; margin: 0; padding: 5px; max-width: 100%; }
             aside {
                 background: #f0f3ef;
                 border-right: 1px solid var(--line);
@@ -462,13 +483,27 @@
             </div>
             <span class="offline">Standalone · works offline</span>
         </header>
+        <section class="review-summary" aria-label="Wrapping review progress">
+            <button id="show-processed"></button>
+            <button id="show-pending"></button>
+            <button id="show-reference"></button>
+            <p>Processed = implemented, ready for your review. Needs decision = open question. Reference = existing behavior.</p>
+        </section>
         <div class="layout">
             <aside aria-label="Snapshot selection">
                 <label class="field" for="provider"
                     >File provider / formatter</label
                 ><select id="provider">
                     <option value="">All providers</option></select
-                ><label class="field" for="search">Find a test</label
+                ><label class="field" for="review-status">Review status</label>
+                <select id="review-status">
+                    <option value="">All snapshots</option>
+                    <option value="review">All wrapping review cases</option>
+                    <option value="processed">Processed</option>
+                    <option value="pending">Needs decision</option>
+                    <option value="reference">Reference</option>
+                </select>
+                <label class="field" for="search">Find a test</label
                 ><input
                     type="search"
                     id="search"
@@ -494,9 +529,19 @@
                     </div>
                     <p class="description" id="description"></p>
                     <div class="subtle" id="test-id"></div>
+                    <section id="review-note" class="review-note" aria-label="Review decision">
+                        <strong id="review-label"></strong>
+                        <p id="review-question"></p>
+                    </section>
                     <div class="toolbar">
                         <div class="stats" id="stats"></div>
                         <div class="options">
+                            <label id="comparison-choice">Compare with
+                                <select id="comparison-source">
+                                    <option value="before">Previous snapshot</option>
+                                    <option value="input">Fixture input</option>
+                                </select>
+                            </label>
                             <label
                                 ><input id="changes" type="checkbox" />Changes
                                 only</label
@@ -512,7 +557,7 @@
                     >
                         <div class="pane-heads">
                             <div>
-                                <strong>Input</strong
+                                <strong id="input-label">Input</strong
                                 ><small id="input-path"></small>
                                 <div class="file-info" id="input-info"></div>
                             </div>
@@ -717,7 +762,8 @@
                 $("rows").replaceChildren(fragment);
                 $("empty-diff").hidden = count !== 0;
             }
-            function select(item) {
+            const reviewLabels = { processed: "Processed", pending: "Needs decision", reference: "Reference" };
+            function select(item, preserveComparison = false) {
                 selected = item;
                 $("detail").hidden = !item;
                 $("no-tests").hidden = !!item;
@@ -731,9 +777,19 @@
                 $("title").textContent = item.name;
                 $("description").textContent = item.description;
                 $("test-id").textContent = item.test;
-                $("input-path").textContent = item.inputPath;
+                $("review-note").hidden = !item.review;
+                $("review-note").className = "review-note " + (item.review?.status || "");
+                $("review-label").textContent = reviewLabels[item.review?.status] || "";
+                $("review-question").textContent = item.review?.note || "";
+                const hasBefore = typeof item.review?.before === "string";
+                $("comparison-choice").hidden = !hasBefore;
+                if (!preserveComparison) $("comparison-source").value = hasBefore ? "before" : "input";
+                const showBefore = hasBefore && $("comparison-source").value === "before";
+                const before = showBefore ? item.review.before : item.input;
+                $("input-label").textContent = showBefore ? "Previous snapshot" : "Fixture input";
+                $("input-path").textContent = showBefore ? "Saved result before initializer wrapping" : item.inputPath;
                 $("output-path").textContent = item.id;
-                $("input-info").textContent = lineInfo(item.input);
+                $("input-info").textContent = lineInfo(before);
                 $("output-info").textContent = lineInfo(item.result);
                 $("settings").textContent = item.settings;
                 $("locations").textContent =
@@ -743,7 +799,7 @@
                     item.id +
                     "\n\nTest: " +
                     item.test;
-                currentRows = compare(item.input, item.result);
+                currentRows = compare(before, item.result);
                 const removed = currentRows.filter(
                         (row) => row.changed && row.left && row.left.num !== "",
                     ).length,
@@ -754,7 +810,7 @@
                 $("stats").replaceChildren(
                     node(
                         "span",
-                        normalize(item.input) === normalize(item.result)
+                        normalize(before) === normalize(item.result)
                             ? "Unchanged"
                             : "Content changes",
                         "pill",
@@ -779,7 +835,9 @@
                     (item) =>
                         (!$("provider").value ||
                             item.provider === $("provider").value) &&
-                        [item.name, item.test, item.description, item.inputPath]
+                        (!$("review-status").value ||
+                            ($("review-status").value === "review" ? !!item.review : item.review?.status === $("review-status").value)) &&
+                        [item.name, item.test, item.description, item.inputPath, item.review?.note]
                             .join(" ")
                             .toLowerCase()
                             .includes(query),
@@ -801,7 +859,7 @@
                                     ? " same"
                                     : ""),
                         ),
-                        document.createTextNode(item.name),
+                        document.createTextNode(item.name.replace(/^WrappingReview\//, "")),
                     );
                     button.append(
                         title,
@@ -812,6 +870,7 @@
                                 item.test.split(".").pop().replace(/_/g, " "),
                         ),
                     );
+                    if (item.review) button.append(node("span", reviewLabels[item.review.status], "review-badge " + item.review.status));
                     button.onclick = () => select(item);
                     fragment.append(button);
                 }
@@ -835,6 +894,18 @@
                     $("provider").append(option);
                 }
                 $("provider").onchange = filter;
+                $("review-status").onchange = filter;
+                $("comparison-source").onchange = () => select(selected, true);
+                for (const status of ["processed", "pending", "reference"]) {
+                    const count = data.cases.filter(item => item.review?.status === status).length;
+                    $("show-" + status).textContent = reviewLabels[status] + " · " + count;
+                    $("show-" + status).onclick = () => {
+                        $("review-status").value = status;
+                        $("provider").value = "";
+                        $("search").value = "";
+                        filter();
+                    };
+                }
                 $("search").oninput = filter;
                 $("changes").onchange = renderRows;
                 $("whitespace").onchange = renderRows;

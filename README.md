@@ -11,7 +11,7 @@ Enable processing with `pnfmt_enabled = true` and choose a formatter with `pnfmt
 
 | Files | Formatter | Status | What it does |
 | --- | --- | --- | --- |
-| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace and wraps code, with parameter/argument list styles, import/modifier/member sorting, blank-line preferences, file headers, region removal, and exclusion regions. Member ordering preserves storage declaration order. |
+| [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace and wraps code, with parameter/argument styles and opt-in initializer, collection-expression, and list-pattern styles; import/modifier/member sorting, blank-line preferences, file headers, region removal, and exclusion regions. Member ordering preserves storage declaration order. |
 | [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, optionally wraps attributes, sorts safe properties and items, and reports project-structure diagnostics. |
 | [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Experimental | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
 | [`.resx`](docs/formatters/resx.md) | Resource | Stable | Sorts resource entries, protects runtime string newlines from Git checkout conversion, and optionally removes generated schema and documentation content. |

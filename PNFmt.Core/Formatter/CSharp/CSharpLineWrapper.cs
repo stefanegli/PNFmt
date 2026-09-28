@@ -20,7 +20,11 @@ namespace PNFmt
             var width = PositiveInteger(settings, "max_line_length", 0);
             var argumentsStyle = ResolveStyle(settings, "csharp_wrap_arguments_style");
             var parametersStyle = ResolveStyle(settings, "csharp_wrap_parameters_style");
-            var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle);
+            var arrayStyle = ResolveStyle(settings, "csharp_wrap_array_initializer_style");
+            var initializerStyle = ResolveStyle(settings, "csharp_wrap_object_and_collection_initializer_style");
+            var listStyle = ResolveStyle(settings, "csharp_wrap_list_pattern");
+            var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle)
+                || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle);
             if (width == 0 && !canChopWithoutWidth)
             {
                 return source.ToString();
@@ -55,7 +59,7 @@ namespace PNFmt
                 var exclusions = CSharpFormattingExclusions.Parse(root);
                 var changes = new Dictionary<int, TextChange>();
                 var occupiedLines = new HashSet<int>();
-                foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle)
+                foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle, arrayStyle, initializerStyle, listStyle)
                     .OrderByDescending(item => item.Owner.Span.Length))
                 {
                     if (exclusions.Intersects(group.Owner.Span))
@@ -86,7 +90,9 @@ namespace PNFmt
                         : boundaries;
                     foreach (var boundary in selected)
                     {
-                        changes[boundary.Span.Start] = new TextChange(boundary.Span, newLine + indentation);
+                        var boundaryIndent = boundary.Token == group.OpenToken || boundary.Token == group.CloseToken
+                            ? ContinuationIndent(source, group.Owner.SpanStart, 0, tabWidth, useTabs) : indentation;
+                        changes[boundary.Span.Start] = new TextChange(boundary.Span, newLine + boundaryIndent);
                         occupiedLines.Add(boundary.Line);
                         attempted.Add(ordinals[boundary.Token]);
                     }
@@ -236,7 +242,8 @@ namespace PNFmt
         }
 
         private static IEnumerable<WrapGroup> Groups(
-            SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle)
+            SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle,
+            WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle)
         {
             foreach (var node in root.DescendantNodes(descendIntoChildren: node => !(node is InterpolatedStringExpressionSyntax)))
             {
@@ -247,6 +254,29 @@ namespace PNFmt
                 else if (node is BaseParameterListSyntax parameters)
                 {
                     yield return new WrapGroup(node, parameters.Parameters.Select(parameter => parameter.GetFirstToken()).ToArray(), parametersStyle);
+                }
+                else if (node is CollectionExpressionSyntax collection && listStyle != WrapStyle.Default && collection.Elements.Count > 0)
+                {
+                    yield return new WrapGroup(node, new[] { collection.OpenBracketToken }
+                        .Concat(collection.Elements.Select(element => element.GetFirstToken())).Append(collection.CloseBracketToken).ToArray(),
+                        listStyle, collection.OpenBracketToken, collection.CloseBracketToken);
+                }
+                else if (node is ListPatternSyntax pattern && listStyle != WrapStyle.Default && pattern.Patterns.Count > 0)
+                {
+                    yield return new WrapGroup(node, pattern.Patterns.Select(element => element.GetFirstToken())
+                        .Append(pattern.CloseBracketToken).ToArray(), listStyle, closeToken: pattern.CloseBracketToken);
+                }
+                else if (node is InitializerExpressionSyntax initializer && initializer.Expressions.Count > 0)
+                {
+                    var style = initializer.IsKind(SyntaxKind.ArrayInitializerExpression) ? arrayStyle
+                        : initializer.IsKind(SyntaxKind.ObjectInitializerExpression) || initializer.IsKind(SyntaxKind.CollectionInitializerExpression)
+                            || initializer.IsKind(SyntaxKind.WithInitializerExpression) ? initializerStyle : WrapStyle.Default;
+                    if (style != WrapStyle.Default)
+                    {
+                        yield return new WrapGroup(node, new[] { initializer.OpenBraceToken }
+                            .Concat(initializer.Expressions.Select(element => element.GetFirstToken()))
+                            .Append(initializer.CloseBraceToken).ToArray(), style, initializer.OpenBraceToken, initializer.CloseBraceToken);
+                    }
                 }
                 else if (node is BinaryExpressionSyntax binary && !(node.Parent is BinaryExpressionSyntax))
                 {
@@ -340,16 +370,21 @@ namespace PNFmt
 
         private sealed class WrapGroup
         {
-            public WrapGroup(SyntaxNode owner, SyntaxToken[] tokens, WrapStyle style = WrapStyle.Default)
+            public WrapGroup(SyntaxNode owner, SyntaxToken[] tokens, WrapStyle style = WrapStyle.Default,
+                SyntaxToken openToken = default, SyntaxToken closeToken = default)
             {
                 this.Owner = owner;
                 this.Tokens = tokens;
                 this.Style = style;
+                this.OpenToken = openToken;
+                this.CloseToken = closeToken;
             }
 
             public SyntaxNode Owner { get; }
             public SyntaxToken[] Tokens { get; }
             public WrapStyle Style { get; }
+            public SyntaxToken OpenToken { get; }
+            public SyntaxToken CloseToken { get; }
         }
 
         private enum WrapStyle

@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 
 using LibGit2Sharp;
 
@@ -51,6 +52,40 @@ namespace PNFmt.Tests.Snapshots
                 Assert.DoesNotContain("/*SNAPSHOT_DATA*/", html);
                 Assert.Contains("\\u003C", html);
                 Assert.Contains("ColonAssignments.editorconfig", html);
+            }
+        }
+
+        [Fact]
+        public void Wrapping_review_separates_processed_pending_and_reference_cases_and_retains_before_results()
+        {
+            using (var repository = new Repository(Repository.Discover(AppContext.BaseDirectory)))
+            using (var directory = new TestDirectory())
+            {
+                var root = repository.Info.WorkingDirectory;
+                var cases = SnapshotReviewExporter.ReadCases(root);
+                var review = cases.Where(item => item.review is not null).ToArray();
+                Assert.Equal(6, review.Count(item => item.review.status == "processed"));
+                Assert.Equal(11, review.Count(item => item.review.status == "pending"));
+                Assert.Equal(4, review.Count(item => item.review.status == "reference"));
+                Assert.All(cases.Where(item => item.name.StartsWith("WrappingReview/", StringComparison.Ordinal)),
+                    item => Assert.NotNull(item.review));
+                var previous = review.Where(item => item.review.before is not null).ToArray();
+                Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs" },
+                    previous.Select(item => item.name).ToArray());
+                Assert.All(previous, item =>
+                {
+                    Assert.Equal(item.input, item.review.before);
+                    Assert.NotEqual(item.result, item.review.before);
+                });
+                Assert.Equal("pending", review.Single(item => item.name == "WrappingReview/SwitchExpressions.cs").review.status);
+                var output = directory.GetPath("wrapping.html");
+                SnapshotReviewExporter.Write(root, output, wrappingReviewOnly: true);
+                var dataLine = File.ReadLines(output).Single(line => line.TrimStart().StartsWith("const data = ", StringComparison.Ordinal));
+                using (var json = JsonDocument.Parse(dataLine.Trim().Substring("const data = ".Length).TrimEnd(';')))
+                {
+                    Assert.Equal(review.Select(item => item.id), json.RootElement.GetProperty("cases").EnumerateArray()
+                        .Select(item => item.GetProperty("id").GetString()));
+                }
             }
         }
     }

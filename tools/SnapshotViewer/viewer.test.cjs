@@ -134,3 +134,37 @@ test("provider selection, navigation, search, and display controls work together
     get("search").oninput();
     assert.equal(get("detail").hidden, false);
 });
+
+test("review status keeps open decisions separate and offers the previous snapshot comparison", () => {
+    const { elements, cases } = load();
+    const get = (id) => elements.get(id);
+    for (const [status, count] of [["processed", 6], ["pending", 11], ["reference", 4]]) {
+        get("show-" + status).onclick();
+        assert.equal(get("tests").children.length, count);
+        for (const button of get("tests").children) {
+            assert.equal(cases.find(item => item.id === button.dataset.id).review.status, status);
+        }
+    }
+    get("show-processed").onclick();
+    get("search").value = "CollectionExpressions.cs";
+    get("search").oninput();
+    assert.equal(get("tests").children.length, 1);
+    assert.equal(get("review-label").textContent, "Processed");
+    assert.equal(get("input-label").textContent, "Previous snapshot");
+    assert.equal(get("comparison-choice").hidden, false);
+    assert.ok(get("stats").textContent.includes("Content changes"));
+    get("comparison-source").value = "input";
+    get("comparison-source").onchange();
+    assert.equal(get("input-label").textContent, "Fixture input");
+    get("show-pending").onclick();
+    get("search").value = "SwitchExpressions.cs";
+    get("search").oninput();
+    assert.equal(get("review-label").textContent, "Needs decision");
+    assert.ok(get("review-question").textContent.includes("switch arms"));
+    assert.equal(get("comparison-choice").hidden, true);
+    get("provider").value = "XML";
+    get("provider").onchange();
+    assert.equal(get("detail").hidden, true);
+    get("show-reference").onclick();
+    assert.equal(get("tests").children.length, 4);
+});

@@ -1,0 +1,130 @@
+[
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ArrayInitializers.cs",
+    "status": "processed",
+    "note": "Implemented: array initializers use csharp_wrap_array_initializer_style = chop_always. Review one element per line, including the closing delimiter.",
+    "before": "class Example\n{\n    string[] items = new[] { \"first-customer-reference\", \"second-customer-reference\", \"third-customer-reference\" };\n}\n"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/CollectionExpressions.cs",
+    "status": "processed",
+    "note": "Implemented: collection expressions use csharp_wrap_list_pattern = chop_always. Compare the previous snapshot with the new layout.",
+    "before": "class Example\n{\n    string[] items = [\"first-customer-reference\", \"second-customer-reference\", \"third-customer-reference\"];\n}\n"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ObjectArrays.cs",
+    "status": "processed",
+    "note": "New coverage: each object in the array has its own line. Array elements and object members use separate wrapping settings. Compare the new fixture input with the result."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ObjectInitializers.cs",
+    "status": "processed",
+    "note": "New coverage: csharp_wrap_object_and_collection_initializer_style = chop_always puts each object member on its own line. Compare the new fixture input with the result."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/CollectionInitializers.cs",
+    "status": "processed",
+    "note": "New coverage: traditional collection initializers also use csharp_wrap_object_and_collection_initializer_style = chop_always. Compare the new fixture input with the result."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ListPatterns.cs",
+    "status": "processed",
+    "note": "New coverage: the JetBrains csharp_wrap_list_pattern setting also applies to list patterns. Review this shared scope alongside collection expressions."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/Calls.cs",
+    "status": "reference",
+    "note": "Already supported: a long argument list wraps at the configured width. Use this as a reference when judging other expressions."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ConditionalExpressions.cs",
+    "status": "pending",
+    "note": "Decide: should a long conditional expression break around ? and : so its branches are easier to scan?"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/Patterns.cs",
+    "status": "pending",
+    "note": "Decide: should long property patterns expand their members? Currently the short method signature wraps while the long pattern stays together. This is separate from the implemented list-pattern setting."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/Queries.cs",
+    "status": "pending",
+    "note": "Decide: should query clauses appear on separate lines? Also consider whether the existing Microsoft query-clause newline setting is sufficient."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortCallMultiline.cs",
+    "status": "pending",
+    "note": "Decide together with ShortCallSingleLine.cs: should short calls converge to one layout, or retain existing line breaks?"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortCallSingleLine.cs",
+    "status": "pending",
+    "note": "Decide together with ShortCallMultiline.cs: should short calls converge to one layout, or retain existing line breaks?"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/SwitchExpressions.cs",
+    "status": "pending",
+    "note": "Decide: should switch arms each get their own line? Currently the short method signature wraps while the long switch expression stays together."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/Tuples.cs",
+    "status": "pending",
+    "note": "Decide: should long tuples put each element on a separate line, or fit several elements on each line?"
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/StructuralAttributes.xml",
+    "status": "reference",
+    "note": "Already supported: attributes on a structural element wrap at the configured width. Compare with the protected text-bearing cases."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/AttributesOnDifferentLines.xml",
+    "status": "reference",
+    "note": "Already supported: xml_attribute_style = on_different_lines puts each attribute on its own line."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/AttributesOnSingleLine.xml",
+    "status": "reference",
+    "note": "Already supported: xml_attribute_style = on_single_line joins short attribute lists."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/TextAttributes.xml",
+    "status": "pending",
+    "note": "Decide: should attributes on text-bearing elements wrap while their text remains byte-for-byte preserved? Currently the complete subtree is protected."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/MixedContentAttributes.xml",
+    "status": "pending",
+    "note": "Decide: should start-tag attributes wrap around mixed content? Spaces around inline elements must retain their meaning."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/TagSpelling.xml",
+    "status": "pending",
+    "note": "Decide: normalize spacing around =, quotes, and self-closing delimiters, or preserve the original tag spelling?"
+  },
+  {
+    "provider": "XAML",
+    "name": "WrappingReview/TextAndStructuralContainers.xaml",
+    "status": "pending",
+    "note": "Decide: should text-bearing controls wrap their attributes like structural containers, while preserving all text content?"
+  }
+]
