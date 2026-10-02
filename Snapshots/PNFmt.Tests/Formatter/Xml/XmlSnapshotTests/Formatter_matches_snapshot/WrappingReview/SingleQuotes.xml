@@ -1,0 +1,7 @@
+<Root>
+    <Entry
+        Literal='It&apos;s ready.'
+        Existing='&apos;ready&apos;'
+        Numeric='&#39;&#x27;'
+        Mixed='He said &quot;it&apos;s ready&quot;.'/>
+</Root>

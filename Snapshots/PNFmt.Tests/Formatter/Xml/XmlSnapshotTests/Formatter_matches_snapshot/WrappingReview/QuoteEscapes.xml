@@ -1,0 +1,9 @@
+<Root>
+    <Entry
+        Literal="He said &quot;hello&quot;."
+        Existing="&quot;ready&quot;"
+        Numeric="&#34;&#x22;"
+        LiteralEntity="&amp;quot;"
+        Whitespace="&#xA;&#xD;&#x9;"
+        Backslash="C:\say &quot;hello&quot;"/>
+</Root>

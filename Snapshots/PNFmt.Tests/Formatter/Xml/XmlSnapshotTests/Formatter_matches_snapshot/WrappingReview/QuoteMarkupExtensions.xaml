@@ -1,0 +1,6 @@
+<TextBlock
+    xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'
+    Text='{Binding Caption, FallbackValue=&apos;A &amp; B&apos;}'><Run
+        Text='&apos;first&apos;'/><Run
+        Text='second'/> <Run
+        Text='third'/></TextBlock>

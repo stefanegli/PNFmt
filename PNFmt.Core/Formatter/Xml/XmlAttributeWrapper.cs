@@ -6,9 +6,8 @@ using System.Text;
 
 namespace PNFmt
 {
-    // Operates on already validated tag slices, changing only tag whitespace.
-    // XML parsing and protected-subtree selection belong to
-    // XmlDocumentFormatter; this class never interprets attribute values.
+    // Operates on validated tag slices without decoding attribute values.
+    // XML parsing and protected-subtree selection belong to XmlDocumentFormatter.
     internal sealed class XmlAttributeWrapper
     {
         private readonly StringBuilder output;
@@ -22,6 +21,7 @@ namespace PNFmt
         private readonly bool? spacesAroundEquals;
         private readonly bool? spaceAfterLastAttribute;
         private readonly bool? spaceBeforeSelfClosing;
+        private readonly char attributeQuote;
         private long column;
 
         public XmlAttributeWrapper(IReadOnlyDictionary<string, string> settings, string indent, string newLine, int defaultTabWidth, int capacity = 16)
@@ -34,6 +34,9 @@ namespace PNFmt
             this.spacesAroundEquals = BooleanOption(settings, "xml_spaces_around_eq_in_attribute");
             this.spaceAfterLastAttribute = BooleanOption(settings, "xml_space_after_last_attribute");
             this.spaceBeforeSelfClosing = BooleanOption(settings, "xml_space_before_self_closing");
+            settings.TryGetValue("pnfmt_xml_quote_style", out var quoteStyle);
+            quoteStyle = quoteStyle?.Trim().ToLowerInvariant();
+            this.attributeQuote = quoteStyle == "single_quotes" ? '\'' : quoteStyle == "double_quotes" ? '"' : '\0';
             settings.TryGetValue("max_line_length", out var generalWidth);
             var widthSetting = Option(settings, "xml_max_line_length") ?? generalWidth;
             this.width = Option(settings, "xml_wrap_tags_and_pi") == "true" ? PositiveInteger(widthSetting, 0) : 0;
@@ -46,7 +49,8 @@ namespace PNFmt
             }
             this.Enabled = this.width > 0 || this.style == "on_single_line"
                 || this.style == "first_attribute_on_single_line" || this.style == "on_different_lines"
-                || this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue;
+                || this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue
+                || this.attributeQuote != '\0';
         }
 
         public bool Enabled { get; }
@@ -77,12 +81,12 @@ namespace PNFmt
                 return;
             }
 
-            // Normalize explicitly selected spacing before measuring width. Keeping
-            // this separate leaves attribute values and their quote/entity spelling
-            // opaque, and makes wrapping stable even when spacing changes the width.
-            if (!declaration && (this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue))
+            // Apply spacing and quote escapes before measuring width, so any added
+            // entity spellings participate in wrapping on the first pass.
+            if (!declaration && (this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue
+                || this.attributeQuote != '\0'))
             {
-                text = this.NormalizeSpacing(text, start, end);
+                text = this.NormalizeTag(text, start, end);
                 start = 0;
                 end = text.Length;
             }
@@ -188,6 +192,32 @@ namespace PNFmt
                 : character == '\t' ? current + this.tabWidth - (current % this.tabWidth) : current + 1;
         }
 
+        private void AppendAttributeValue(StringBuilder result, string text, int start, int end, char sourceQuote)
+        {
+            if (this.attributeQuote == '\0' || this.attributeQuote == sourceQuote)
+            {
+                result.Append(text, start, end - start);
+                return;
+            }
+
+            result.Append(this.attributeQuote);
+            var copied = start + 1;
+            for (var index = copied; index < end - 1; index++)
+            {
+                if (text[index] == this.attributeQuote)
+                {
+                    result.Append(text, copied, index - copied);
+                    result.Append(this.attributeQuote == '"' ? "&quot;" : "&apos;");
+                    copied = index + 1;
+                }
+            }
+            // Existing entity/character references contain no literal quote and
+            // remain exact. Decoding them would change whitespace normalization
+            // (for example &#xA; versus a literal newline) or double-escape &amp;.
+            result.Append(text, copied, end - 1 - copied);
+            result.Append(this.attributeQuote);
+        }
+
         private static bool? BooleanOption(IReadOnlyDictionary<string, string> settings, string key)
             => bool.TryParse(Option(settings, key), out var value) ? value : (bool?)null;
 
@@ -236,7 +266,7 @@ namespace PNFmt
 
         private static bool IsWhitespace(char value) => value == ' ' || value == '\t' || value == '\r' || value == '\n';
 
-        private string NormalizeSpacing(string text, int start, int end)
+        private string NormalizeTag(string text, int start, int end)
         {
             var result = new StringBuilder(end - start);
             var position = start + 1;
@@ -296,12 +326,12 @@ namespace PNFmt
                 {
                     result.Append(text, gapStart, nameEnd - gapStart);
                     result.Append(this.spacesAroundEquals.Value ? " = " : "=");
-                    result.Append(text, valueStart, position - valueStart);
                 }
                 else
                 {
-                    result.Append(text, gapStart, position - gapStart);
+                    result.Append(text, gapStart, valueStart - gapStart);
                 }
+                this.AppendAttributeValue(result, text, valueStart, position, quote);
             }
             return result.ToString();
         }

@@ -1,8 +1,8 @@
-# XML and MSBuild attribute wrapping and tag spacing
+# XML and MSBuild attribute wrapping, tag spacing, and quotes
 
-The `xml`, `xaml`, and `csproj` formatters share optional attribute wrapping, arrangement, and tag spacing. The project formatter also supports `.props`, `.targets`, and `.proj` files when selected explicitly. These options follow [JetBrains XML property names](https://www.jetbrains.com/help/resharper/EditorConfig_XML_XmlCodeStylePageSchema.html).
+The `xml`, `xaml`, and `csproj` formatters share optional attribute wrapping, arrangement, tag spacing, and quote normalization. The project formatter also supports `.props`, `.targets`, and `.proj` files when selected explicitly. Wrapping and spacing use [JetBrains XML property names](https://www.jetbrains.com/help/resharper/EditorConfig_XML_XmlCodeStylePageSchema.html); quote style uses a PNFmt-specific option.
 
-Wrapping and spacing normalization are disabled by default; none of these properties are added by `--write-default-config`. Layout must be enabled: `pnfmt_format = false` disables this pass. These settings alone do not activate file processing.
+Wrapping, spacing normalization, and quote normalization are disabled by default; none of these properties are added by `--write-default-config`. Layout must be enabled: `pnfmt_format = false` disables this pass. These settings alone do not activate file processing.
 
 ## Wrapping long lines
 
@@ -82,16 +82,42 @@ xml_space_after_last_attribute = false
 xml_space_before_self_closing = true
 ```
 
-Quote style is preserved. There is no quote-normalization setting.
+## Quote style
+
+`pnfmt_xml_quote_style` controls attribute delimiters on element start tags, including namespace declarations. It requires enabled processing and layout, but no wrapping switch or width. It has no aliases and is not added by `--write-default-config`.
+
+| Value | Behavior |
+| --- | --- |
+| `preserve` | Keep existing delimiters and value spelling. This is the default when omitted, `unset`, or invalid. |
+| `single_quotes` | Use `'` delimiters; escape conflicting literal apostrophes as `&apos;`. |
+| `double_quotes` | Use `"` delimiters; escape conflicting literal double quotes as `&quot;`. |
+
+Values are case-insensitive. Existing entity and decimal/hexadecimal character references are preserved exactly, even when their escaping is no longer required. For example, `&quot;`, `&#34;`, `&#x22;`, and `&amp;quot;` are neither decoded nor double-escaped. Literal whitespace and numeric whitespace references such as `&#xA;`, `&#xD;`, and `&#x9;` remain distinct: decoding and rewriting them could change the value returned by an XML parser. Backslashes are ordinary XML characters, not quote escapes. See [XML attribute-value normalization](https://www.w3.org/TR/xml/#AVNormalize).
+
+```ini
+[*.{xml,xaml}]
+pnfmt_enabled = true
+pnfmt_xml_quote_style = double_quotes
+
+[*.xml]
+pnfmt_formatter = xml
+
+[*.xaml]
+pnfmt_formatter = xaml
+```
+
+For example, `<Entry Text='He said "hello" &amp; left.'/>` becomes `<Entry Text="He said &quot;hello&quot; &amp; left."/>`. The parsed attribute value remains identical. In XAML, this also preserves the decoded value passed to a markup-extension parser, including its inner quote characters.
+
+Quote changes happen before wrapping measures width, including the length of inserted references. `xml_attribute_style = do_not_touch` still permits an explicit quote style. Element text, comments, CDATA, XML declarations, and ordinary processing instructions are not affected by this option. Explicit `xml:space="preserve"` subtrees retain all tag spelling. Invalid XML is not repaired, and existing DTD restrictions remain in place.
 
 ## Aliases and preservation
 
 The options are case-insensitive. Every `xml_` option on this page supports a `resharper_` prefix alias, including `resharper_xml_spaces_around_eq_in_attribute`, `resharper_xml_space_after_last_attribute`, and `resharper_xml_space_before_self_closing`. The name without `resharper_` wins when present, including invalid values. `unset` removes that spelling and allows an alias to apply. Width precedence is `xml_max_line_length`, its prefixed alias, then `max_line_length`. Unqualified JetBrains aliases such as `attribute_style` are not supported.
 
-The pass leaves attribute order, names, quotes, entity spellings, and values intact. Text, CDATA, and all content whitespace in text-bearing, mixed-content, and XAML text-container subtrees remain exact. Start-tag attributes throughout those subtrees can wrap or normalize spacing without inserting separators between inline elements or changing text indentation. Whitespace-only leaf values also remain exact. Width is a target for tag attributes, not a limit on preserved text following a start tag.
+The pass leaves attribute order, names, existing entity spellings, and parsed values intact. Quotes and literal value spelling also stay intact unless quote normalization is selected. Text, CDATA, and all content whitespace in text-bearing, mixed-content, and XAML text-container subtrees remain exact. Start-tag attributes throughout those subtrees can wrap, normalize spacing, or normalize quotes without inserting separators between inline elements or changing text indentation. Whitespace-only leaf values also remain exact. Width is a target for tag attributes, not a limit on preserved text following a start tag.
 
 `xml:space="preserve"` protects the complete subtree, including tag spelling. Nested `xml:space="default"` does not override an already protected subtree. XAML structural and custom tags outside these explicit preservation boundaries can have their attributes formatted without changing their child-content layout.
 
-For MSBuild, the existing project serializer and any enabled sorting run first. They retain their established normalization and canonicalization behavior; this tag-formatting pass operates on that result. Consequently, `do_not_touch` prevents additional attribute arrangement changes but does not make MSBuild preserve the original tag spelling or manual attribute layout. Explicit spacing options can still apply. Project documents containing a DTD retain existing serializer behavior and skip the pass.
+For MSBuild, the existing project serializer and any enabled sorting run first. They retain their established normalization and canonicalization behavior; this tag-formatting pass operates on that result. Consequently, `do_not_touch` prevents additional attribute arrangement changes but does not make MSBuild preserve the original tag spelling or manual attribute layout. Explicit spacing and quote options can still apply. `preserve` keeps the serializer's quotes, which may differ from the source. Project documents containing a DTD retain existing serializer behavior and skip the pass.
 
 Explicit charset changes are reflected in the XML declaration before wrapping, including when a declaration must be inserted, so the result is stable on the first run. Preview, check, lint, encoding, and final-newline behavior remain those of the selected formatter. See [XML/XAML](xml-xaml.md), [MSBuild](csproj.md), and [configuration contracts](../configuration-contracts.md).

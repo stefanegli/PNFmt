@@ -64,15 +64,15 @@ namespace PNFmt.Tests.Snapshots
                 var root = repository.Info.WorkingDirectory;
                 var cases = SnapshotReviewExporter.ReadCases(root);
                 var review = cases.Where(item => item.review is not null).ToArray();
-                Assert.Equal(30, review.Count(item => item.review.status == "processed"));
-                Assert.Equal(1, review.Count(item => item.review.status == "pending"));
+                Assert.Equal(34, review.Count(item => item.review.status == "processed"));
+                Assert.DoesNotContain(review, item => item.review.status == "pending");
                 Assert.Equal(4, review.Count(item => item.review.status == "reference"));
                 Assert.All(cases.Where(item => item.name.StartsWith("WrappingReview/", StringComparison.Ordinal)),
                     item => Assert.NotNull(item.review));
                 var previous = review.Where(item => item.review.before is not null).ToArray();
                 Assert.Equal(new[] { "WrappingReview/ArrayInitializers.cs", "WrappingReview/CollectionExpressions.cs", "WrappingReview/ConditionalExpressions.cs",
                     "WrappingReview/Patterns.cs", "WrappingReview/Queries.cs", "WrappingReview/ShortCallMultiline.cs", "WrappingReview/SwitchExpressions.cs", "WrappingReview/Tuples.cs",
-                    "WrappingReview/MixedContentAttributes.xml", "WrappingReview/TagSpelling.xml", "WrappingReview/TextAttributes.xml", "WrappingReview/TextAndStructuralContainers.xaml" }.OrderBy(name => name),
+                    "WrappingReview/MixedContentAttributes.xml", "WrappingReview/TagSpelling.xml", "WrappingReview/TextAttributes.xml", "WrappingReview/TextAndStructuralContainers.xaml", "WrappingReview/QuoteStyle.xml" }.OrderBy(name => name),
                     previous.Select(item => item.name).OrderBy(name => name));
                 Assert.All(previous, item =>
                 {
@@ -91,9 +91,11 @@ namespace PNFmt.Tests.Snapshots
                 Assert.Equal("processed", switchExpression.review.status);
                 Assert.Equal(review.Single(item => item.name == "WrappingReview/ShortCallSingleLine.cs").result,
                     review.Single(item => item.name == "WrappingReview/ShortCallMultiline.cs").result);
-                var deferred = Assert.Single(review, item => item.review.status == "pending");
-                Assert.Equal("WrappingReview/QuoteStyle.xml", deferred.name);
-                Assert.Contains("Deferred", deferred.review.note);
+                var quotes = Assert.Single(review, item => item.name == "WrappingReview/QuoteStyle.xml");
+                Assert.Equal("processed", quotes.review.status);
+                Assert.Contains("pnfmt_xml_quote_style", quotes.review.note);
+                Assert.Contains("First='one'", quotes.review.before);
+                Assert.Contains("First=\"one\"", quotes.result);
                 var output = directory.GetPath("wrapping.html");
                 SnapshotReviewExporter.Write(root, output, wrappingReviewOnly: true);
                 var dataLine = File.ReadLines(output).Single(line => line.TrimStart().StartsWith("const data = ", StringComparison.Ordinal));

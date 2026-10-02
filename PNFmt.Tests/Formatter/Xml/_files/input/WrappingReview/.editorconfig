@@ -36,3 +36,18 @@ xml_space_before_self_closing = false
 
 [InlineTextAndCData.xml]
 xml_attribute_style = on_different_lines
+
+[QuoteStyle.xml]
+pnfmt_xml_quote_style = double_quotes
+
+[QuoteEscapes.xml]
+pnfmt_xml_quote_style = double_quotes
+xml_attribute_style = on_different_lines
+
+[SingleQuotes.xml]
+pnfmt_xml_quote_style = single_quotes
+xml_attribute_style = on_different_lines
+
+[QuoteMarkupExtensions.xaml]
+pnfmt_xml_quote_style = single_quotes
+xml_attribute_style = on_different_lines

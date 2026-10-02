@@ -151,7 +151,7 @@
     "provider": "XML",
     "name": "WrappingReview/TagSpelling.xml",
     "status": "processed",
-    "note": "Implemented: existing XML spacing settings remove spaces around = and before >, add a space before />, and single-line attribute style normalizes attribute gaps. Original quotes remain unchanged; quote policy is deferred in QuoteStyle.xml.",
+    "note": "Implemented: existing XML spacing settings remove spaces around = and before >, add a space before />, and single-line attribute style normalizes attribute gaps. Original quotes remain unchanged because no quote style is selected here; see QuoteStyle.xml for opt-in quote normalization.",
     "before": "<Root>\n    <Entry  First = 'one'    Second = 'two'/>\n</Root>\n"
   },
   {
@@ -218,7 +218,26 @@
   {
     "provider": "XML",
     "name": "WrappingReview/QuoteStyle.xml",
-    "status": "pending",
-    "note": "Deferred at your request: decide later whether XML quotes should be normalized. No quote setting or normalization has been implemented; single quotes, double quotes, and entity spellings remain unchanged."
+    "status": "processed",
+    "note": "Implemented: pnfmt_xml_quote_style = double_quotes selects double-quoted attributes while preserving existing entity spellings. Compare the previous snapshot; preserve remains the default.",
+    "before": "<Root>\n    <Entry First='one' Second=\"two\" Escaped='&quot;three&quot;' />\n</Root>\n"
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/QuoteEscapes.xml",
+    "status": "processed",
+    "note": "New coverage: double_quotes escapes literal double quotes as &quot;. Existing named/numeric references, escaped entity-looking text, backslashes, and newline/tab references retain their spelling and decoded values."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/SingleQuotes.xml",
+    "status": "processed",
+    "note": "New coverage: single_quotes escapes literal apostrophes as &apos;. Existing &apos;, &quot;, and numeric references are neither decoded nor double-escaped."
+  },
+  {
+    "provider": "XAML",
+    "name": "WrappingReview/QuoteMarkupExtensions.xaml",
+    "status": "processed",
+    "note": "New coverage: single_quotes escapes apostrophes in markup extensions and Run text with &apos;. The decoded binding and text values, plus separators between inline elements, remain unchanged."
   }
 ]

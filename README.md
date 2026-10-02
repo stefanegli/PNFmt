@@ -12,13 +12,13 @@ Enable processing with `pnfmt_enabled = true` and choose a formatter with `pnfmt
 | Files | Formatter | Status | What it does |
 | --- | --- | --- | --- |
 | [`.cs`](docs/formatters/csharp.md) | C# | Experimental | Formats whitespace and wraps code, with parameter/argument styles, short-call joining, and opt-in initializer, collection-expression, pattern, ternary, query, switch-expression, and tuple styles; import/modifier/member sorting, blank-line preferences, file headers, region removal, and exclusion regions. Member ordering preserves storage declaration order. |
-| [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, optionally wraps attributes or normalizes tag spacing, sorts safe properties and items, and reports project-structure diagnostics. |
+| [`.csproj`](docs/formatters/csproj.md) | Project | Stable | Formats MSBuild project XML, optionally formats attribute wrapping, spacing, and quotes, sorts safe properties and items, and reports project-structure diagnostics. |
 | [`.editorconfig`, `.ini`](docs/formatters/ini.md) | Configuration | Experimental | Sorts properties and sections, groups keys by prefix, and merges duplicate sections. |
 | [`.resx`](docs/formatters/resx.md) | Resource | Stable | Sorts resource entries, protects runtime string newlines from Git checkout conversion, and optionally removes generated schema and documentation content. |
 | [`.rsp`](docs/formatters/rsp.md) | Response | Experimental | Sorts lines in .NET compiler response files while respecting comment barriers. |
 | [`.slnx`](docs/formatters/slnx.md) | Solution | Experimental | Orders known solution elements and normalizes XML layout. |
-| [`.xml`](docs/formatters/xml-xaml.md) | XML | Experimental | Indents structural markup and optionally wraps attributes or normalizes tag spacing while preserving quotes, values, and content whitespace. |
-| [`.xaml`](docs/formatters/xml-xaml.md) | XAML | Experimental | Indents known layout/resource containers and optionally formats tag whitespace, including text-container attributes, while preserving inline text and custom-container content whitespace. |
+| [`.xml`](docs/formatters/xml-xaml.md) | XML | Experimental | Indents structural markup and optionally formats attribute wrapping, spacing, and quotes while preserving parsed values and content whitespace. |
+| [`.xaml`](docs/formatters/xml-xaml.md) | XAML | Experimental | Indents known layout/resource containers and optionally formats tag whitespace and quotes, including text-container attributes, while preserving inline text and custom-container content whitespace. |
 
 Status reflects each formatter's maturity; PNFmt as a whole remains alpha software.
 
@@ -105,7 +105,7 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Run the following command to add defaults that enable every formatter with sorting and selected cleanup behaviors. C# region removal and INI/EditorConfig section sorting and merging remain off. C# and XML/MSBuild wrapping, attribute styles, XML tag spacing, Microsoft blank-line preferences, and file headers are not configured:
+Run the following command to add defaults that enable every formatter with sorting and selected cleanup behaviors. C# region removal and INI/EditorConfig section sorting and merging remain off. C# and XML/MSBuild wrapping, attribute styles, XML tag spacing/quotes, Microsoft blank-line preferences, and file headers are not configured:
 
 ```powershell
 pnfmt --write-default-config .

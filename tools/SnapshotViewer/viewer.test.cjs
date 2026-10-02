@@ -138,7 +138,7 @@ test("provider selection, navigation, search, and display controls work together
 test("review status keeps open decisions separate and offers the previous snapshot comparison", () => {
     const { elements, cases } = load();
     const get = (id) => elements.get(id);
-    for (const [status, count] of [["processed", 30], ["pending", 1], ["reference", 4]]) {
+    for (const [status, count] of [["processed", 34], ["pending", 0], ["reference", 4]]) {
         get("show-" + status).onclick();
         assert.equal(get("tests").children.length, count);
         for (const button of get("tests").children) {
@@ -170,7 +170,7 @@ test("review status keeps open decisions separate and offers the previous snapsh
     assert.ok(get("review-question").textContent.includes("csharp_wrap_property_pattern"));
     assert.ok(get("stats").textContent.includes("Content changes"));
     for (const name of ["Queries.cs", "ShortCallMultiline.cs", "SwitchExpressions.cs", "Tuples.cs",
-        "TextAttributes.xml", "MixedContentAttributes.xml", "TagSpelling.xml", "TextAndStructuralContainers.xaml"]) {
+        "TextAttributes.xml", "MixedContentAttributes.xml", "TagSpelling.xml", "TextAndStructuralContainers.xaml", "QuoteStyle.xml"]) {
         get("search").value = "WrappingReview/" + name;
         get("search").oninput();
         assert.equal(get("tests").children.length, 1);
@@ -178,15 +178,11 @@ test("review status keeps open decisions separate and offers the previous snapsh
         assert.equal(get("input-label").textContent, "Previous snapshot");
         assert.ok(get("stats").textContent.includes("Content changes"));
     }
+    assert.ok(get("review-question").textContent.includes("pnfmt_xml_quote_style"));
     get("show-pending").onclick();
-    get("search").value = "WrappingReview/QuoteStyle.xml";
-    get("search").oninput();
-    assert.equal(get("review-label").textContent, "Needs decision");
-    assert.ok(get("review-question").textContent.includes("Deferred"));
-    assert.equal(get("comparison-choice").hidden, true);
-    get("provider").value = "C#";
-    get("provider").onchange();
+    assert.equal(get("tests").children.length, 0);
     assert.equal(get("detail").hidden, true);
+    assert.equal(get("no-tests").hidden, false);
     get("show-reference").onclick();
     assert.equal(get("tests").children.length, 4);
 });

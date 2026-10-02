@@ -65,10 +65,16 @@ spacing settings (no spaces around `=` or before `>`, one space before `/>`).
 `TagSpacingExpanded.xml` shows the opposite spacing choices, and
 `InlineTextAndCData.xml` shows wrapping throughout nested inline markup.
 
+`QuoteStyle.xml` now selects `pnfmt_xml_quote_style = double_quotes` and retains
+its earlier result for comparison. `QuoteEscapes.xml` covers literal quotes, existing
+entities, numeric references, backslashes, and whitespace references. `SingleQuotes.xml`
+shows apostrophe escaping with `single_quotes`, and `QuoteMarkupExtensions.xaml`
+shows unchanged decoded bindings and inline separators. Quote style defaults to
+`preserve` in all other cases.
+
 The saved outputs describe current behavior, including limitations, rather than a
-proposed target style. Quote normalization is the only deferred decision, shown in
-`QuoteStyle.xml`. No quote setting is implemented; all quotes retain their spelling.
-All other cases have been processed or are reference examples.
+proposed target style. All 38 cases are processed or reference examples; no decisions
+remain pending in this review.
 Processed cases still await the user's review. Cases with identical input
 and output are intentional: they make preserved layouts and unwrapped constructs
 visible in the review. Update these baselines deliberately if formatting policy

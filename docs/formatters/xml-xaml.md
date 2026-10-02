@@ -45,7 +45,9 @@ By default, start and end tags retain their exact original text, including quote
 
 Set `xml_wrap_tags_and_pi = true` with `max_line_length` to wrap long tags between complete attributes. `xml_attribute_style` also supports explicit single-line or one-attribute-per-line arrangements, and `xml_attribute_indent` controls continuation indentation. The XML declaration can wrap; ordinary processing-instruction data stays intact. Attributes can wrap on text-bearing elements and within mixed-content or XAML text containers while preserving their content whitespace.
 
-`xml_spaces_around_eq_in_attribute`, `xml_space_after_last_attribute`, and `xml_space_before_self_closing` accept `true` or `false` to normalize tag spacing independently of wrapping. Missing/invalid settings preserve existing spacing; existing closing-delimiter line breaks stay intact. Quotes and attribute values are always preserved. These options require layout and are absent from generated configuration. See [XML and MSBuild attribute wrapping and tag spacing](xml-wrapping.md) for values, aliases, examples, and preservation rules.
+`xml_spaces_around_eq_in_attribute`, `xml_space_after_last_attribute`, and `xml_space_before_self_closing` accept `true` or `false` to normalize tag spacing independently of wrapping. Missing/invalid settings preserve existing spacing; existing closing-delimiter line breaks stay intact.
+
+`pnfmt_xml_quote_style` accepts `preserve` (default), `single_quotes`, or `double_quotes`. Missing/invalid/`unset` values preserve quotes. Only conflicting literal quote characters are escaped as `&apos;` or `&quot;`; existing references, literal whitespace, and parsed attribute values remain unchanged. Text, CDATA, comments, declarations, processing instructions, and explicit `xml:space` subtrees are unaffected. All these options require enabled layout and are absent from generated configuration. See [XML and MSBuild attribute formatting](xml-wrapping.md) for aliases, examples, and preservation rules.
 
 ## Text preservation
 
