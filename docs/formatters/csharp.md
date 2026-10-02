@@ -68,7 +68,7 @@ The supported break points are:
 - Chained calls: before member-access dots or the complete `?.` operator.
 - Binary expressions: before operators by default. Set `dotnet_style_operator_placement_when_wrapping = end_of_line` to break after operators instead; `beginning_of_line` is the default.
 
-New continuation lines use one additional indentation level, honoring `indent_style`, `indent_size`, and `tab_width`. Newlines follow `end_of_line` when configured, otherwise the file's detected convention. Outer constructs wrap first; nested calls and expressions are measured again with their new indentation. Wrapping adds line breaks without joining existing multiline layouts. Closing argument and parameter delimiters remain with the last item unless already on a separate line.
+New continuation lines use one additional indentation level, honoring `indent_style`, `indent_size`, and `tab_width`. Newlines follow `end_of_line` when configured, otherwise the file's detected convention. Outer constructs wrap first; nested calls and expressions are measured again with their new indentation. Existing breaks remain unless short-call joining is explicitly enabled below. Closing argument and parameter delimiters remain with the last item unless already on a separate line.
 
 The width is a target, not a strict limit. PNFmt only inserts breaks between existing tokens where the intervening text is ordinary horizontal whitespace. Strings, interpolated-string contents, comments, directives, inactive source, and `// pnfmt: off` regions are preserved. Lists or expressions intersecting an excluded region are left alone by the wrapping pass. Long identifiers, literals, and unsupported constructs can still exceed the width.
 
@@ -98,6 +98,110 @@ Chopping adds a break after the opening delimiter, including for a single item; 
 The aliases `resharper_csharp_wrap_parameters_style` and `resharper_csharp_wrap_arguments_style` are also supported. When both spellings resolve to a value, the name without `resharper_` takes precedence, including when its value is invalid. `unset` removes that spelling through normal EditorConfig inheritance, allowing the other alias to apply if configured.
 
 Missing, `unset`, or unrecognized styles retain PNFmt's original behavior: chop lists only when their code exceeds a configured width, and preserve shorter multiline layouts. No list style is added by `--write-default-config`.
+
+### Joining short calls
+
+Reuse the JetBrains line-break preservation setting to make short multiline and
+single-line calls converge:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_format = true
+max_line_length = 80
+csharp_keep_existing_linebreaks = false
+csharp_wrap_arguments_style = chop_if_long
+```
+
+PNFmt currently supports `csharp_keep_existing_linebreaks` **for argument lists**:
+calls, object creation, and element access, including empty and single-argument
+lists. `false` allows their boundaries to join only when the complete resulting
+code line fits a positive `max_line_length`. The width includes indentation, tab
+stops, and code following the closing delimiter; trailing comments do not count.
+Roslyn's configured delimiter/comma spacing applies. Nested calls compact first.
+
+`true`, omitted, invalid, or unset values preserve existing line breaks. The
+case-insensitive boolean also accepts `resharper_csharp_keep_existing_linebreaks`;
+the unprefixed C# name takes precedence even when invalid, and `unset` allows alias
+fallback. Neither spelling is added to generated defaults. Enabled file processing
+and layout are required; both current and legacy layout controls apply.
+
+`csharp_wrap_arguments_style = chop_always` prevents joining. Otherwise, short calls
+can join before `chop_if_long` evaluates the list; long calls still follow the chosen
+argument style. No joining occurs without a positive width. Comments or directives
+at list boundaries, excluded lists, interpolated-string contents, and multiline
+argument expressions remain protected. This option does not flatten lambda bodies,
+strings, declarations, or other expression layouts. This is scoped support for the
+JetBrains setting, not a global removal of existing line breaks.
+
+### Queries, switch expressions, and tuples
+
+These styles opt into additional wrapping:
+
+| Setting | Origin and scope |
+| --- | --- |
+| `csharp_wrap_linq_expressions` | JetBrains: LINQ query clauses and query continuations. |
+| `csharp_wrap_switch_expression` | JetBrains: switch-expression arms. |
+| `pnfmt_csharp_wrap_tuple_style` | PNFmt: tuple expressions, tuple types, and deconstruction variable lists. |
+
+All three accept case-insensitive `wrap_if_long`, `chop_if_long`, and `chop_always`.
+`wrap_if_long` fits whole clauses, arms, or tuple elements at a positive width.
+`chop_if_long` separates them when long or already multiline; `chop_always` separates
+them regardless of width. Both chopping styles work without a width for existing
+multiline constructs, and `chop_always` also expands short ones. Short single-line
+constructs stay compact under the width-dependent styles, including exact-width
+matches. Empty switch expressions remain compact.
+
+The two JetBrains styles support their `resharper_` aliases with the same precedence
+and `unset` behavior as the argument styles. The PNFmt tuple setting has no vendor
+alias. Missing, invalid, or unset styles leave ordinary Roslyn layout even when a
+width is configured. File activation and layout are required. Generated defaults
+omit all these settings.
+
+The review examples use:
+
+```ini
+[*.cs]
+pnfmt_enabled = true
+pnfmt_formatter = csharp
+pnfmt_format = true
+max_line_length = 80
+csharp_wrap_linq_expressions = chop_if_long
+csharp_wrap_before_linq_expression = true
+csharp_wrap_switch_expression = chop_if_long
+pnfmt_csharp_wrap_tuple_style = chop_if_long
+```
+
+`csharp_wrap_before_linq_expression` (or
+`resharper_csharp_wrap_before_linq_expression`) accepts case-insensitive `true` or
+`false`. With a valid LINQ wrapping style, `true` puts the initial `from` of a
+multiline query on a new line, including when it was already multiline. Omitted
+or invalid values default to `false`; it does not enable query wrapping alone.
+Alias precedence follows the other JetBrains settings. It is not generated.
+Query clauses align with the initial `from` through Roslyn's indentation rules.
+Wrapping separates continuation `into` clauses; a join's `into` remains part of
+that join. It does not split the components within a clause.
+
+The Microsoft `csharp_new_line_between_query_expression_clauses` preference is
+still passed to Roslyn. Its default `true` can introduce additional clause breaks
+in multiline queries. Use `false` together with `wrap_if_long` to allow several
+clauses to fit together. Roslyn can retain a wholly single-line query, so use the
+LINQ wrapping style when width-based or unconditional clause wrapping is wanted.
+
+Switch opening braces follow `csharp_new_line_before_open_brace`; chopped closing
+braces get their own line. `wrap_if_long` retains safe inline arm boundaries while
+adding necessary breaks. Tuple opening parentheses stay in place; chopping breaks
+after them and between elements, with the closing parenthesis kept beside the last
+element unless already on a separate line. Tuple names, types, and deconstruction
+syntax are preserved.
+
+Nested constructs are measured after outer wrapping. Existing breaks are retained.
+Only ordinary whitespace changes: comments, directives, inactive code, literals,
+interpolated-string contents, and excluded regions remain protected. Switch guards,
+patterns, query structure, and existing commas remain intact. Protected boundaries
+and indivisible elements can still exceed the width. Indentation, tabs, and line
+endings follow the ordinary layout settings.
 
 ### Initializers, collection expressions, and list patterns
 

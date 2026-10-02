@@ -7,6 +7,7 @@ using System.Linq;
 
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Formatting;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Text;
 
@@ -16,7 +17,6 @@ namespace PNFmt
     {
         public static string Apply(Document document, IReadOnlyDictionary<string, string> settings)
         {
-            var source = document.GetTextAsync().GetAwaiter().GetResult();
             var width = PositiveInteger(settings, "max_line_length", 0);
             var argumentsStyle = ResolveStyle(settings, "csharp_wrap_arguments_style");
             var parametersStyle = ResolveStyle(settings, "csharp_wrap_parameters_style");
@@ -25,9 +25,21 @@ namespace PNFmt
             var listStyle = ResolveStyle(settings, "csharp_wrap_list_pattern");
             var propertyPatternStyle = ResolveStyle(settings, "csharp_wrap_property_pattern");
             var ternaryStyle = ResolveStyle(settings, "csharp_wrap_ternary_expr_style");
+            var queryStyle = ResolveStyle(settings, "csharp_wrap_linq_expressions");
+            var switchStyle = ResolveStyle(settings, "csharp_wrap_switch_expression");
+            settings.TryGetValue("pnfmt_csharp_wrap_tuple_style", out var tupleValue);
+            var tupleStyle = ParseStyle(tupleValue);
+            var preserveSwitchArmSpacing = switchStyle == WrapStyle.WrapIfLong;
+            document = FormatDocument(document, preserveSwitchArmSpacing);
+            var source = document.GetTextAsync().GetAwaiter().GetResult();
+            var compactCalls = width > 0 && argumentsStyle != WrapStyle.ChopAlways
+                && bool.TryParse(ResolveValue(settings, "csharp_keep_existing_linebreaks"), out var keepBreaks) && !keepBreaks;
+            var wrapBeforeQuery = bool.TryParse(ResolveValue(settings, "csharp_wrap_before_linq_expression"), out var beforeQuery) && beforeQuery;
             var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle)
                 || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle)
-                || CanChopWithoutWidth(ternaryStyle) || CanChopWithoutWidth(propertyPatternStyle);
+                || CanChopWithoutWidth(ternaryStyle) || CanChopWithoutWidth(propertyPatternStyle)
+                || CanChopWithoutWidth(queryStyle) || CanChopWithoutWidth(switchStyle) || CanChopWithoutWidth(tupleStyle)
+                || (wrapBeforeQuery && queryStyle != WrapStyle.Default);
             if (width == 0 && !canChopWithoutWidth)
             {
                 return source.ToString();
@@ -51,6 +63,11 @@ namespace PNFmt
             var attempted = new HashSet<int>();
             while (true)
             {
+                if (compactCalls)
+                {
+                    document = CSharpCallCompactor.Apply(document, width, tabWidth, preserveSwitchArmSpacing);
+                    source = document.GetTextAsync().GetAwaiter().GetResult();
+                }
                 var root = document.GetSyntaxRootAsync().GetAwaiter().GetResult();
                 var tokens = root.DescendantTokens().ToArray();
                 var longLines = width > 0 ? FindLongLines(source, tokens, width, tabWidth) : new bool[source.Lines.Count];
@@ -65,7 +82,7 @@ namespace PNFmt
                 var changes = new Dictionary<int, TextChange>();
                 var occupiedLines = new HashSet<int>();
                 foreach (var group in Groups(root, operatorsAtEnd, argumentsStyle, parametersStyle, arrayStyle, initializerStyle, listStyle,
-                    propertyPatternStyle, ternaryStyle, ternaryOperatorsAtEnd)
+                    propertyPatternStyle, ternaryStyle, ternaryOperatorsAtEnd, queryStyle, wrapBeforeQuery, switchStyle, tupleStyle)
                     .OrderByDescending(item => item.Owner.Span.Length))
                 {
                     if (exclusions.Intersects(group.Owner.Span))
@@ -110,9 +127,49 @@ namespace PNFmt
                 }
 
                 document = document.WithText(source.WithChanges(changes.Values.OrderBy(change => change.Span.Start)));
-                document = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document).GetAwaiter().GetResult();
+                document = FormatDocument(document, preserveSwitchArmSpacing);
                 source = document.GetTextAsync().GetAwaiter().GetResult();
             }
+        }
+
+        internal static Document FormatDocument(Document document, bool preserveSwitchArmSpacing)
+        {
+            var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document).GetAwaiter().GetResult();
+            if (!preserveSwitchArmSpacing)
+            {
+                return formatted;
+            }
+
+            // Roslyn normally separates all arms once a switch spans multiple lines.
+            // In simple-wrap mode, retain safe inline arm boundaries so greedy width
+            // wrapping, including the next formatter run, can make that decision.
+            var original = document.GetSyntaxRootAsync().GetAwaiter().GetResult();
+            var inline = new HashSet<SyntaxToken>(original.DescendantNodes()
+                .OfType<SwitchExpressionSyntax>().SelectMany(expression => expression.Arms.Skip(1))
+                .Select(arm => arm.GetFirstToken()).Where(token => BreakBefore(token).HasValue));
+            var tokens = original.DescendantTokens().ToArray();
+            var outputTokens = formatted.GetSyntaxRootAsync().GetAwaiter().GetResult().DescendantTokens().ToArray();
+            var source = formatted.GetTextAsync().GetAwaiter().GetResult();
+            var exclusions = CSharpFormattingExclusions.Parse(original);
+            var options = document.GetOptionsAsync().GetAwaiter().GetResult();
+            var spacing = options.GetOption(CSharpFormattingOptions.SpaceAfterComma) ? " " : "";
+            var changes = new List<TextChange>();
+            for (var index = 0; index < tokens.Length; index++)
+            {
+                if (!inline.Contains(tokens[index]) || exclusions.Intersects(tokens[index].Parent.Span)
+                    || tokens[index].Parent.AncestorsAndSelf().Any(node => node is InterpolatedStringExpressionSyntax))
+                {
+                    continue;
+                }
+                var token = outputTokens[index];
+                var previous = token.GetPreviousToken();
+                if (previous.TrailingTrivia.Concat(token.LeadingTrivia)
+                    .All(trivia => trivia.IsKind(SyntaxKind.WhitespaceTrivia) || trivia.IsKind(SyntaxKind.EndOfLineTrivia)))
+                {
+                    changes.Add(new TextChange(TextSpan.FromBounds(previous.Span.End, token.SpanStart), spacing));
+                }
+            }
+            return changes.Count == 0 ? formatted : formatted.WithText(source.WithChanges(changes));
         }
 
         private static IEnumerable<SyntaxToken> BinaryBreaks(BinaryExpressionSyntax binary, bool operatorsAtEnd)
@@ -250,7 +307,8 @@ namespace PNFmt
         private static IEnumerable<WrapGroup> Groups(
             SyntaxNode root, bool operatorsAtEnd, WrapStyle argumentsStyle, WrapStyle parametersStyle,
             WrapStyle arrayStyle, WrapStyle initializerStyle, WrapStyle listStyle, WrapStyle propertyPatternStyle,
-            WrapStyle ternaryStyle, bool ternaryOperatorsAtEnd)
+            WrapStyle ternaryStyle, bool ternaryOperatorsAtEnd, WrapStyle queryStyle, bool wrapBeforeQuery,
+            WrapStyle switchStyle, WrapStyle tupleStyle)
         {
             foreach (var node in root.DescendantNodes(descendIntoChildren: node => !(node is InterpolatedStringExpressionSyntax)))
             {
@@ -293,6 +351,38 @@ namespace PNFmt
                             .Append(initializer.CloseBraceToken).ToArray(), style, initializer.OpenBraceToken, initializer.CloseBraceToken);
                     }
                 }
+                else if (node is QueryExpressionSyntax query && queryStyle != WrapStyle.Default)
+                {
+                    var clauses = QueryBreaks(query.Body);
+                    if (wrapBeforeQuery)
+                    {
+                        var lines = query.GetLocation().GetLineSpan();
+                        if (lines.StartLinePosition.Line != lines.EndLinePosition.Line)
+                        {
+                            yield return new WrapGroup(node, new[] { query.FromClause.FromKeyword }, WrapStyle.ChopAlways);
+                        }
+                        clauses = new[] { query.FromClause.FromKeyword }.Concat(clauses);
+                    }
+                    yield return new WrapGroup(node, clauses.ToArray(), queryStyle);
+                }
+                else if (node is SwitchExpressionSyntax switchExpression && switchStyle != WrapStyle.Default && switchExpression.Arms.Count > 0)
+                {
+                    yield return new WrapGroup(node, new[] { switchExpression.OpenBraceToken }
+                        .Concat(switchExpression.Arms.Select(arm => arm.GetFirstToken())).Append(switchExpression.CloseBraceToken).ToArray(),
+                        switchStyle, switchExpression.OpenBraceToken, switchExpression.CloseBraceToken);
+                }
+                else if (node is TupleExpressionSyntax tuple && tupleStyle != WrapStyle.Default)
+                {
+                    yield return new WrapGroup(node, tuple.Arguments.Select(argument => argument.GetFirstToken()).ToArray(), tupleStyle);
+                }
+                else if (node is TupleTypeSyntax tupleType && tupleStyle != WrapStyle.Default)
+                {
+                    yield return new WrapGroup(node, tupleType.Elements.Select(element => element.GetFirstToken()).ToArray(), tupleStyle);
+                }
+                else if (node is ParenthesizedVariableDesignationSyntax designation && tupleStyle != WrapStyle.Default)
+                {
+                    yield return new WrapGroup(node, designation.Variables.Select(variable => variable.GetFirstToken()).ToArray(), tupleStyle);
+                }
                 else if (node is ConditionalExpressionSyntax ternary && ternaryStyle != WrapStyle.Default)
                 {
                     yield return new WrapGroup(node, ternaryOperatorsAtEnd
@@ -334,6 +424,17 @@ namespace PNFmt
                 != source.Lines.GetLineFromPosition(node.Span.End - 1).LineNumber;
         }
 
+        private static WrapStyle ParseStyle(string value)
+        {
+            switch (value?.Trim().ToLowerInvariant())
+            {
+                case "wrap_if_long": return WrapStyle.WrapIfLong;
+                case "chop_if_long": return WrapStyle.ChopIfLong;
+                case "chop_always": return WrapStyle.ChopAlways;
+                default: return WrapStyle.Default;
+            }
+        }
+
         private static int PositiveInteger(IReadOnlyDictionary<string, string> settings, string name, int fallback)
         {
             return settings.TryGetValue(name, out var value)
@@ -341,15 +442,26 @@ namespace PNFmt
                 && result > 0 ? result : fallback;
         }
 
+        private static IEnumerable<SyntaxToken> QueryBreaks(QueryBodySyntax body)
+        {
+            foreach (var clause in body.Clauses)
+            {
+                yield return clause.GetFirstToken();
+            }
+            yield return body.SelectOrGroup.GetFirstToken();
+            if (body.Continuation is not null)
+            {
+                yield return body.Continuation.IntoKeyword;
+                foreach (var token in QueryBreaks(body.Continuation.Body))
+                {
+                    yield return token;
+                }
+            }
+        }
+
         private static WrapStyle ResolveStyle(IReadOnlyDictionary<string, string> settings, string name)
         {
-            switch (ResolveValue(settings, name)?.Trim().ToLowerInvariant())
-            {
-                case "wrap_if_long": return WrapStyle.WrapIfLong;
-                case "chop_if_long": return WrapStyle.ChopIfLong;
-                case "chop_always": return WrapStyle.ChopAlways;
-                default: return WrapStyle.Default;
-            }
+            return ParseStyle(ResolveValue(settings, name));
         }
 
         private static string ResolveValue(IReadOnlyDictionary<string, string> settings, string name)

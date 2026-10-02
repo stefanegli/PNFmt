@@ -153,9 +153,7 @@ namespace PNFmt
                     filePath: Path.Combine(directory, ".globalconfig")).Project;
                 var document = project.AddDocument(
                     "Source.cs", sourceRoot, filePath: Path.Combine(directory, "Source.cs"));
-                var formatted = Microsoft.CodeAnalysis.Formatting.Formatter.FormatAsync(document)
-                    .GetAwaiter().GetResult();
-                return CSharpLineWrapper.Apply(formatted, settings);
+                return CSharpLineWrapper.Apply(document, settings);
             }
         }
 

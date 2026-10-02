@@ -26,7 +26,7 @@ questions), and **Reference** (previously supported behavior). These statuses ar
 explicit review notes, not inferred from whether the input differs from its result.
 Processed does not mean the user has approved the output.
 
-The array-initializer, collection-expression, conditional-expression, and property-pattern cases default to comparing the
+Processed cases with a saved earlier result default to comparing the
 previous snapshot with the current snapshot. Use **Compare with** to switch back
 to the fixture input. New cases compare their fixture input with the saved result.
 The previous snapshots and the questions/statuses are retained in
@@ -48,12 +48,20 @@ Property patterns use `csharp_wrap_property_pattern = chop_if_long`. The process
 method signature. `ShortPattern.cs` shows a compact pattern, and `NestedPatterns.cs`
 shows short inner patterns staying compact while long ones expand.
 
+Queries use `csharp_wrap_linq_expressions = chop_if_long` and
+`csharp_wrap_before_linq_expression = true`. Switch expressions use
+`csharp_wrap_switch_expression = chop_if_long`; tuples use the PNFmt-specific
+`pnfmt_csharp_wrap_tuple_style = chop_if_long`. Short calls use
+`csharp_keep_existing_linebreaks = false` alongside
+`csharp_wrap_arguments_style = chop_if_long`. Their multiline and single-line inputs
+now produce the same result. Additional cases cover short expressions, query
+continuations, nested calls/switches, and tuple types.
+
 The saved outputs describe current behavior, including limitations, rather than a
-proposed target style. Review the processed collection/initializer/list-pattern/property-pattern and ternary
-cases, then compare the supported call and structural-attribute cases with tuples,
-queries, switch expressions, and text-bearing
-XML/XAML that still need decisions. The short single-line and multiline call
-cases show how existing line breaks affect the result. Cases with identical input
+proposed target style. All C# cases in this review have now been processed or are
+reference examples. The four remaining decisions concern text-bearing or mixed-content
+XML/XAML and XML tag spelling. Compare those with the structural-attribute references.
+Processed cases still await the user's review. Cases with identical input
 and output are intentional: they make preserved layouts and unwrapped constructs
 visible in the review. Update these baselines deliberately if formatting policy
 changes later.

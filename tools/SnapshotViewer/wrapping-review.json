@@ -84,32 +84,36 @@
   {
     "provider": "C#",
     "name": "WrappingReview/Queries.cs",
-    "status": "pending",
-    "note": "Decide: should query clauses appear on separate lines? Also consider whether the existing Microsoft query-clause newline setting is sufficient."
+    "status": "processed",
+    "note": "Implemented: csharp_wrap_linq_expressions = chop_if_long wraps long or multiline queries. csharp_wrap_before_linq_expression = true puts the first clause on a new line. Short queries stay compact.",
+    "before": "class Example\n{\n    object M() => from customer in customerAccounts where customer.IsEligibleForDiscount orderby customer.DisplayName select customer.ReferenceIdentifier;\n}\n"
   },
   {
     "provider": "C#",
     "name": "WrappingReview/ShortCallMultiline.cs",
-    "status": "pending",
-    "note": "Decide together with ShortCallSingleLine.cs: should short calls converge to one layout, or retain existing line breaks?"
+    "status": "processed",
+    "note": "Implemented: csharp_keep_existing_linebreaks = false joins safe call-list boundaries when the complete line fits max_line_length. Compare the previous multiline result with the compact call.",
+    "before": "class Example\n{\n    void M()\n    {\n        Process(\n            first,\n            second\n        );\n    }\n}\n"
   },
   {
     "provider": "C#",
     "name": "WrappingReview/ShortCallSingleLine.cs",
-    "status": "pending",
-    "note": "Decide together with ShortCallMultiline.cs: should short calls converge to one layout, or retain existing line breaks?"
+    "status": "processed",
+    "note": "Implemented: the same policy keeps this short call on one line. Its result now matches ShortCallMultiline.cs; unchanged output is intentional."
   },
   {
     "provider": "C#",
     "name": "WrappingReview/SwitchExpressions.cs",
-    "status": "pending",
-    "note": "Decide: should switch arms each get their own line? Currently the short method signature wraps while the long switch expression stays together."
+    "status": "processed",
+    "note": "Implemented: csharp_wrap_switch_expression = chop_if_long puts each arm of a long or multiline switch on its own line. The short method signature now stays together.",
+    "before": "class Example\n{\n    object M(\n        int value) => value switch { 1 => firstCustomerReferenceIdentifier, 2 => secondCustomerReferenceIdentifier, _ => thirdCustomerReferenceIdentifier };\n}\n"
   },
   {
     "provider": "C#",
     "name": "WrappingReview/Tuples.cs",
-    "status": "pending",
-    "note": "Decide: should long tuples put each element on a separate line, or fit several elements on each line?"
+    "status": "processed",
+    "note": "Implemented: pnfmt_csharp_wrap_tuple_style = chop_if_long puts each element of a long or multiline tuple on its own line. The closing parenthesis stays with the last element.",
+    "before": "class Example\n{\n    object M() => (firstCustomerReferenceIdentifier, secondCustomerReferenceIdentifier, thirdCustomerReferenceIdentifier);\n}\n"
   },
   {
     "provider": "XML",
@@ -152,5 +156,47 @@
     "name": "WrappingReview/TextAndStructuralContainers.xaml",
     "status": "pending",
     "note": "Decide: should text-bearing controls wrap their attributes like structural containers, while preserving all text content?"
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortQuery.cs",
+    "status": "processed",
+    "note": "New coverage: chop_if_long keeps a short single-line query compact, even when wrap_before_linq_expression is enabled."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortSwitch.cs",
+    "status": "processed",
+    "note": "New coverage: chop_if_long keeps a short switch expression on one line."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/ShortTuple.cs",
+    "status": "processed",
+    "note": "New coverage: pnfmt_csharp_wrap_tuple_style = chop_if_long keeps short tuples compact."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/QueryContinuations.cs",
+    "status": "processed",
+    "note": "New coverage: a long query wraps its clauses and continuation, including group, into, orderby, and select."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/NestedCalls.cs",
+    "status": "processed",
+    "note": "New coverage: inner calls compact first, then the outer call joins when its complete line fits the width. Multiline argument contents and comments remain protected."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/TupleTypes.cs",
+    "status": "processed",
+    "note": "New coverage: tuple types use the same PNFmt tuple-wrapping setting as tuple values and deconstruction variables. Names and types are preserved."
+  },
+  {
+    "provider": "C#",
+    "name": "WrappingReview/NestedSwitchExpressions.cs",
+    "status": "processed",
+    "note": "New coverage: the outer switch wraps first; a short nested switch stays compact."
   }
 ]
