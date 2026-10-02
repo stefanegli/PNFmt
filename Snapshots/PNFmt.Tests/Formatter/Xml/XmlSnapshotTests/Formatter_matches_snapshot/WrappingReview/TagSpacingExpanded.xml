@@ -1,0 +1,5 @@
+<Root>
+    <Entry First = 'one' Second = "two" >Keep this exact text.</Entry>
+    <Empty Value = 'three'/>
+    <Empty/>
+</Root>

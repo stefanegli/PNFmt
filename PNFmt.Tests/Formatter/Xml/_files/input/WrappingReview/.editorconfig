@@ -22,3 +22,17 @@ xml_attribute_style = on_different_lines
 
 [AttributesOnSingleLine.xml]
 xml_attribute_style = on_single_line
+
+[TagSpelling.xml]
+xml_attribute_style = on_single_line
+xml_spaces_around_eq_in_attribute = false
+xml_space_after_last_attribute = false
+xml_space_before_self_closing = true
+
+[TagSpacingExpanded.xml]
+xml_spaces_around_eq_in_attribute = true
+xml_space_after_last_attribute = true
+xml_space_before_self_closing = false
+
+[InlineTextAndCData.xml]
+xml_attribute_style = on_different_lines

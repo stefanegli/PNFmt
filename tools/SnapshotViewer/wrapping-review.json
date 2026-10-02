@@ -136,26 +136,30 @@
   {
     "provider": "XML",
     "name": "WrappingReview/TextAttributes.xml",
-    "status": "pending",
-    "note": "Decide: should attributes on text-bearing elements wrap while their text remains byte-for-byte preserved? Currently the complete subtree is protected."
+    "status": "processed",
+    "note": "Implemented: existing XML width and attribute-style settings now apply to text-bearing start tags. Text and its whitespace remain exact.",
+    "before": "<Root>\n    <Entry FirstCustomerReferenceIdentifier=\"first-value\" SecondCustomerReferenceIdentifier=\"second-value\">Keep this exact text.</Entry>\n</Root>\n"
   },
   {
     "provider": "XML",
     "name": "WrappingReview/MixedContentAttributes.xml",
-    "status": "pending",
-    "note": "Decide: should start-tag attributes wrap around mixed content? Spaces around inline elements must retain their meaning."
+    "status": "processed",
+    "note": "Implemented: start-tag attributes can wrap throughout mixed content without adding or removing text separators around inline elements.",
+    "before": "<Root>\n    <Paragraph FirstCustomerReferenceIdentifier=\"first-value\" SecondCustomerReferenceIdentifier=\"second-value\">Keep <Strong Emphasis=\"high\">this exact</Strong> spacing.</Paragraph>\n</Root>\n"
   },
   {
     "provider": "XML",
     "name": "WrappingReview/TagSpelling.xml",
-    "status": "pending",
-    "note": "Decide: normalize spacing around =, quotes, and self-closing delimiters, or preserve the original tag spelling?"
+    "status": "processed",
+    "note": "Implemented: existing XML spacing settings remove spaces around = and before >, add a space before />, and single-line attribute style normalizes attribute gaps. Original quotes remain unchanged; quote policy is deferred in QuoteStyle.xml.",
+    "before": "<Root>\n    <Entry  First = 'one'    Second = 'two'/>\n</Root>\n"
   },
   {
     "provider": "XAML",
     "name": "WrappingReview/TextAndStructuralContainers.xaml",
-    "status": "pending",
-    "note": "Decide: should text-bearing controls wrap their attributes like structural containers, while preserving all text content?"
+    "status": "processed",
+    "note": "Implemented: text-bearing and structural XAML controls share the existing attribute-wrapping settings. Text, inline separators, bindings, and markup extensions remain unchanged.",
+    "before": "<Grid xmlns=\"http://schemas.microsoft.com/winfx/2006/xaml/presentation\">\n    <TextBlock AutomationProperties.Name=\"A long accessible customer reference label\" Foreground=\"DarkSlateGray\">Keep this exact text.</TextBlock>\n    <Border\n        AutomationProperties.Name=\"A long accessible customer reference label\"\n        Background=\"DarkSlateGray\" />\n</Grid>\n"
   },
   {
     "provider": "C#",
@@ -198,5 +202,23 @@
     "name": "WrappingReview/NestedSwitchExpressions.cs",
     "status": "processed",
     "note": "New coverage: the outer switch wraps first; a short nested switch stays compact."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/TagSpacingExpanded.xml",
+    "status": "processed",
+    "note": "New coverage: the opposite spacing choices add spaces around = and before >, and remove the space before />. Single and double quotes are both preserved."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/InlineTextAndCData.xml",
+    "status": "processed",
+    "note": "New coverage: each start-tag attribute moves to its own line while adjacent inline elements, the intentional separator before the third element, and CDATA remain unchanged."
+  },
+  {
+    "provider": "XML",
+    "name": "WrappingReview/QuoteStyle.xml",
+    "status": "pending",
+    "note": "Deferred at your request: decide later whether XML quotes should be normalized. No quote setting or normalization has been implemented; single quotes, double quotes, and entity spellings remain unchanged."
   }
 ]

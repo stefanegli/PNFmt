@@ -85,7 +85,7 @@ namespace PNFmt
             {
                 var (node, depth) = pending.Pop();
                 wrapper.Append(text, copied, node.Start - copied);
-                if (node.Preserve || (node.Children.Count > 0 && node.Children.All(child => child.IsWhitespace)))
+                if (node.PreserveSubtree)
                 {
                     wrapper.Append(text, node.Start, node.End - node.Start);
                     copied = node.End;
@@ -256,8 +256,8 @@ namespace PNFmt
                         elements.Enqueue(new Node
                         {
                             IsElement = true,
-                            Preserve = reader.XmlSpace == XmlSpace.Preserve
-                                || (xaml && XamlWhitespacePolicy.IsTextContainer(reader.LocalName)),
+                            PreserveSubtree = reader.XmlSpace == XmlSpace.Preserve,
+                            Preserve = xaml && XamlWhitespacePolicy.IsTextContainer(reader.LocalName),
                             IndentChildren = !xaml || XamlWhitespacePolicy.IsStructuralContainer(reader.NamespaceURI, reader.LocalName),
                         });
                     }
@@ -267,14 +267,15 @@ namespace PNFmt
             return elements;
         }
 
-        private static void Render(Node node, string text, XmlAttributeWrapper output, int depth, string newLine)
+        private static void Render(Node node, string text, XmlAttributeWrapper output, int depth, string newLine, bool preserveContent = false)
         {
             if (!node.IsElement)
             {
                 AppendNonElement(node, text, output, depth);
                 return;
             }
-            if (node.Preserve || (node.Children.Count > 0 && node.Children.All(child => child.IsWhitespace)))
+            preserveContent |= node.Preserve;
+            if (node.PreserveSubtree || (preserveContent && !output.Enabled))
             {
                 output.Append(text, node.Start, node.End - node.Start);
                 return;
@@ -283,7 +284,7 @@ namespace PNFmt
             // Wrap the validated source tag as it is rendered, avoiding another
             // XML parse, layout tree, and complete intermediate output string.
             output.AppendTag(text, node.Start, node.OpenEnd, depth);
-            var block = node.IndentChildren && node.Children.Any(child => !child.IsWhitespace);
+            var block = !preserveContent && node.IndentChildren && node.Children.Any(child => !child.IsWhitespace);
             foreach (var child in node.Children)
             {
                 if (block && child.IsWhitespace)
@@ -297,7 +298,7 @@ namespace PNFmt
                     output.AppendIndent(depth + 1);
                 }
 
-                Render(child, text, output, depth + 1, newLine);
+                Render(child, text, output, depth + 1, newLine, preserveContent);
             }
 
             if (block)
@@ -324,6 +325,7 @@ namespace PNFmt
             public bool IsWhitespace { get; set; }
             public int OpenEnd { get; set; }
             public bool Preserve { get; set; }
+            public bool PreserveSubtree { get; set; }
             public int Start { get; set; }
         }
     }

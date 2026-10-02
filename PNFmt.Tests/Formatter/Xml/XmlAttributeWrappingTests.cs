@@ -246,24 +246,23 @@ namespace PNFmt.Tests.Formatter.Xml
             Assert.Contains(newline + new string(' ', 11) + "b='2'/>", result);
         }
 
-        [Theory]
-        [InlineData("<p a='1' b='2'>text</p>")]
-        [InlineData("<p a='1' b='2'>one<b a='1' b='2'/>two</p>")]
-        [InlineData("<p a='1' b='2'> \n </p>")]
-        [InlineData("<p a='1' b='2'><![CDATA[ < & > ]]></p>")]
-        [InlineData("<p xml:space='preserve' a='1' b='2'><c xml:space='default' a='1'/></p>")]
-        public void Protected_subtrees_remain_exact_when_wrapping_is_requested(string content)
-        {
-            var result = Format("<root>" + content + "<other a='1' b='2'/></root>", ("xml_attribute_style", "on_different_lines"));
-            Assert.Contains(content, result);
-            Assert.Contains("<other\n        a='1'", result);
-        }
-
         [Fact]
         public void Single_line_style_can_join_existing_breaks_then_wrap_to_width()
         {
             Assert.Equal("<root a='1'\n    b='2'/>", Format("<root\n a='1'\n b='2'/>",
                 ("xml_attribute_style", "on_single_line"), ("xml_wrap_tags_and_pi", "true"), ("max_line_length", "18")));
+        }
+
+        [Theory]
+        [InlineData("text")]
+        [InlineData(" \r\n \t ")]
+        [InlineData("<![CDATA[ < & > \r\n ]]>")]
+        [InlineData("&#32;&#xA0; &amp; \r\n")]
+        public void Text_and_cdata_remain_exact_while_the_start_tag_wraps(string content)
+        {
+            var result = Format("<p a='1' b='2'>" + content + "</p>", ("xml_attribute_style", "on_different_lines"), ("end_of_line", "lf"));
+            Assert.StartsWith("<p\n    a='1'\n    b='2'>", result);
+            Assert.EndsWith(">" + content + "</p>", result);
         }
 
         [Theory]
@@ -309,12 +308,12 @@ namespace PNFmt.Tests.Formatter.Xml
         }
 
         [Fact]
-        public void Xaml_text_containers_are_protected_while_structural_attributes_can_wrap()
+        public void Xaml_text_and_structural_containers_can_both_wrap_attributes()
         {
             const string Input = "<Grid xmlns='http://schemas.microsoft.com/winfx/2006/xaml/presentation'><TextBlock Text='Keep' Width='10'/><Button Width='10' Height='20'/></Grid>";
             var settings = new Dictionary<string, string> { ["xml_attribute_style"] = "on_different_lines" };
             var result = XmlDocumentFormatter.Format(Input, settings, xaml: true);
-            Assert.Contains("<TextBlock Text='Keep' Width='10'/>", result);
+            Assert.Contains("<TextBlock\n        Text='Keep'\n        Width='10'/>", result);
             Assert.Contains("<Button\n        Width='10'\n        Height='20'/>", result);
             Assert.Equal(result, XmlDocumentFormatter.Format(result, settings, xaml: true));
             Assert.True(XNode.DeepEquals(XDocument.Parse(Input), XDocument.Parse(result)));
@@ -326,6 +325,16 @@ namespace PNFmt.Tests.Formatter.Xml
             const string Input = "<?xml version='1.0' encoding='utf-8'?>\n<r/>";
             Assert.Equal("<?xml version='1.0'\n    encoding='utf-8'?>\n<r/>", Format(Input, ("max_line_length", "25"), ("xml_wrap_tags_and_pi", "true")));
             Assert.Equal(Input, Format(Input, ("xml_attribute_style", "on_different_lines")));
+        }
+
+        [Fact]
+        public void Xml_space_subtrees_remain_exact_with_all_tag_options_enabled()
+        {
+            const string Content = "<p xml:space='preserve' a = '1' b='2'><c xml:space='default' a='1'/></p>";
+            var result = Format("<root>" + Content + "<other a='1' b='2'/></root>", ("xml_attribute_style", "on_different_lines"),
+                ("xml_spaces_around_eq_in_attribute", "false"), ("xml_space_before_self_closing", "true"), ("xml_space_after_last_attribute", "true"));
+            Assert.Contains(Content, result);
+            Assert.Contains("<other\n        a='1'", result);
         }
 
         private static string Format(string input, params (string Key, string Value)[] settings)

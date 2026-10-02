@@ -1,8 +1,8 @@
-# XML and MSBuild attribute wrapping
+# XML and MSBuild attribute wrapping and tag spacing
 
-The `xml`, `xaml`, and `csproj` formatters share optional attribute wrapping and arrangement. The project formatter also supports `.props`, `.targets`, and `.proj` files when selected explicitly. These options follow [JetBrains XML property names](https://www.jetbrains.com/help/resharper/EditorConfig_XML_XmlCodeStylePageSchema.html).
+The `xml`, `xaml`, and `csproj` formatters share optional attribute wrapping, arrangement, and tag spacing. The project formatter also supports `.props`, `.targets`, and `.proj` files when selected explicitly. These options follow [JetBrains XML property names](https://www.jetbrains.com/help/resharper/EditorConfig_XML_XmlCodeStylePageSchema.html).
 
-Wrapping is disabled by default and no wrapping properties are added by `--write-default-config`. Layout must be enabled: `pnfmt_format = false` disables this pass. Wrapping settings alone do not activate file processing.
+Wrapping and spacing normalization are disabled by default; none of these properties are added by `--write-default-config`. Layout must be enabled: `pnfmt_format = false` disables this pass. These settings alone do not activate file processing.
 
 ## Wrapping long lines
 
@@ -24,7 +24,7 @@ Set both `xml_wrap_tags_and_pi = true` and a positive `max_line_length` to add b
 
 `xml_max_line_length` overrides the general width for these formatters. Missing, `unset`, zero, negative, or invalid widths disable width-based wrapping after fallback resolution. A missing, false, or invalid wrapping switch disables width-based wrapping; explicit attribute styles can still apply without it or a width.
 
-Only whitespace before complete attributes can change. A long element name or attribute value may exceed the target. Wrapping does not split MSBuild conditions, paths, task arguments, or other values, nor wrap element text, comments, or CDATA. Ordinary processing-instruction data is opaque and remains exact; the XML declaration can wrap between its pseudo-attributes.
+Wrapping changes only whitespace before complete attributes; the separate spacing options below can normalize other tag whitespace. A long element name or attribute value may exceed the target. Wrapping does not split MSBuild conditions, paths, task arguments, or other values, nor wrap element text, comments, or CDATA. Ordinary processing-instruction data is opaque and remains exact; the XML declaration can wrap between its pseudo-attributes.
 
 ## Attribute arrangement and indentation
 
@@ -37,7 +37,7 @@ Only whitespace before complete attributes can change. A long element name or at
 | `on_different_lines` | Put every attribute on its own line after the tag name, including a single attribute. |
 | `do_not_touch` | Leave element-tag attribute arrangement unchanged by this pass, even when width wrapping is enabled. XML declaration wrapping is independent. |
 
-When the style is missing or invalid, existing attribute breaks are retained and enabled width wrapping only adds breaks. Empty attribute lists remain empty. Whitespace before `>` or `/>` retains its existing spelling, including an existing closing-delimiter line break.
+When the style is missing or invalid, existing attribute breaks are retained and enabled width wrapping only adds breaks. Empty attribute lists remain empty. Whitespace before `>` or `/>` retains its existing spelling unless explicitly configured below; an existing closing-delimiter line break is always retained.
 
 `xml_attribute_indent` controls new continuation indentation:
 
@@ -58,12 +58,40 @@ For example, configure `xml_attribute_style = on_different_lines` and `xml_attri
     PrivateAssets="all" />
 ```
 
+## Tag spacing
+
+These independent options accept `true` or `false`. Missing, invalid, or `unset` values preserve the corresponding source whitespace after alias resolution. No width or wrapping switch is required.
+
+| Setting | `true` | `false` |
+| --- | --- | --- |
+| `xml_spaces_around_eq_in_attribute` | One space on each side: `Name = 'value'`. | No spaces: `Name='value'`. |
+| `xml_space_after_last_attribute` | One space before `>` in a non-self-closing start tag with attributes. | No space before `>`. |
+| `xml_space_before_self_closing` | One space before `/>`, including tags without attributes. | No space before `/>`. |
+
+Spacing around `=` can replace line breaks outside the quoted value. Delimiter spacing changes only horizontal whitespace; existing line breaks and their indentation before `>` or `/>` are preserved. End tags, XML declarations, and ordinary processing instructions are not affected by these options. `xml_attribute_style = do_not_touch` disables arrangement and width wrapping for element tags but still permits explicitly selected spacing changes. Spacing is normalized before measuring the wrapping width.
+
+For example, this configuration turns `<Entry  First = 'one'    Second = 'two'/>` into `<Entry First='one' Second='two' />`:
+
+```ini
+[*.xml]
+pnfmt_enabled = true
+pnfmt_formatter = xml
+xml_attribute_style = on_single_line
+xml_spaces_around_eq_in_attribute = false
+xml_space_after_last_attribute = false
+xml_space_before_self_closing = true
+```
+
+Quote style is preserved. There is no quote-normalization setting.
+
 ## Aliases and preservation
 
-The options are case-insensitive. `resharper_xml_wrap_tags_and_pi`, `resharper_xml_attribute_style`, `resharper_xml_attribute_indent`, and `resharper_xml_max_line_length` are supported aliases. The name without `resharper_` wins when present, including invalid values. `unset` removes that spelling and allows an alias to apply. Width precedence is `xml_max_line_length`, its prefixed alias, then `max_line_length`. Unqualified JetBrains aliases such as `attribute_style` are not supported.
+The options are case-insensitive. Every `xml_` option on this page supports a `resharper_` prefix alias, including `resharper_xml_spaces_around_eq_in_attribute`, `resharper_xml_space_after_last_attribute`, and `resharper_xml_space_before_self_closing`. The name without `resharper_` wins when present, including invalid values. `unset` removes that spelling and allows an alias to apply. Width precedence is `xml_max_line_length`, its prefixed alias, then `max_line_length`. Unqualified JetBrains aliases such as `attribute_style` are not supported.
 
-The wrapping pass leaves attribute order, names, quotes, entity spellings, values, and whitespace around `=` intact. It preserves text/CDATA and whitespace-only leaf subtrees, `xml:space="preserve"` subtrees, and XAML text containers. Nested `xml:space="default"` does not override an already protected subtree. XAML structural and custom tags outside protected subtrees can have their attributes wrapped without changing their child-content layout.
+The pass leaves attribute order, names, quotes, entity spellings, and values intact. Text, CDATA, and all content whitespace in text-bearing, mixed-content, and XAML text-container subtrees remain exact. Start-tag attributes throughout those subtrees can wrap or normalize spacing without inserting separators between inline elements or changing text indentation. Whitespace-only leaf values also remain exact. Width is a target for tag attributes, not a limit on preserved text following a start tag.
 
-For MSBuild, the existing project serializer and any enabled sorting run first. They retain their established normalization and canonicalization behavior; this wrapping pass operates on that result. Consequently, `do_not_touch` prevents additional attribute edits but does not make MSBuild preserve the original tag spelling or manual attribute layout. Project documents containing a DTD retain existing serializer behavior and skip the wrapping pass.
+`xml:space="preserve"` protects the complete subtree, including tag spelling. Nested `xml:space="default"` does not override an already protected subtree. XAML structural and custom tags outside these explicit preservation boundaries can have their attributes formatted without changing their child-content layout.
+
+For MSBuild, the existing project serializer and any enabled sorting run first. They retain their established normalization and canonicalization behavior; this tag-formatting pass operates on that result. Consequently, `do_not_touch` prevents additional attribute arrangement changes but does not make MSBuild preserve the original tag spelling or manual attribute layout. Explicit spacing options can still apply. Project documents containing a DTD retain existing serializer behavior and skip the pass.
 
 Explicit charset changes are reflected in the XML declaration before wrapping, including when a declaration must be inserted, so the result is stable on the first run. Preview, check, lint, encoding, and final-newline behavior remain those of the selected formatter. See [XML/XAML](xml-xaml.md), [MSBuild](csproj.md), and [configuration contracts](../configuration-contracts.md).

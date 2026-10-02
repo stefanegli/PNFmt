@@ -1,6 +1,6 @@
 # XML and XAML formatters
 
-PNFmt formats `.xml` and `.xaml` files independently, without loading schemas, application types, projects, or solutions. It indents structural content and optionally wraps attributes. Element and attribute order and namespace prefixes stay unchanged. Existing `.csproj`, `.resx`, and `.slnx` files continue to use their dedicated formatters.
+PNFmt formats `.xml` and `.xaml` files independently, without loading schemas, application types, projects, or solutions. It indents structural content and optionally wraps attributes or normalizes tag spacing. Element and attribute order and namespace prefixes stay unchanged. Existing `.csproj`, `.resx`, and `.slnx` files continue to use their dedicated formatters.
 
 ## Configuration
 
@@ -41,19 +41,21 @@ Formatting places structural child elements, comments, and processing instructio
 
 By default, start and end tags retain their exact original text, including quote style, spaces around attributes, multiline attribute layout, entity references, and self-closing tag spelling. Comments, processing instructions, and CDATA retain their contents. Line endings inside these protected parts are not normalized. Global trailing-whitespace cleanup is not applied.
 
-## Optional attribute wrapping
+## Optional attribute wrapping and tag spacing
 
-Set `xml_wrap_tags_and_pi = true` with `max_line_length` to wrap long tags between complete attributes. `xml_attribute_style` also supports explicit single-line or one-attribute-per-line arrangements, and `xml_attribute_indent` controls continuation indentation. The XML declaration can wrap; ordinary processing-instruction data stays intact. Protected subtrees remain unchanged, and attribute values and text are never split. These features require layout and are disabled by default. See [XML and MSBuild attribute wrapping](xml-wrapping.md) for values, aliases, examples, and preservation rules.
+Set `xml_wrap_tags_and_pi = true` with `max_line_length` to wrap long tags between complete attributes. `xml_attribute_style` also supports explicit single-line or one-attribute-per-line arrangements, and `xml_attribute_indent` controls continuation indentation. The XML declaration can wrap; ordinary processing-instruction data stays intact. Attributes can wrap on text-bearing elements and within mixed-content or XAML text containers while preserving their content whitespace.
+
+`xml_spaces_around_eq_in_attribute`, `xml_space_after_last_attribute`, and `xml_space_before_self_closing` accept `true` or `false` to normalize tag spacing independently of wrapping. Missing/invalid settings preserve existing spacing; existing closing-delimiter line breaks stay intact. Quotes and attribute values are always preserved. These options require layout and are absent from generated configuration. See [XML and MSBuild attribute wrapping and tag spacing](xml-wrapping.md) for values, aliases, examples, and preservation rules.
 
 ## Text preservation
 
-An element containing character data or CDATA keeps its entire subtree unchanged. This includes mixed content such as `<p>Hello <b>world</b>!</p>`, numeric character references, and whitespace-only leaf values. `xml:space="preserve"` protects the complete subtree, even if a descendant requests `xml:space="default"`.
+An element containing character data or CDATA preserves text and content whitespace throughout its subtree. This includes mixed content such as `<p>Hello <b>world</b>!</p>`, numeric character references, and whitespace-only leaf values. Opt-in tag formatting can change start-tag whitespace, including on descendants, without adding or removing text separators. With those options omitted, the entire subtree remains unchanged. `xml:space="preserve"` always protects the complete subtree including tag spelling, even if a descendant requests `xml:space="default"`.
 
 For ordinary XML, enabling formatting treats whitespace-only gaps around child markup as layout. Applications that interpret such gaps as data should use `xml:space="preserve"` or leave formatting disabled for those files. No schema-based determination of insignificant whitespace is attempted.
 
 ## Additional XAML rules
 
-XAML can treat spaces between inline elements as visible text. PNFmt therefore preserves entire text-oriented subtrees such as `TextBlock`, `TextBox`, `RichTextBox`, `Span`, `Run`, `Bold`, `Italic`, `Underline`, `Hyperlink`, `Paragraph`, `Section`, `FlowDocument`, `FormattedString`, and `String`, as well as property elements ending in `.Inlines`.
+XAML can treat spaces between inline elements as visible text. PNFmt therefore preserves content whitespace throughout text-oriented subtrees such as `TextBlock`, `TextBox`, `RichTextBox`, `Span`, `Run`, `Bold`, `Italic`, `Underline`, `Hyperlink`, `Paragraph`, `Section`, `FlowDocument`, `FormattedString`, and `String`, as well as property elements ending in `.Inlines`. Their start-tag attributes can still use explicitly configured wrapping or spacing.
 
 Child indentation is enabled only for a fixed set of common structural types in the WPF/WinUI presentation, Avalonia, and MAUI namespaces. This includes windows/pages, grids/panels, resource dictionaries, styles, templates, triggers, and visual states. Selected structural property elements, such as `Grid.RowDefinitions` and `ResourceDictionary.MergedDictionaries`, are supported too. The full lists are in [XamlWhitespacePolicy.cs](../../PNFmt.Core/Formatter/Xml/XamlWhitespacePolicy.cs).
 

@@ -138,7 +138,7 @@ test("provider selection, navigation, search, and display controls work together
 test("review status keeps open decisions separate and offers the previous snapshot comparison", () => {
     const { elements, cases } = load();
     const get = (id) => elements.get(id);
-    for (const [status, count] of [["processed", 24], ["pending", 4], ["reference", 4]]) {
+    for (const [status, count] of [["processed", 30], ["pending", 1], ["reference", 4]]) {
         get("show-" + status).onclick();
         assert.equal(get("tests").children.length, count);
         for (const button of get("tests").children) {
@@ -169,7 +169,8 @@ test("review status keeps open decisions separate and offers the previous snapsh
     assert.equal(get("input-label").textContent, "Previous snapshot");
     assert.ok(get("review-question").textContent.includes("csharp_wrap_property_pattern"));
     assert.ok(get("stats").textContent.includes("Content changes"));
-    for (const name of ["Queries.cs", "ShortCallMultiline.cs", "SwitchExpressions.cs", "Tuples.cs"]) {
+    for (const name of ["Queries.cs", "ShortCallMultiline.cs", "SwitchExpressions.cs", "Tuples.cs",
+        "TextAttributes.xml", "MixedContentAttributes.xml", "TagSpelling.xml", "TextAndStructuralContainers.xaml"]) {
         get("search").value = "WrappingReview/" + name;
         get("search").oninput();
         assert.equal(get("tests").children.length, 1);
@@ -178,10 +179,10 @@ test("review status keeps open decisions separate and offers the previous snapsh
         assert.ok(get("stats").textContent.includes("Content changes"));
     }
     get("show-pending").onclick();
-    get("search").value = "WrappingReview/TextAttributes.xml";
+    get("search").value = "WrappingReview/QuoteStyle.xml";
     get("search").oninput();
     assert.equal(get("review-label").textContent, "Needs decision");
-    assert.ok(get("review-question").textContent.includes("text-bearing"));
+    assert.ok(get("review-question").textContent.includes("Deferred"));
     assert.equal(get("comparison-choice").hidden, true);
     get("provider").value = "C#";
     get("provider").onchange();

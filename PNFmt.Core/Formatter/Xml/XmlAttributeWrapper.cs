@@ -6,8 +6,8 @@ using System.Text;
 
 namespace PNFmt
 {
-    // Operates on already validated tag slices, changing only whitespace before
-    // complete attributes. XML parsing and protected-subtree selection belong to
+    // Operates on already validated tag slices, changing only tag whitespace.
+    // XML parsing and protected-subtree selection belong to
     // XmlDocumentFormatter; this class never interprets attribute values.
     internal sealed class XmlAttributeWrapper
     {
@@ -19,6 +19,9 @@ namespace PNFmt
         private readonly string newLine;
         private readonly int tabWidth;
         private readonly int width;
+        private readonly bool? spacesAroundEquals;
+        private readonly bool? spaceAfterLastAttribute;
+        private readonly bool? spaceBeforeSelfClosing;
         private long column;
 
         public XmlAttributeWrapper(IReadOnlyDictionary<string, string> settings, string indent, string newLine, int defaultTabWidth, int capacity = 16)
@@ -28,6 +31,9 @@ namespace PNFmt
             this.newLine = newLine;
             this.style = Option(settings, "xml_attribute_style");
             this.attributeIndent = Option(settings, "xml_attribute_indent");
+            this.spacesAroundEquals = BooleanOption(settings, "xml_spaces_around_eq_in_attribute");
+            this.spaceAfterLastAttribute = BooleanOption(settings, "xml_space_after_last_attribute");
+            this.spaceBeforeSelfClosing = BooleanOption(settings, "xml_space_before_self_closing");
             settings.TryGetValue("max_line_length", out var generalWidth);
             var widthSetting = Option(settings, "xml_max_line_length") ?? generalWidth;
             this.width = Option(settings, "xml_wrap_tags_and_pi") == "true" ? PositiveInteger(widthSetting, 0) : 0;
@@ -39,7 +45,8 @@ namespace PNFmt
                 this.tabWidth = defaultTabWidth;
             }
             this.Enabled = this.width > 0 || this.style == "on_single_line"
-                || this.style == "first_attribute_on_single_line" || this.style == "on_different_lines";
+                || this.style == "first_attribute_on_single_line" || this.style == "on_different_lines"
+                || this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue;
         }
 
         public bool Enabled { get; }
@@ -64,7 +71,22 @@ namespace PNFmt
 
         public void AppendTag(string text, int start, int end, int depth, bool declaration = false)
         {
-            if (!this.Enabled || (!declaration && this.style == "do_not_touch") || (declaration && this.width == 0))
+            if (!this.Enabled || (declaration && this.width == 0))
+            {
+                this.Append(text, start, end - start);
+                return;
+            }
+
+            // Normalize explicitly selected spacing before measuring width. Keeping
+            // this separate leaves attribute values and their quote/entity spelling
+            // opaque, and makes wrapping stable even when spacing changes the width.
+            if (!declaration && (this.spacesAroundEquals.HasValue || this.spaceAfterLastAttribute.HasValue || this.spaceBeforeSelfClosing.HasValue))
+            {
+                text = this.NormalizeSpacing(text, start, end);
+                start = 0;
+                end = text.Length;
+            }
+            if (!declaration && this.style == "do_not_touch")
             {
                 this.Append(text, start, end - start);
                 return;
@@ -166,6 +188,9 @@ namespace PNFmt
                 : character == '\t' ? current + this.tabWidth - (current % this.tabWidth) : current + 1;
         }
 
+        private static bool? BooleanOption(IReadOnlyDictionary<string, string> settings, string key)
+            => bool.TryParse(Option(settings, key), out var value) ? value : (bool?)null;
+
         private bool Fits(string gap, string text, int gapStart, int start, int end)
         {
             var projected = this.column;
@@ -211,17 +236,85 @@ namespace PNFmt
 
         private static bool IsWhitespace(char value) => value == ' ' || value == '\t' || value == '\r' || value == '\n';
 
-        private static string Option(IReadOnlyDictionary<string, string> settings, string key)
+        private string NormalizeSpacing(string text, int start, int end)
         {
-            foreach (var spelling in new[] { key, "resharper_" + key })
+            var result = new StringBuilder(end - start);
+            var position = start + 1;
+            while (position < end && !IsWhitespace(text[position]) && text[position] != '/' && text[position] != '>')
             {
-                if (settings.TryGetValue(spelling, out var value)
-                    && !string.Equals(value.Trim(), "unset", StringComparison.OrdinalIgnoreCase))
+                position++;
+            }
+            result.Append(text, start, position - start);
+            var hasAttribute = false;
+            while (position < end)
+            {
+                var gapStart = position;
+                var hasNewLine = false;
+                while (position < end && IsWhitespace(text[position]))
                 {
-                    return value.Trim().ToLowerInvariant();
+                    hasNewLine |= text[position] == '\r' || text[position] == '\n';
+                    position++;
+                }
+                if (text[position] == '/' || text[position] == '>')
+                {
+                    var space = text[position] == '/' ? this.spaceBeforeSelfClosing : hasAttribute ? this.spaceAfterLastAttribute : null;
+                    if (space.HasValue && !hasNewLine)
+                    {
+                        if (space.Value)
+                        {
+                            result.Append(' ');
+                        }
+                    }
+                    else
+                    {
+                        result.Append(text, gapStart, position - gapStart);
+                    }
+                    result.Append(text, position, end - position);
+                    break;
+                }
+
+                hasAttribute = true;
+                var equals = text.IndexOf('=', position);
+                var nameEnd = equals;
+                while (IsWhitespace(text[nameEnd - 1]))
+                {
+                    nameEnd--;
+                }
+                position = equals + 1;
+                while (IsWhitespace(text[position]))
+                {
+                    position++;
+                }
+                var valueStart = position;
+                var quote = text[position++];
+                while (text[position] != quote)
+                {
+                    position++;
+                }
+                position++;
+                if (this.spacesAroundEquals.HasValue)
+                {
+                    result.Append(text, gapStart, nameEnd - gapStart);
+                    result.Append(this.spacesAroundEquals.Value ? " = " : "=");
+                    result.Append(text, valueStart, position - valueStart);
+                }
+                else
+                {
+                    result.Append(text, gapStart, position - gapStart);
                 }
             }
-            return null;
+            return result.ToString();
+        }
+
+        private static string Option(IReadOnlyDictionary<string, string> settings, string key)
+        {
+            if (settings.TryGetValue(key, out var value)
+                && !string.Equals(value.Trim(), "unset", StringComparison.OrdinalIgnoreCase))
+            {
+                return value.Trim().ToLowerInvariant();
+            }
+            return settings.TryGetValue("resharper_" + key, out value)
+                && !string.Equals(value.Trim(), "unset", StringComparison.OrdinalIgnoreCase) ? value.Trim().ToLowerInvariant() : null;
         }
 
         private static int PositiveInteger(string value, int fallback)

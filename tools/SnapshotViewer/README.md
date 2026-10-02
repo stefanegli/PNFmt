@@ -57,10 +57,18 @@ Queries use `csharp_wrap_linq_expressions = chop_if_long` and
 now produce the same result. Additional cases cover short expressions, query
 continuations, nested calls/switches, and tuple types.
 
+XML/XAML text-bearing and mixed-content start tags now use the same wrapping settings
+as structural elements, while preserving all text separators and CDATA. The four
+original XML/XAML decision cases are processed and retain their previous results for
+comparison. `TagSpelling.xml` selects single-line attribute style and the existing
+spacing settings (no spaces around `=` or before `>`, one space before `/>`).
+`TagSpacingExpanded.xml` shows the opposite spacing choices, and
+`InlineTextAndCData.xml` shows wrapping throughout nested inline markup.
+
 The saved outputs describe current behavior, including limitations, rather than a
-proposed target style. All C# cases in this review have now been processed or are
-reference examples. The four remaining decisions concern text-bearing or mixed-content
-XML/XAML and XML tag spelling. Compare those with the structural-attribute references.
+proposed target style. Quote normalization is the only deferred decision, shown in
+`QuoteStyle.xml`. No quote setting is implemented; all quotes retain their spelling.
+All other cases have been processed or are reference examples.
 Processed cases still await the user's review. Cases with identical input
 and output are intentional: they make preserved layouts and unwrapped constructs
 visible in the review. Update these baselines deliberately if formatting policy

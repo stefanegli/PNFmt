@@ -16,7 +16,7 @@ Project, resource, solution, XML, and XAML implementations retain their own pars
 
 Project and resource document formatters return `FileFormatResult` directly from each call. They retain settings, but no per-run status, diagnostics, or logger; callers keep independent results and supply operation context through `FileFormatRequest`.
 
-XML and XAML attribute wrapping shares the normal layout render, using validated source slices and cached indentation rather than parsing an intermediate formatted document. XML declaration encoding is normalized before width measurement; final XML validation and protected-subtree rules remain in place. MSBuild applies the shared attribute writer after its existing project serializer.
+XML and XAML attribute wrapping and opt-in tag spacing share the normal layout render, using validated source slices and cached indentation rather than parsing an intermediate formatted document. XML declaration encoding and explicit tag spacing are normalized before width measurement. Text-bearing and XAML inline subtrees preserve content whitespace while permitting start-tag formatting; explicit `xml:space` subtrees retain complete protection. Final XML validation remains in place. MSBuild applies the shared attribute writer after its existing project serializer.
 
 ## Configuration
 
