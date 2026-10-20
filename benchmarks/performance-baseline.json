@@ -2,6 +2,8 @@
   "SuiteVersion": 3,
   "Revision": "09b320fd07321f65cd341d58b38f1d22be670c8b",
   "Reason": "Initial publish baseline after removing the redundant XML/XAML wrapping parse; retain the measured time and allocation improvements. See docs/performance.md.",
+  "CompactionRevision": "c277f78739fc11de2a563256f9f4d14699877f7c",
+  "CompactionReason": "Initial baseline for the two new short-call cases, using the reviewed implementation before batching. The original baseline predates compaction; existing cases retain their original revision. See docs/performance.md.",
   "Tolerances": {
     "TimePercent": 20,
     "WriteTimePercent": 50,

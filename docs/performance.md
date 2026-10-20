@@ -37,7 +37,7 @@ Scratch storage did not eliminate hosted-runner timing variability. The same alp
 
 ## What is compared
 
-The gate builds the **same current benchmark sources** twice in Release: once against the current formatter/CLI source, once against the commit pinned in [`benchmarks/performance-baseline.json`](../benchmarks/performance-baseline.json). Both run on the same machine, runtime, architecture, and logical CPU count. This avoids a fixed millisecond budget tied to one developer's hardware. A missing baseline, failed build, invalid report, missing/duplicate case, incomplete sample set, or non-repeatable formatter output fails the gate.
+The gate builds the **same current benchmark sources** in Release against the current formatter/CLI and both fixed references in [`benchmarks/performance-baseline.json`](../benchmarks/performance-baseline.json). The existing 67 cases use `Revision`; only the two new `csharp-compaction` cases use `CompactionRevision`, whose implementation supports that feature. All run on the same machine, runtime, architecture, and logical CPU count. This avoids comparing compaction with an older implementation that ignores its setting, or using a fixed millisecond budget tied to one developer's hardware. A missing baseline, failed build, invalid report, missing/duplicate case, incomplete sample set, or non-repeatable formatter output fails the gate. Compaction additionally requires identical output fingerprints across both revisions.
 
 There are 69 individually checked cases:
 
@@ -67,7 +67,7 @@ Equality passes; comparisons use unrounded numbers. Floors handle small absolute
 Each invocation writes fresh files to `artifacts/performance/<run-id>/`:
 
 - `PerformanceGate.md`: the timing policy, baseline/current timings, allocations, percentage changes, output differences, and `PASS`, `FAIL`, or `TIMING WARNING` for every case. An allocation failure stays `FAIL` even when timing is also advisory. Retained on threshold failures.
-- `baseline.json` and `run.json`: the exact policy, timing mode, machine name, baseline/current commit IDs, dirty-working-tree flag, start time, and benchmark source hashes.
+- `baseline.json` and `run.json`: the exact policy, timing mode, machine name, both reference commit IDs and current commit ID, dirty-working-tree flag, start time, and benchmark source hashes.
 - Worker JSON reports: runtime metadata, sample arrays, iteration counts, and output fingerprints.
 - Build and worker logs, retained even when a command fails before comparison.
 
@@ -92,7 +92,9 @@ Adding or substantially changing a scenario also requires reviewing the fixture 
 
 Suite version 2 adds eight RESX cases without changing the pinned source revision or tolerances. Previous mixed-repository fixtures use LF and do not exercise CRLF-specific serialization costs. The RESX cases compare both revisions using the same current harness; multiline output fingerprints intentionally differ because resource newlines are now protected with character references. Runtime-value preservation and real Git checkout behavior are verified separately by resource tests, since the old baseline does not preserve all resource newline values.
 
-Suite version 3 adds preview and already formatted cases for 400 short multiline C# calls with `max_line_length = 120` and `csharp_keep_existing_linebreaks = false`, bringing the total to 69. The pinned revision and tolerances remain unchanged. The pinned implementation predates call compaction, so output fingerprints differ intentionally; both sides must still produce stable output and preserve preview input bytes. The fixture exposes whole-document work repeated per call, which the long-list modes do not exercise.
+Suite version 3 adds preview and already formatted cases for 400 short multiline C# calls with `max_line_length = 120` and `csharp_keep_existing_linebreaks = false`, bringing the total to 69. These two cases establish their first fixed reference at `c277f78739fc11de2a563256f9f4d14699877f7c`, the reviewed implementation before batching. The existing 67 cases keep revision `09b320fd07321f65cd341d58b38f1d22be670c8b`; no reference is advanced and no tolerance is widened. Both compaction revisions must produce identical, stable output and preserve preview input bytes. The fixture exposes whole-document work repeated per call, which the long-list modes do not exercise.
+
+The initial attempt to apply the older common reference to the new preview case measured 16.79 ms / 5.99 MiB for unchanged multiline behavior versus 32.60 ms / 11.22 MiB for batched compaction. That reference predates the feature and ignores `csharp_keep_existing_linebreaks`, so it measures different behavior. The separate pre-fix compaction reference corrects this comparison without replacing any established baseline. Initial-layout reuse further removes a duplicate format pass; its focused preview measured 27.22 ms / 7.97 MiB before the complete three-round validation. The same new fixture against the pre-fix implementation remains mandatory in every full validation.
 
 ## Initial baseline and optimization
 
