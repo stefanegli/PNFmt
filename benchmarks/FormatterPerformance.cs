@@ -16,13 +16,13 @@ namespace PNFmt.Benchmarks
             {
                 throw new ArgumentException("Unknown performance family: " + kind);
             }
-            var count = kind == "csharp" ? 200 : 1000;
             var modes = kind == "csharp"
-                ? new[] { "default", "width120", "wrap_if_long", "chop", "preferences", "header" }
+                ? new[] { "default", "width120", "wrap_if_long", "chop", "preferences", "header", "compact" }
                 : kind == "resx" ? new[] { "lf", "crlf", "crlf-multiline", "crlf-long" }
                 : new[] { "default", "width120", "chop" };
             foreach (var mode in modes)
             {
+                var count = kind == "csharp" ? mode == "compact" ? 400 : 200 : 1000;
                 var folder = Path.Combine(directory, mode);
                 Directory.CreateDirectory(folder);
                 var path = Path.Combine(folder, "Input." + (kind == "csharp" ? "cs" : kind));
@@ -105,6 +105,7 @@ namespace PNFmt.Benchmarks
                     "chop" => "xml_attribute_style = on_different_lines\n",
                     "preferences" => "dotnet_style_allow_multiple_blank_lines_experimental = false\ncsharp_style_allow_blank_lines_between_consecutive_braces_experimental = false\ndotnet_style_allow_statement_immediately_after_block_experimental = false\n",
                     "header" => "file_header_template = Copyright (c) Example.\\n{fileName}\n",
+                    "compact" => "max_line_length = 120\ncsharp_keep_existing_linebreaks = false\n",
                     _ => "",
                 });
         }
@@ -126,6 +127,15 @@ namespace PNFmt.Benchmarks
             if (kind == "csharp")
             {
                 output.Append("namespace Example { public class Worker {\n");
+                if (mode == "compact")
+                {
+                    output.Append("public void Run() {\n");
+                    for (var index = 0; index < count; index++)
+                    {
+                        output.Append("Work(\n1,\n2\n);\n");
+                    }
+                    return output.Append("}\n}}\n").ToString();
+                }
                 for (var index = 0; index < count; index++)
                 {
                     output.Append($"public string Build{index}(string firstParameter, string secondParameter, string thirdParameter, string fourthParameter, string fifthParameter, string sixthParameter){{\n\n\nreturn Compose(firstParameter, secondParameter, thirdParameter, fourthParameter, fifthParameter, sixthParameter);\n}}\n");

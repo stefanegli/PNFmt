@@ -28,7 +28,7 @@ function Invoke-Dotnet([string[]]$Arguments, [string]$LogPath)
 Push-Location $repoRoot
 try
 {
-    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.SuiteVersion -ne 2 -or
+    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.SuiteVersion -ne 3 -or
         [string]::IsNullOrWhiteSpace($policy.Reason))
     {
         throw 'The performance baseline must pin a full commit ID and describe why it was chosen.'

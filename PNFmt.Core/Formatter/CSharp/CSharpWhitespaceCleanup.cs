@@ -14,6 +14,16 @@ namespace PNFmt
     {
         public static string Apply(string text, IReadOnlyDictionary<string, string> settings)
         {
+            var trim = EditorConfigSettings.IsEnabled(settings, "trim_trailing_whitespace");
+            var newLine = ResolveNewLine(settings);
+            var insertFinalNewline = EditorConfigSettings.IsEnabled(settings, "insert_final_newline");
+            var needsFinalNewline = insertFinalNewline && text.Length > 0
+                && text[text.Length - 1] != '\n' && text[text.Length - 1] != '\r';
+            if (!trim && !needsFinalNewline && (newLine is null || !HasDifferentNewLines(text, newLine)))
+            {
+                return text;
+            }
+
             var root = CSharpSyntaxTree.ParseText(text, new CSharpParseOptions(LanguageVersion.CSharp14)).GetRoot();
             var exclusions = CSharpFormattingExclusions.Parse(root);
             var protectedSpans = root.DescendantTokens().Select(token => token.Span)
@@ -23,8 +33,6 @@ namespace PNFmt
                 .Where(span => span.Length > 0).OrderBy(span => span.Start).ToArray();
             var source = SourceText.From(text);
             var changes = new List<TextChange>();
-            var trim = EditorConfigSettings.IsEnabled(settings, "trim_trailing_whitespace");
-            var newLine = ResolveNewLine(settings);
             var protectedIndex = 0;
             foreach (var line in source.Lines)
             {
@@ -45,7 +53,7 @@ namespace PNFmt
             }
 
             var result = source.WithChanges(changes).ToString();
-            if (EditorConfigSettings.IsEnabled(settings, "insert_final_newline")
+            if (insertFinalNewline
                 && !exclusions.Intersects(new TextSpan(text.Length, 0))
                 && result.Length > 0 && result[result.Length - 1] != '\n' && result[result.Length - 1] != '\r')
             {
@@ -67,6 +75,18 @@ namespace PNFmt
             }
 
             return TextSpan.FromBounds(end, line.EndIncludingLineBreak);
+        }
+
+        private static bool HasDifferentNewLines(string text, string newLine)
+        {
+            if (newLine == "\n") return text.IndexOf('\r') >= 0;
+            if (newLine == "\r") return text.IndexOf('\n') >= 0;
+            for (var index = 0; index < text.Length; index++)
+            {
+                if (text[index] == '\n') return true;
+                if (text[index] == '\r' && (index + 1 >= text.Length || text[++index] != '\n')) return true;
+            }
+            return false;
         }
 
         private static bool OverlapsProtectedSpan(TextSpan changeSpan, TextSpan[] protectedSpans, ref int index)

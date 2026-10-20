@@ -10,6 +10,14 @@ namespace PNFmt.Tests.Formatter.CSharp
 {
     public sealed class CSharpCallCompactionTests
     {
+        [Fact]
+        public void A_rejected_call_does_not_prevent_a_call_on_its_closing_line_from_compacting()
+        {
+            var result = Format("LongCallName(\nfirst,\nsecond); B(\nx,\ny);",
+                ("csharp_keep_existing_linebreaks", "false"), ("max_line_length", "23"));
+            Assert.Equal("LongCallName(\nfirst,\nsecond); B(x, y);", result);
+        }
+
         [Theory]
         [InlineData("csharp_keep_existing_linebreaks")]
         [InlineData("resharper_csharp_keep_existing_linebreaks")]
@@ -21,6 +29,14 @@ namespace PNFmt.Tests.Formatter.CSharp
                 (setting, "false"), ("max_line_length", "80"),
                 ("csharp_space_between_method_call_name_and_opening_parenthesis", "true"),
                 ("csharp_space_between_method_call_parameter_list_parentheses", "true")));
+        }
+
+        [Fact]
+        public void Calls_sharing_a_line_are_checked_against_the_combined_width()
+        {
+            var result = Format("A(\nx,\ny); B(\nx,\ny);",
+                ("csharp_keep_existing_linebreaks", "false"), ("max_line_length", "16"));
+            Assert.Equal("A(x, y); B(\nx,\ny);", result);
         }
 
         [Fact]
@@ -87,6 +103,14 @@ namespace PNFmt.Tests.Formatter.CSharp
                 ("max_line_length", "30"), ("indent_style", "tab"), ("indent_size", "8"), ("tab_width", "8"), ("end_of_line", "crlf"));
             Assert.Contains("\tProcess(\r\n", tabbed);
             Assert.DoesNotContain("\n", tabbed.Replace("\r\n", ""));
+        }
+
+        [Fact]
+        public void Independent_calls_compact_while_a_call_that_exceeds_the_width_keeps_its_breaks()
+        {
+            var result = Format("Short(\na,\nb);\nThisCallNameDoesNotFit(\na,\nb);\nOther(\nx,\ny);",
+                ("csharp_keep_existing_linebreaks", "false"), ("max_line_length", "20"));
+            Assert.Equal("Short(a, b);\nThisCallNameDoesNotFit(\na,\nb);\nOther(x, y);", result);
         }
 
         [Fact]

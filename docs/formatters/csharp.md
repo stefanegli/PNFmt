@@ -121,6 +121,8 @@ code line fits a positive `max_line_length`. The width includes indentation, tab
 stops, and code following the closing delimiter; trailing comments do not count.
 Roslyn's configured delimiter/comma spacing applies. Nested calls compact first.
 
+Independent calls compact in batches. Calls sharing a line are checked separately against their combined resulting width; batching does not relax width or protected-content rules.
+
 `true`, omitted, invalid, or unset values preserve existing line breaks. The
 case-insensitive boolean also accepts `resharper_csharp_keep_existing_linebreaks`;
 the unprefixed C# name takes precedence even when invalid, and `unset` allows alias
