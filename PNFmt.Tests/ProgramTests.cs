@@ -1087,7 +1087,7 @@ namespace PNFmt.Tests
                     "z=2\r\na=1\r\n");
                 var response = directory.Write(
                     Path.Combine("nested", "compiler.rsp"),
-                    "zeta.cs\r\nalpha.cs\r\n");
+                    "zeta.cs  \r\nalpha.cs\r\n");
 
                 var result = Run("--recursive", directory.Path);
 
@@ -1100,7 +1100,7 @@ namespace PNFmt.Tests
                 Assert.Equal(new[] { "A.csproj", "Z.csproj" }, XDocument.Load(solution).Root
                     .Elements("Project").Select(element => (string)element.Attribute("Path")));
                 Assert.Equal("a = 1\r\nz = 2\r\n", File.ReadAllText(ini));
-                Assert.Equal("alpha.cs\r\nzeta.cs\r\n", File.ReadAllText(response));
+                Assert.Equal("zeta.cs\r\nalpha.cs\r\n", File.ReadAllText(response));
             }
         }
 
