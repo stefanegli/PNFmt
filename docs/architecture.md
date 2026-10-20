@@ -20,6 +20,8 @@ Project and resource document formatters return `FileFormatResult` directly from
 
 C# call compaction batches calls on disjoint source lines into one Roslyn formatting pass, then measures the complete resulting lines using token ordinals and cached code endpoints. That pass also supplies initial layout, avoiding a separate full-document format before joining calls. Calls sharing a line remain sequential, nested calls compact before their parents, and rejected calls are restored from the original source. Whitespace cleanup avoids parsing when no requested cleanup can change the input, including already matching line endings. Protection checks still apply whenever an edit is needed.
 
+Project property and metadata dependencies preserve repeated assignments in source order. When every assignment has the same case-insensitive name, that order is completely constrained, so the dependency module returns it without constructing or traversing a graph.
+
 XML and XAML attribute wrapping, opt-in tag spacing, and quote normalization share the normal layout render, using validated source slices and cached indentation rather than parsing an intermediate formatted document. XML declaration encoding, explicit tag spacing, and quote escapes are normalized before width measurement. Quote changes preserve existing references and literal whitespace, escaping only conflicting literal delimiters without decoding attribute values. Text-bearing and XAML inline subtrees preserve content whitespace while permitting start-tag formatting; explicit `xml:space` subtrees retain complete protection. Final XML validation remains in place. MSBuild applies the shared attribute writer after its existing project serializer.
 
 ## Configuration

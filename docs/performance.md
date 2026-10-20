@@ -110,6 +110,10 @@ A same-machine Release comparison against `c277f78`, with .NET 10.0.12 on Window
 
 Batching removes repeated whole-document formatting per independent call and repeated token scans during width checks. Cleanup also skips reparsing when requested whitespace is already satisfied. These measurements demonstrate the allocation scaling improvement; they are not portable timing promises or a replacement for the mandatory pinned-baseline comparison. The pinned revision and tolerance values are unchanged.
 
+### Repository dependency sorting
+
+The first complete review-fix validation retained all allocation and correctness limits but failed three timing comparisons: 4,000 repeated metadata assignments (6.65/8.28 ms), 2,000 repeated properties (3.93/5.03 ms), and nested repository preview (58.45/72.09 ms). The sorting, file-read, and runner implementations for those paths were identical to the original pinned source; per-round timings drifted substantially (for example, the same current nested preview measured 103.51, 72.09, and 45.98 ms). Rather than changing references or tolerances, repeated single-name assignments now avoid building a dependency graph whose chain already fixes the entire order. The complete enforced validation is rerun afterward; the initial failure report remains retained for investigation.
+
 ### XML and XAML wrapping
 
 The initial pinned baseline is `09b320fd07321f65cd341d58b38f1d22be670c8b`, after the XML/XAML optimization. It locks in the improvement rather than allowing a later regression up to the original wrapping implementation's cost.

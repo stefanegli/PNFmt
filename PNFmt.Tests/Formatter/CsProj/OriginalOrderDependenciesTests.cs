@@ -8,6 +8,17 @@ namespace PNFmt.Tests.Formatter.CsProj
     public sealed class OriginalOrderDependenciesTests
     {
         [Fact]
+        public void Repeated_assignments_keep_source_order_even_when_comparison_requests_the_reverse()
+        {
+            var dependencies = new OriginalOrderDependencies(new[] { "Name", "name", "NAME" });
+            dependencies.AddReference(0, "Other");
+            dependencies.AddReference(1, "Name");
+            dependencies.AddReference(2, "name");
+
+            Assert.Equal(new[] { 0, 1, 2 }, dependencies.Sort((left, right) => right.CompareTo(left)));
+        }
+
+        [Fact]
         public void Sorting_preserves_every_assignment_and_reference_boundary()
         {
             var random = new Random(1729);

@@ -12,9 +12,19 @@ namespace PNFmt
         private readonly Dictionary<string, List<int>> assignments = new Dictionary<string, List<int>>(StringComparer.OrdinalIgnoreCase);
         private readonly HashSet<int>[] edges;
         private readonly int[] indegree;
+        private readonly int[] fixedOrder;
 
         public OriginalOrderDependencies(IReadOnlyList<string> names)
         {
+            // Repeated assignments to one name already form a complete chain.
+            // No reference or comparison can change their required source order.
+            if (names.Count > 1 && names[0] is not null
+                && names.Skip(1).All(name => StringComparer.OrdinalIgnoreCase.Equals(names[0], name)))
+            {
+                this.fixedOrder = Enumerable.Range(0, names.Count).ToArray();
+                return;
+            }
+
             this.edges = new HashSet<int>[names.Count];
             this.indegree = new int[names.Count];
             for (var index = 0; index < names.Count; index++)
@@ -37,6 +47,11 @@ namespace PNFmt
 
         public void AddReference(int index, string name)
         {
+            if (this.fixedOrder is not null)
+            {
+                return;
+            }
+
             if (!this.assignments.TryGetValue(name, out var indices))
             {
                 return;
@@ -63,6 +78,11 @@ namespace PNFmt
 
         public IReadOnlyList<int> Sort(Comparison<int> comparison)
         {
+            if (this.fixedOrder is not null)
+            {
+                return this.fixedOrder;
+            }
+
             var remaining = (int[])this.indegree.Clone();
             var ready = new SortedSet<int>(Comparer<int>.Create((left, right) =>
             {
