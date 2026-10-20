@@ -100,7 +100,7 @@ The initial attempt to apply the older common reference to the new preview case 
 
 ### Short-call compaction
 
-A same-machine Release comparison against `c277f78`, with .NET 10.0.12 on Windows and tiered compilation disabled, measured these medians of nine individual previews after at least ten warm-up operations. The input contains independent multiline `F(1, 2)` calls inside one method, with a 120-column width and `csharp_keep_existing_linebreaks = false`:
+A same-machine Release comparison of the initial batched implementation against `c277f78`, with .NET 10.0.12 on Windows and tiered compilation disabled, measured these medians of nine individual previews after at least ten warm-up operations. The input contains independent multiline `F(1, 2)` calls inside one method, with a 120-column width and `csharp_keep_existing_linebreaks = false`:
 
 | Calls | Before ms/file | Batched ms/file | Before MiB/file | Batched MiB/file |
 | --- | ---: | ---: | ---: | ---: |
@@ -110,9 +110,13 @@ A same-machine Release comparison against `c277f78`, with .NET 10.0.12 on Window
 
 Batching removes repeated whole-document formatting per independent call and repeated token scans during width checks. Cleanup also skips reparsing when requested whitespace is already satisfied. These measurements demonstrate the allocation scaling improvement; they are not portable timing promises or a replacement for the mandatory pinned-baseline comparison. The pinned revision and tolerance values are unchanged.
 
+After initial-layout reuse, complete three-round `Enforce` validation of `1364f8a` on VELA passed all 69 cases, coverage, packaging, and isolated installed-tool checks. The mandatory 400-call preview measured 1,664.60 to 17.32 ms and 381.93 to 8.02 MiB per file (97.9% lower allocations), with identical output fingerprints. Already formatted checks measured 8.82 to 7.74 ms. These results use the fixed pre-batching compaction reference; the other 67 cases retain their original reference and all tolerances remain unchanged.
+
 ### Repository dependency sorting
 
-The first complete review-fix validation retained all allocation and correctness limits but failed three timing comparisons: 4,000 repeated metadata assignments (6.65/8.28 ms), 2,000 repeated properties (3.93/5.03 ms), and nested repository preview (58.45/72.09 ms). The sorting, file-read, and runner implementations for those paths were identical to the original pinned source; per-round timings drifted substantially (for example, the same current nested preview measured 103.51, 72.09, and 45.98 ms). Rather than changing references or tolerances, repeated single-name assignments now avoid building a dependency graph whose chain already fixes the entire order. The complete enforced validation is rerun afterward; the initial failure report remains retained for investigation.
+The first complete review-fix validation retained all allocation and correctness limits but failed three timing comparisons: 4,000 repeated metadata assignments (6.65/8.28 ms), 2,000 repeated properties (3.93/5.03 ms), and nested repository preview (58.45/72.09 ms). The sorting, file-read, and runner implementations for those paths were identical to the original pinned source; per-round timings drifted substantially (for example, the same current nested preview measured 103.51, 72.09, and 45.98 ms). Rather than changing references or tolerances, repeated single-name assignments now avoid building a dependency graph whose chain already fixes the entire order. The initial failure report remains retained for investigation.
+
+Complete enforced validation after this optimization passed. Repeated metadata at 4,000 entries measured 5.195/4.850 ms and 7,970.8/7,063.3 KiB (baseline/current); repeated properties at 2,000 entries measured 3.619/3.218 ms and 5,141.4/4,687.6 KiB. Nested repository preview measured 53.032/47.291 ms. Allocation reductions are the direct effect of avoiding the redundant graph; the retained round-level timings document the machine variability.
 
 ### XML and XAML wrapping
 
