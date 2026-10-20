@@ -80,6 +80,8 @@ Generated defaults enable sorting except for response files, C# modifier/member 
 
 The command creates `.pnfmt` with `maxCpuCount` set to `4` only when missing: at the Git root, or beside `.editorconfig` outside Git. It never modifies an existing `.pnfmt`.
 
+Existing `.editorconfig` input is decoded strictly. Updates stage UTF-8 without a BOM and reject intervening byte changes, read-only files, symbolic links, and reparse points rather than overwriting them. Missing files use exclusive creation. Replacement preserves Windows security metadata and Unix permission bits, but changes file identity (other hard links retain old contents); ownership, extended metadata, durability, and a race after the final edit check depend on the file system. Interrupted replacement can leave `.pnfmt-*.tmp` or `.tmp.bak` recovery siblings.
+
 When legacy settings exist, supply both migration choices for non-interactive runs:
 
 ```powershell

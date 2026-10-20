@@ -276,6 +276,25 @@ namespace PNFmt.Tests
         }
 
         [Fact]
+        public void Default_configuration_rejects_invalid_encoding_and_read_only_input_without_writing()
+        {
+            using var directory = new TemporaryDirectory();
+            var path = Path.Combine(directory.Path, ".editorconfig");
+            var invalid = new byte[] { 0xC3, 0x28 };
+            File.WriteAllBytes(path, invalid);
+            Assert.Equal(2, Run("--write-default-config", path).ExitCode);
+            Assert.Equal(invalid, File.ReadAllBytes(path));
+
+            File.WriteAllText(path, "root = true\n");
+            File.SetAttributes(path, FileAttributes.ReadOnly);
+            var result = Run("--write-default-config", path);
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains("read-only", result.Error);
+            Assert.Equal("root = true\n", File.ReadAllText(path));
+            Assert.Equal(new[] { path }, Directory.GetFiles(directory.Path));
+        }
+
+        [Fact]
         public void Default_editorconfig_creation_does_not_overwrite_a_concurrent_file()
         {
             using (var directory = new TemporaryDirectory())
@@ -292,6 +311,81 @@ namespace PNFmt.Tests
 
                 Assert.Contains("created while defaults were being prepared", exception.Message);
                 Assert.Equal(ConcurrentContents, File.ReadAllText(editorConfig));
+            }
+        }
+
+        [Fact]
+        public void Default_editorconfig_update_does_not_recreate_a_deleted_file()
+        {
+            using var directory = new TemporaryDirectory();
+            var path = directory.Write(".editorconfig", "root = true\n");
+            var writer = DefaultEditorConfigWriter.Open(path);
+            File.Delete(path);
+
+            Assert.Throws<FileNotFoundException>(() => writer.Write(false, false));
+            Assert.Empty(Directory.GetFiles(directory.Path));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Default_editorconfig_update_rejects_intervening_text_or_encoding_changes(bool encodingOnly)
+        {
+            using var directory = new TemporaryDirectory();
+            const string Original = "root = true\n[*.cs]\nindent_size = 2\n";
+            var path = directory.Write(".editorconfig", Original);
+            var timestamp = File.GetLastWriteTimeUtc(path);
+            var writer = DefaultEditorConfigWriter.Open(path);
+            var edited = encodingOnly
+                ? Encoding.Unicode.GetPreamble().Concat(Encoding.Unicode.GetBytes(Original)).ToArray()
+                : Encoding.UTF8.GetBytes(Original.Replace("= 2", "= 4"));
+            File.WriteAllBytes(path, edited);
+            File.SetLastWriteTimeUtc(path, timestamp);
+
+            var exception = Assert.Throws<IOException>(() => writer.Write(false, false));
+
+            Assert.Contains("changed during formatting", exception.Message);
+            Assert.Equal(edited, File.ReadAllBytes(path));
+            Assert.Equal(new[] { path }, Directory.GetFiles(directory.Path));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Default_editorconfig_update_rejects_symbolic_links_including_a_swapped_source(bool swapAfterOpen)
+        {
+            using var directory = new TemporaryDirectory();
+            var target = directory.Write("target.txt", "root = true\n");
+            var path = Path.Combine(directory.Path, ".editorconfig");
+            DefaultEditorConfigWriter writer = null;
+            if (swapAfterOpen)
+            {
+                File.Copy(target, path);
+                writer = DefaultEditorConfigWriter.Open(path);
+                File.Delete(path);
+            }
+
+            try
+            {
+                File.CreateSymbolicLink(path, target);
+            }
+            catch (IOException exception) when (OperatingSystem.IsWindows() && (exception.HResult & 0xFFFF) == 1314)
+            {
+                return; // Linux CI exercises this when Windows denies link creation.
+            }
+
+            try
+            {
+                writer ??= DefaultEditorConfigWriter.Open(path);
+                var exception = Assert.Throws<IOException>(() => writer.Write(false, false));
+                Assert.Contains("reparse point", exception.Message);
+                Assert.NotNull(new FileInfo(path).LinkTarget);
+                Assert.Equal("root = true\n", File.ReadAllText(target));
+                Assert.Empty(Directory.GetFiles(directory.Path, ".pnfmt-*.tmp*"));
+            }
+            finally
+            {
+                File.Delete(path);
             }
         }
 

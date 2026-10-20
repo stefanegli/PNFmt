@@ -10,15 +10,13 @@ namespace PNFmt.Cli
 {
     internal sealed class DefaultEditorConfigWriter
     {
-        private readonly string original;
-        private readonly bool targetExisted;
+        private readonly EncodedTextFile original;
 
-        private DefaultEditorConfigWriter(string path, string original, bool targetExisted)
+        private DefaultEditorConfigWriter(string path, EncodedTextFile original)
         {
             this.TargetPath = path;
             this.original = original;
-            this.targetExisted = targetExisted;
-            this.LegacySettingCount = DefaultEditorConfigDocument.CountLegacySettings(original);
+            this.LegacySettingCount = DefaultEditorConfigDocument.CountLegacySettings(original?.Text ?? string.Empty);
         }
 
         public int LegacySettingCount { get; }
@@ -28,29 +26,29 @@ namespace PNFmt.Cli
         public static DefaultEditorConfigWriter Open(string targetPath)
         {
             var editorConfigPath = ResolveEditorConfigPath(targetPath);
-            var targetExisted = File.Exists(editorConfigPath);
-            var original = targetExisted
-                ? File.ReadAllText(editorConfigPath)
-                : string.Empty;
-            return new DefaultEditorConfigWriter(editorConfigPath, original, targetExisted);
+            var original = File.Exists(editorConfigPath)
+                ? EncodedTextFile.Read(editorConfigPath)
+                : null;
+            return new DefaultEditorConfigWriter(editorConfigPath, original);
         }
 
         public ConfigurationWriteResult Write(
             bool migrateLegacySettings,
             bool removeLegacySettings)
         {
+            var originalText = this.original?.Text ?? string.Empty;
             var updated = DefaultEditorConfigDocument.Update(
-                this.original,
+                originalText,
                 migrateLegacySettings,
                 removeLegacySettings);
-            if (string.Equals(this.original, updated, StringComparison.Ordinal))
+            if (string.Equals(originalText, updated, StringComparison.Ordinal))
             {
                 return new ConfigurationWriteResult(this.TargetPath, false);
             }
 
-            if (this.targetExisted)
+            if (this.original is not null)
             {
-                File.WriteAllText(this.TargetPath, updated, new UTF8Encoding(false));
+                this.original.Write(this.TargetPath, new UTF8Encoding(false, true).GetBytes(updated));
             }
             else
             {

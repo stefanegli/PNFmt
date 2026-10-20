@@ -12,6 +12,8 @@ Document formatting returns `DocumentFormatResult`: formatted text, bytes from a
 
 Replacement uses a backup for recovery if the file system fails partway through; normal completion removes staging and backup files. Abrupt process termination can leave `.pnfmt-*.tmp` or `.tmp.bak` siblings. This is an optimistic edit check, not a transaction with external editors: path replacement can still race the final check, and durability depends on the file system. Replacing a path gives it a new file identity, so other hard links retain the previous contents. Windows replacement preserves destination security metadata; Unix permission bits are copied, but ownership and extended metadata depend on the runtime/file system.
 
+Default configuration updates use the same strict decoding and staged replacement for existing `.editorconfig` files. The original bytes are captured before any migration prompts, so intervening edits are rejected. Successful updates retain the command's UTF-8-without-BOM output convention. Creating a missing `.editorconfig` or `.pnfmt` uses exclusive creation to avoid overwriting a concurrently created path. Existing `.pnfmt` files remain untouched.
+
 Project, resource, solution, XML, and XAML implementations retain their own parsing, preservation, and serialization rules. In particular, legacy resource settings can leave an otherwise unchanged document untouched; each formatter retains its documented BOM and final-newline behavior.
 
 Project and resource document formatters return `FileFormatResult` directly from each call. They retain settings, but no per-run status, diagnostics, or logger; callers keep independent results and supply operation context through `FileFormatRequest`.

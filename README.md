@@ -113,6 +113,8 @@ pnfmt --write-default-config .
 
 The command reuses matching sections in an existing `.editorconfig`, preserves existing values and line order, and inserts only missing settings at their sorted positions. Missing sections are appended and no comments are added. A new `.editorconfig` also gets `root = true`.
 
+Existing configuration is decoded strictly and updated through a staged replacement. Edits made while defaults or migration answers are being prepared are rejected without overwriting them. Files requiring updates must be writable regular files; symbolic links and reparse points are rejected. New files are created only if still missing. Replacement has the same file-system race and metadata limits as [formatter writes](docs/architecture.md#file-processing).
+
 If legacy `csproj_formatter_*` or `resx_formatter_*` settings are found, PNFmt asks separately whether to migrate them and whether to remove the old settings. Both answers can be supplied for non-interactive use:
 
 ```powershell
