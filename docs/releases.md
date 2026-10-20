@@ -3,6 +3,10 @@
 Releases use a version tag on an already validated `master` commit. Do not create
 a release branch or push another commit just to trigger publication.
 
+The [PNForge build](forge-build.md) provides complete Windows validation on VELA
+with enforced timing checks. Its validation package is separate from the GitHub
+`release-package` required by the tag workflow below.
+
 ## Prepare through normal development
 
 Set the intended version in `PNFmt.Cli/PNFmt.Cli.csproj` and update the installation

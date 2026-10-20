@@ -21,6 +21,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool
 
 Leave `-TimingPolicy` at its `Enforce` default and leave all skip switches off. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
 
+The [PNForge verify pipeline](forge-build.md) runs this complete validation on
+VELA with `-TimingPolicy Enforce` and retains its performance reports. A successful
+VELA run supplies the local validation for its exact source commit. The GitHub Build
+and its retained release package remain separately required for tag publication.
+
 Run just the performance comparison independently from the repository root:
 
 ```powershell

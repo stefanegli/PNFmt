@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 3,
+  "id": "verify",
+  "name": "Build, test and validate PNFmt",
+  "description": "Release tests, coverage, formatting, enforced performance comparisons and isolated tool-package checks on VELA. Packages are retained without publication.",
+  "artifactRetention": { "keepRuns": 10 },
+  "triggers": [
+    { "type": "manual" },
+    { "type": "push" }
+  ],
+  "stages": [
+    {
+      "id": "build",
+      "name": "Build, test and package",
+      "jobs": [
+        {
+          "id": "verify",
+          "requires": { "os": "windows", "dotnetSdk": "10.0" },
+          "reports": {
+            "tests": { "paths": ["artifacts/coverage"] },
+            "coverage": {
+              "paths": ["artifacts/coverage"],
+              "profile": "pnfmt-production-v1",
+              "toolchain": "coverlet-10.0.1-reportgenerator-5.5.11",
+              "expectedAssemblies": ["PNFmt.Core", "pnfmt"]
+            }
+          },
+          "outputs": [
+            { "name": "coverage", "path": "artifacts/coverage", "when": "always" },
+            { "name": "performance", "path": "artifacts/performance", "when": "always" },
+            { "name": "package", "path": "artifacts/packages" }
+          ],
+          "steps": [
+            {
+              "id": "validate",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                "-File", "scripts/Test-ForgeBuild.ps1"
+              ],
+              "environment": { "DOTNET_CLI_TELEMETRY_OPTOUT": "1", "DOTNET_NOLOGO": "1" },
+              "timeoutSeconds": 3600
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

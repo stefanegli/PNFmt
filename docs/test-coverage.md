@@ -80,6 +80,11 @@ boundaries, independent assemblies/metrics, missing data, and malformed input.
 
 ## CI and releases
 
+The [PNForge build](forge-build.md) uses the same coverage command and thresholds
+on VELA. It imports TRX and Cobertura results into Forge and retains the coverage
+directory as a downloadable artifact, including reports from failed tests when
+collection produced them.
+
 The Build workflow runs the shared coverage command on Windows and Linux. It adds
 coverage and threshold results to the GitHub Actions summary and uploads a
 `coverage-<os>` artifact even when a test or threshold fails. Download the artifact
