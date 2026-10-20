@@ -12,7 +12,7 @@ namespace PNFmt
 {
     internal static class CSharpCallCompactor
     {
-        public static Document Apply(Document document, int width, int tabWidth, bool preserveSwitchArmSpacing)
+        public static Document Apply(Document document, int width, int tabWidth, bool preserveSwitchArmSpacing, bool formatInput = false)
         {
             var rejected = new HashSet<int>();
             while (true)
@@ -56,7 +56,7 @@ namespace PNFmt
                 }
                 if (batch.Count == 0)
                 {
-                    return document;
+                    return formatInput ? CSharpLineWrapper.FormatDocument(document, preserveSwitchArmSpacing) : document;
                 }
 
                 var candidate = Join(document, source, batch, preserveSwitchArmSpacing);
@@ -85,6 +85,7 @@ namespace PNFmt
                 // apply configured spacing once for the successful batch.
                 document = accepted.Length == batch.Count ? candidate
                     : Join(document, source, accepted, preserveSwitchArmSpacing);
+                formatInput = false;
                 rejected.Clear();
             }
         }

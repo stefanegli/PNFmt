@@ -28,21 +28,27 @@ function Invoke-Dotnet([string[]]$Arguments, [string]$LogPath)
 Push-Location $repoRoot
 try
 {
-    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.SuiteVersion -ne 3 -or
-        [string]::IsNullOrWhiteSpace($policy.Reason))
+    if ($policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or $policy.CompactionRevision -cnotmatch '^[0-9a-f]{40}$' -or
+        $policy.SuiteVersion -ne 3 -or [string]::IsNullOrWhiteSpace($policy.Reason) -or
+        [string]::IsNullOrWhiteSpace($policy.CompactionReason))
     {
         throw 'The performance baseline must pin a full commit ID and describe why it was chosen.'
     }
-    & git cat-file -e "$($policy.Revision)^{commit}"
-    if ($LASTEXITCODE -ne 0)
+    $sources = @{ current = $repoRoot }
+    foreach ($baseline in @('baseline', 'compaction'))
     {
-        throw "Performance baseline $($policy.Revision) is unavailable locally. Fetch its history (CI uses fetch-depth: 0) and rerun."
+        $commit = if ($baseline -eq 'baseline') { $policy.Revision } else { $policy.CompactionRevision }
+        & git cat-file -e "$commit^{commit}"
+        if ($LASTEXITCODE -ne 0)
+        {
+            throw "Performance baseline $commit is unavailable locally. Fetch its history (CI uses fetch-depth: 0) and rerun."
+        }
+        $archive = Join-Path $buildRoot "$baseline.zip"
+        & git archive --format=zip "--output=$archive" $commit
+        if ($LASTEXITCODE -ne 0) { throw 'Could not export the performance baseline.' }
+        $sources[$baseline] = Join-Path $buildRoot "source-$baseline"
+        Expand-Archive -LiteralPath $archive -DestinationPath $sources[$baseline]
     }
-    $archive = Join-Path $buildRoot 'baseline.zip'
-    & git archive --format=zip "--output=$archive" $policy.Revision
-    if ($LASTEXITCODE -ne 0) { throw 'Could not export the performance baseline.' }
-    $baselineSource = Join-Path $buildRoot 'source'
-    Expand-Archive -LiteralPath $archive -DestinationPath $baselineSource
 
     $currentRevision = (& git rev-parse HEAD | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Could not identify the current revision.' }
@@ -53,6 +59,7 @@ try
     @{
         StartedUtc = [DateTime]::UtcNow.ToString('o')
         BaselineRevision = $policy.Revision
+        CompactionBaselineRevision = $policy.CompactionRevision
         CurrentRevision = $currentRevision
         CurrentDirty = -not [string]::IsNullOrWhiteSpace($currentStatus)
         MachineName = [Environment]::MachineName
@@ -61,14 +68,14 @@ try
     } | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $runDirectory 'run.json') -Encoding utf8
     Copy-Item -LiteralPath (Join-Path $repoRoot 'Directory.Build.props') -Destination $buildRoot
 
-    # Build the SAME current harness twice. Only the referenced formatter/CLI
+    # Build the SAME current harness for each fixed reference and current source.
     # source revision changes; each copy has independent intermediate output.
-    foreach ($revision in @('baseline', 'current'))
+    foreach ($revision in @('baseline', 'compaction', 'current'))
     {
         $harness = Join-Path $buildRoot $revision
         New-Item -ItemType Directory -Path $harness | Out-Null
         foreach ($file in $harnessFiles) { Copy-Item -LiteralPath $file.FullName -Destination $harness }
-        $source = if ($revision -eq 'baseline') { $baselineSource } else { $repoRoot }
+        $source = $sources[$revision]
         Write-Host "Building $revision performance harness..."
         Invoke-Dotnet @('build', (Join-Path $harness 'PNFmt.Benchmarks.csproj'), '--configuration', 'Release',
             '--output', (Join-Path $buildRoot "bin-$revision"), "-p:FormatterSourceRoot=$source", '--nologo') `
@@ -80,14 +87,15 @@ try
     $env:DOTNET_TieredCompilation = '0'
     foreach ($round in 1..3)
     {
-        foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'resx', 'repository'))
+        foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'csharp-compaction', 'resx', 'repository'))
         {
             $revisions = if ($round % 2 -eq 1) { @('baseline', 'current') } else { @('current', 'baseline') }
             foreach ($revision in $revisions)
             {
                 $name = "$revision-$family-$round"
+                $binary = if ($revision -eq 'baseline' -and $family -eq 'csharp-compaction') { 'compaction' } else { $revision }
                 Write-Host "Measuring $name..."
-                Invoke-Dotnet @((Join-Path $buildRoot "bin-$revision/PNFmt.Benchmarks.dll"), '--performance', $family,
+                Invoke-Dotnet @((Join-Path $buildRoot "bin-$binary/PNFmt.Benchmarks.dll"), '--performance', $family,
                     (Join-Path $runDirectory "$name.json")) (Join-Path $runDirectory "$name.log")
             }
         }

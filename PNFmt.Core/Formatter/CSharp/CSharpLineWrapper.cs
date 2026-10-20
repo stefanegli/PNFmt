@@ -30,10 +30,15 @@ namespace PNFmt
             settings.TryGetValue("pnfmt_csharp_wrap_tuple_style", out var tupleValue);
             var tupleStyle = ParseStyle(tupleValue);
             var preserveSwitchArmSpacing = switchStyle == WrapStyle.WrapIfLong;
-            document = FormatDocument(document, preserveSwitchArmSpacing);
-            var source = document.GetTextAsync().GetAwaiter().GetResult();
             var compactCalls = width > 0 && argumentsStyle != WrapStyle.ChopAlways
                 && bool.TryParse(ResolveValue(settings, "csharp_keep_existing_linebreaks"), out var keepBreaks) && !keepBreaks;
+            var tabWidth = PositiveInteger(settings, "tab_width", 4);
+            // Joining candidates already need Roslyn layout for their width check.
+            // Use that pass as the initial layout rather than formatting twice.
+            document = compactCalls
+                ? CSharpCallCompactor.Apply(document, width, tabWidth, preserveSwitchArmSpacing, formatInput: true)
+                : FormatDocument(document, preserveSwitchArmSpacing);
+            var source = document.GetTextAsync().GetAwaiter().GetResult();
             var wrapBeforeQuery = bool.TryParse(ResolveValue(settings, "csharp_wrap_before_linq_expression"), out var beforeQuery) && beforeQuery;
             var canChopWithoutWidth = CanChopWithoutWidth(argumentsStyle) || CanChopWithoutWidth(parametersStyle)
                 || CanChopWithoutWidth(arrayStyle) || CanChopWithoutWidth(initializerStyle) || CanChopWithoutWidth(listStyle)
@@ -45,7 +50,6 @@ namespace PNFmt
                 return source.ToString();
             }
 
-            var tabWidth = PositiveInteger(settings, "tab_width", 4);
             settings.TryGetValue("indent_size", out var indentSizeSetting);
             var indentSize = indentSizeSetting == "tab" ? tabWidth : PositiveInteger(settings, "indent_size", 4);
             settings.TryGetValue("indent_style", out var indentStyle);
@@ -63,11 +67,6 @@ namespace PNFmt
             var attempted = new HashSet<int>();
             while (true)
             {
-                if (compactCalls)
-                {
-                    document = CSharpCallCompactor.Apply(document, width, tabWidth, preserveSwitchArmSpacing);
-                    source = document.GetTextAsync().GetAwaiter().GetResult();
-                }
                 var root = document.GetSyntaxRootAsync().GetAwaiter().GetResult();
                 var tokens = root.DescendantTokens().ToArray();
                 var longLines = width > 0 ? FindLongLines(source, tokens, width, tabWidth) : new bool[source.Lines.Count];
@@ -128,6 +127,10 @@ namespace PNFmt
 
                 document = document.WithText(source.WithChanges(changes.Values.OrderBy(change => change.Span.Start)));
                 document = FormatDocument(document, preserveSwitchArmSpacing);
+                if (compactCalls)
+                {
+                    document = CSharpCallCompactor.Apply(document, width, tabWidth, preserveSwitchArmSpacing);
+                }
                 source = document.GetTextAsync().GetAwaiter().GetResult();
             }
         }

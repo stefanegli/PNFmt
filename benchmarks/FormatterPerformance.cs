@@ -12,12 +12,15 @@ namespace PNFmt.Benchmarks
     {
         public static IEnumerable<PerformanceCaseResult> Run(string kind, string directory)
         {
+            var family = kind;
+            var compaction = kind == "csharp-compaction";
+            if (compaction) kind = "csharp";
             if (!new[] { "xml", "xaml", "csproj", "csharp", "resx" }.Contains(kind))
             {
                 throw new ArgumentException("Unknown performance family: " + kind);
             }
-            var modes = kind == "csharp"
-                ? new[] { "default", "width120", "wrap_if_long", "chop", "preferences", "header", "compact" }
+            var modes = compaction ? new[] { "compact" } : kind == "csharp"
+                ? new[] { "default", "width120", "wrap_if_long", "chop", "preferences", "header" }
                 : kind == "resx" ? new[] { "lf", "crlf", "crlf-multiline", "crlf-long" }
                 : new[] { "default", "width120", "chop" };
             foreach (var mode in modes)
@@ -59,7 +62,7 @@ namespace PNFmt.Benchmarks
                     var iterations = Math.Clamp((int)(100.0 / (warm.Elapsed.TotalMilliseconds / warmCount)), 1, 1000);
                     var measurement = new PerformanceCaseResult
                     {
-                        Id = $"{kind}/{count}/{mode}/{(unchanged ? "unchanged" : "preview")}",
+                        Id = $"{family}/{count}/{mode}/{(unchanged ? "unchanged" : "preview")}",
                         Milliseconds = new double[9],
                         AllocatedBytes = new double[9],
                         Iterations = iterations,

@@ -16,11 +16,13 @@ function Write-Fixture([scriptblock]$Change = {})
             SuiteVersion = 3
             Revision = 'd3ac668e7eefa4d2480c874c0164a4c710658961'
             Reason = 'Regression test fixture'
+            CompactionRevision = 'c277f78739fc11de2a563256f9f4d14699877f7c'
+            CompactionReason = 'Initial baseline for short-call compaction'
             Tolerances = @{ TimePercent = 20; WriteTimePercent = 50; AllocationPercent = 10; TimeFloorMilliseconds = 0.1; AllocationFloorBytes = 4096 }
         }
         Reports = @{}
     }
-    $counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 14; resx = 8; repository = 29 }
+    $counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; 'csharp-compaction' = 2; resx = 8; repository = 29 }
     foreach ($family in $counts.Keys)
     {
         foreach ($revision in @('baseline', 'current'))
@@ -138,10 +140,16 @@ try
     Assert-Gate 'RESX reports are required' $false
     Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-resx-$r"].Cases[0].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 }) } }
     Assert-Gate 'RESX allocation regressions are enforced' $false
-    Write-Fixture { param($f) $f.Reports['current-csharp-1'].Cases = @($f.Reports['current-csharp-1'].Cases | Select-Object -First 12) }
+    Write-Fixture { param($f) $f.Reports['current-csharp-compaction-1'].Cases = @($f.Reports['current-csharp-compaction-1'].Cases | Select-Object -First 1) }
     Assert-Gate 'C# compaction cases are required' $false
-    Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-csharp-$r"].Cases[-1].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 }) } }
+    Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-csharp-compaction-$r"].Cases[-1].AllocatedBytes = @(1..9 | ForEach-Object { 110001.0 }) } }
     Assert-Gate 'C# compaction allocation regressions are enforced' $false
+    Write-Fixture { param($f) $f.Policy.CompactionRevision = 'HEAD' }
+    Assert-Gate 'A moving compaction reference fails' $false
+    Write-Fixture { param($f) $f.Policy.CompactionReason = '' }
+    Assert-Gate 'The compaction baseline needs a reason' $false
+    Write-Fixture { param($f) foreach ($r in 1..3) { $f.Reports["current-csharp-compaction-$r"].Cases[0].OutputHash = 'B' * 64 } }
+    Assert-Gate 'Compaction must preserve the reference output' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].TieredCompilation = '1' }
     Assert-Gate 'Wrong timing configuration fails' $false
     Write-Fixture { param($f) $f.Reports['current-xml-1'].Cases[0].OutputHash = 'B' * 64 }

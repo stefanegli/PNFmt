@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $culture = [Globalization.CultureInfo]::InvariantCulture
 $policy = Get-Content -LiteralPath $BaselinePath -Raw | ConvertFrom-Json
-$counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 14; resx = 8; repository = 29 }
+$counts = @{ xml = 6; xaml = 6; csproj = 6; csharp = 12; 'csharp-compaction' = 2; resx = 8; repository = 29 }
 
 function Assert-Number($Value, [bool]$AllowZero = $false)
 {
@@ -35,7 +35,8 @@ function Format-Number([double]$Value, [string]$Pattern = "F3")
 }
 
 if ($policy.SuiteVersion -ne 3 -or $policy.Revision -cnotmatch '^[0-9a-f]{40}$' -or
-    [string]::IsNullOrWhiteSpace($policy.Reason))
+    $policy.CompactionRevision -cnotmatch '^[0-9a-f]{40}$' -or [string]::IsNullOrWhiteSpace($policy.Reason) -or
+    [string]::IsNullOrWhiteSpace($policy.CompactionReason))
 {
     throw "The performance baseline requires suite version 3, a full commit ID, and a reason."
 }
@@ -46,7 +47,7 @@ foreach ($property in @('TimePercent', 'WriteTimePercent', 'AllocationPercent', 
 
 $measurements = @{}
 $environmentIdentity = $null
-foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'resx', 'repository'))
+foreach ($family in @('xml', 'xaml', 'csproj', 'csharp', 'csharp-compaction', 'resx', 'repository'))
 {
     $expectedIds = $null
     foreach ($revision in @('baseline', 'current'))
@@ -104,6 +105,7 @@ $lines = [Collections.Generic.List[string]]::new()
 $lines.Add('# PNFmt performance gate')
 $lines.Add('')
 $lines.Add("Baseline: ``$($policy.Revision)``. $($policy.Reason)")
+$lines.Add("Short-call compaction baseline: ``$($policy.CompactionRevision)``. $($policy.CompactionReason)")
 $lines.Add("Environment: $environmentIdentity. Three process runs; medians of 7 repository or 9 formatter samples, then the median of all three runs.")
 $lines.Add("Timing policy: **$TimingPolicy**. Allocation limits, report validity, and output stability are always enforced.")
 $lines.Add("Limits: time +$($policy.Tolerances.TimePercent)%, writes +$($policy.Tolerances.WriteTimePercent)%, allocations +$($policy.Tolerances.AllocationPercent)%. Noise floors: $($policy.Tolerances.TimeFloorMilliseconds) ms and $($policy.Tolerances.AllocationFloorBytes) bytes; the larger allowance applies.")
@@ -117,6 +119,10 @@ foreach ($key in @($measurements.Keys | Where-Object { $_.StartsWith('baseline/'
     $id = $key.Substring(9)
     $before = $measurements[$key]
     $after = $measurements["current/$id"]
+    if ($id.StartsWith('csharp-compaction/', [StringComparison]::Ordinal) -and $before[0].OutputHash -cne $after[0].OutputHash)
+    {
+        throw "Short-call compaction must preserve the reference output: $id"
+    }
     if ($before.Count -ne 3 -or $after.Count -ne 3 -or
         @($before | ForEach-Object { [string]$_.OutputHash } | Select-Object -Unique).Count -ne 1 -or
         @($after | ForEach-Object { [string]$_.OutputHash } | Select-Object -Unique).Count -ne 1 -or

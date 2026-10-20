@@ -134,6 +134,14 @@ namespace PNFmt.Tests.Formatter.CSharp
         }
 
         [Fact]
+        public void Layout_is_formatted_when_no_calls_need_joining()
+        {
+            var result = Format("class C\n{\nvoid M()\n{\nF();\n}\n}",
+                ("csharp_keep_existing_linebreaks", "false"), ("max_line_length", "80"));
+            Assert.Equal("class C\n{\n    void M()\n    {\n        F();\n    }\n}", result);
+        }
+
+        [Fact]
         public void Nested_calls_constructors_indexers_empty_and_single_arguments_join()
         {
             var result = Format("Outer(\nInner(\na,\nb\n),\nc\n);\nvar x = new C(\na,\nb\n);\nvar y = x[\na,\nb\n];\nEmpty(\n);\nOne(\na\n);",
