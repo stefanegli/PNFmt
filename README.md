@@ -105,7 +105,7 @@ The command returns exit code `0` on success, `1` when `--check` finds changes o
 
 ## Configuration
 
-Run the following command to add defaults that enable every formatter with sorting and selected cleanup behaviors. C# region removal and INI/EditorConfig section sorting and merging remain off. C# and XML/MSBuild wrapping, attribute styles, XML tag spacing/quotes, Microsoft blank-line preferences, and file headers are not configured:
+Run the following command to add defaults that enable every formatter with selected sorting and cleanup behaviors. Response-file sorting, C# region removal, and INI/EditorConfig section sorting and merging remain off. Response-file argument order is preserved because later compiler options can override earlier ones. C# and XML/MSBuild wrapping, attribute styles, XML tag spacing/quotes, Microsoft blank-line preferences, and file headers are not configured:
 
 ```powershell
 pnfmt --write-default-config .

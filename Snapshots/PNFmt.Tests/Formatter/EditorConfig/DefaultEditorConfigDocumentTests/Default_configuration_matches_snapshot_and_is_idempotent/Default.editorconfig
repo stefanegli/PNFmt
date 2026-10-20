@@ -52,7 +52,7 @@ pnfmt_sort_entries = true
 pnfmt_enabled = true
 pnfmt_format = true
 pnfmt_formatter = rsp
-pnfmt_sort_entries = true
+pnfmt_sort_entries = false
 
 [*.slnx]
 pnfmt_enabled = true

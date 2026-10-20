@@ -80,6 +80,8 @@ An `.editorconfig` containing `root = true` needs its own matching `[*.editorcon
 
 Later compiler arguments may override earlier ones. Enable sorting only when line order is safe; comment barriers keep order-sensitive blocks separate.
 
+Omitted sorting defaults off. Generated defaults also set `pnfmt_sort_entries = false` while enabling response-file layout; existing explicit sorting choices are retained.
+
 ## Solutions (`slnx`)
 
 Layout uses two-space indentation independently of `pnfmt_sort_entries`, which orders recognized solution elements. Unknown extension elements are fixed barriers and their subtrees retain character data, whitespace-only values, and carriage-return character references. Containers with character data or inherited `xml:space="preserve"` retain their entire subtree, including order. `pnfmt_format = false` permits sorting without re-indenting.

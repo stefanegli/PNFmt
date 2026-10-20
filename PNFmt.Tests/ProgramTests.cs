@@ -324,6 +324,26 @@ namespace PNFmt.Tests
             }
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("false")]
+        [InlineData("true")]
+        public void Default_response_configuration_preserves_argument_order_unless_sorting_was_selected(string sorting)
+        {
+            using var directory = new TemporaryDirectory();
+            if (sorting is not null)
+            {
+                directory.Write(".editorconfig", "root = true\n[*.rsp]\npnfmt_sort_entries = " + sorting + "\n");
+            }
+
+            var response = directory.Write("compiler.rsp", "/warnaserror-\n/warnaserror+\n");
+            Assert.Equal(0, Run("--write-default-config", directory.Path).ExitCode);
+            Assert.Equal(0, Run(response).ExitCode);
+            Assert.Equal(sorting == "true" ? "/warnaserror+\n/warnaserror-\n" : "/warnaserror-\n/warnaserror+\n",
+                File.ReadAllText(response));
+            Assert.Equal(0, Run("--check", response).ExitCode);
+        }
+
         [Fact]
         public void Default_tool_settings_are_written_at_the_git_repository_root()
         {

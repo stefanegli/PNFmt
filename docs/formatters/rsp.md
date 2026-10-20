@@ -21,4 +21,6 @@ Blank lines do not divide sortable content. A line whose first non-whitespace ch
 
 Compiler response arguments can be order-sensitive because later options may override earlier ones. Enable sorting only when changing line order is safe. Add a full-line `#` comment between order-sensitive blocks when their relative placement must be preserved.
 
+`--write-default-config` enables response-file layout with `pnfmt_sort_entries = false`, preserving argument order. Omitted sorting also defaults off. Existing explicit sorting preferences are preserved when defaults are added.
+
 [Back to the overview](../../README.md)

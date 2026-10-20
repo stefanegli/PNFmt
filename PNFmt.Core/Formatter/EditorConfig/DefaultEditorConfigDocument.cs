@@ -68,7 +68,7 @@ namespace PNFmt
                     new DefaultSetting(EditorConfigSettingNames.Enabled, "true"),
                     new DefaultSetting(EditorConfigSettingNames.Format, "true"),
                     new DefaultSetting(EditorConfigSettingNames.Formatter, "rsp"),
-                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "true")),
+                    new DefaultSetting(EditorConfigSettingNames.SortEntries, "false")),
                 new DefaultSection(
                     "[*.slnx]",
                     new DefaultSetting(EditorConfigSettingNames.Enabled, "true"),
