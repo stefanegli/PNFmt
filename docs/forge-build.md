@@ -13,6 +13,17 @@ publication credential is needed. Forge creates an isolated checkout of the exac
 source revision, including the history needed for pinned performance baselines,
 and supplies its agent-owned temporary directory.
 
+[Invoke-ForgeBuild.ps1](../scripts/Invoke-ForgeBuild.ps1) assigns temporary drive
+aliases to those two existing directories before starting validation. This avoids
+libgit2's Windows ancestor lookup failing beneath Forge's protected installation
+folders and shortens native-library paths. Files remain in the assigned agent
+directories with their existing permissions. The wrapper restores the environment
+and removes only its own unchanged aliases after normal success or failure. After
+forced process termination, review any remaining mapping under the agent identity
+before removing it. Two unused drive letters are required. The pipeline selects
+English .NET/MSBuild diagnostics so its unresolved-reference check also works
+under the service account's locale.
+
 The job calls [Test-ForgeBuild.ps1](../scripts/Test-ForgeBuild.ps1). It restores
 dependencies, checks `dotnet format` including unresolved project references,
 builds Release, verifies repository formatting, checks the coverage and release
