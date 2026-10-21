@@ -30,8 +30,14 @@ considering the change complete.
 
 # Commits and quality gates
 
-Always commit completed work with descriptive messages after relevant checks.
-Stage only related files and keep unrelated changes in separate commits.
+Always commit completed work in useful, cohesive increments after relevant checks.
+Each commit should be independently understandable and leave the repository in a
+working state. Use descriptive messages that explain the change and its purpose.
+Commit a finished increment before starting the next unrelated change; do not
+defer all commits until the end of a task or create arbitrary checkpoint commits.
+Stage only related files and keep unrelated changes in separate commits. Preserve
+other contributors' work and do not rewrite published commits without an explicit
+request.
 
 For source changes, run appropriate tests and the complete validation:
 
