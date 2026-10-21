@@ -10,6 +10,18 @@ $runDirectory = Join-Path $repoRoot "artifacts/performance/$([Guid]::NewGuid().T
 $temporaryRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
 $buildRoot = [IO.Path]::GetFullPath((Join-Path $temporaryRoot ("PNFmt-perf-" + [Guid]::NewGuid().ToString('N'))))
 $savedTiering = $env:DOTNET_TieredCompilation
+$validationOutputs = @(
+    'PNFmt.Cli/bin/Release/net10.0/pnfmt.dll',
+    'PNFmt.Cli/obj/Release/net10.0/pnfmt.dll',
+    'PNFmt.Core/bin/Release/netstandard2.0/PNFmt.Core.dll',
+    'PNFmt.Core/obj/Release/netstandard2.0/PNFmt.Core.dll'
+)
+$outputHashes = @{}
+foreach ($relativePath in $validationOutputs)
+{
+    $path = Join-Path $repoRoot $relativePath
+    $outputHashes[$relativePath] = if (Test-Path -LiteralPath $path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash } else { $null }
+}
 New-Item -ItemType Directory -Force -Path $runDirectory, $buildRoot | Out-Null
 $baselinePath = Join-Path $runDirectory 'baseline.json'
 Copy-Item -LiteralPath (Join-Path $repoRoot 'benchmarks/performance-baseline.json') -Destination $baselinePath
@@ -78,8 +90,19 @@ try
         $source = $sources[$revision]
         Write-Host "Building $revision performance harness..."
         Invoke-Dotnet @('build', (Join-Path $harness 'PNFmt.Benchmarks.csproj'), '--configuration', 'Release',
-            '--output', (Join-Path $buildRoot "bin-$revision"), "-p:FormatterSourceRoot=$source", '--nologo') `
+            '--output', (Join-Path $buildRoot "bin-$revision"), '--artifacts-path', (Join-Path $harness 'artifacts'),
+            "-p:FormatterSourceRoot=$source", '--nologo') `
             (Join-Path $runDirectory "build-$revision.log")
+    }
+
+    # --output alone relocates binaries but leaves referenced projects' obj files
+    # in the live checkout. Those must remain the exact versions tested and packed.
+    foreach ($relativePath in $validationOutputs)
+    {
+        $path = Join-Path $repoRoot $relativePath
+        $hash = if (Test-Path -LiteralPath $path) { (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash } else { $null }
+        if ($hash -cne $outputHashes[$relativePath])
+        { throw "Performance harness build changed validated output '$relativePath'." }
     }
 
     # Timing does not overlap builds or another benchmark. Separate processes

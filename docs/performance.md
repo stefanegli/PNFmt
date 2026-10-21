@@ -36,6 +36,14 @@ With PowerShell 7, including on Linux, use `./build/Test-Performance.ps1`. Allow
 
 The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for performance comparisons and installed-package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
 
+Each revision's harness uses its own SDK artifacts directory as well as its own
+binary output directory. This isolates referenced projects' intermediate files:
+`--output` alone still lets the current-source build overwrite the live `obj`
+assemblies with different version metadata. The comparison checks that the main
+CLI/Core Release binaries and intermediate assemblies remain unchanged before
+starting measurements. This preserves the already tested build for packing with
+`--no-build`; a changed validation output fails the comparison.
+
 During alpha.10 release validation, three Windows hosted-runner attempts using the system-volume temporary directory failed serial repository-write comparisons despite identical formatter/CLI source apart from the package version. In the first run, small-project writes measured 1,235 ms for the baseline and 2,556 ms for the current version; the baseline's final round also slowed to 2,778 ms. A second run passed that case at 1,159/1,161 ms but failed mixed-format writes at 1,190/2,675 ms, with the baseline's final round at 2,688 ms. Allocations remained effectively unchanged. These measurements motivated using the runner's scratch directory for both sides of the comparison, without accepting a formatter cost or changing the baseline.
 
 Scratch storage did not eliminate hosted-runner timing variability. The same alpha.10 commit passed Windows validation, then failed three timing comparisons in the master build while allocations and output checks passed. Hosted timing is therefore report-only; VELA retains timing enforcement. Neither the pinned revision nor the tolerance values changed with this policy.
