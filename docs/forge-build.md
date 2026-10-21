@@ -1,9 +1,11 @@
 # PNForge builds
 
-The repository's [verify pipeline](../.forge/pipelines/verify.json) runs on every
-branch push to PNForge and can also be started manually. PNForge uses `verify` as
+The repository's [verify pipeline](../.forge/pipelines/verify.json) runs on pushes
+to `master` in PNForge and can also be started manually. PNForge uses `verify` as
 this repository's required pull request check. Ready pull requests receive checks
 automatically; pipeline JSON does not need a separate pull request trigger.
+Feature branches use those PR checks or a manual run, avoiding a second standalone
+build for the same feature-branch push.
 
 The single build job requires an ordinary Windows agent advertising `os: windows`
 and `dotnetSdk: 10.0`. The configured default agent runs on VELA. It needs Git,
@@ -14,8 +16,10 @@ source revision, including the history needed for pinned performance baselines,
 and supplies its agent-owned temporary directory.
 
 [Invoke-ForgeBuild.ps1](../scripts/Invoke-ForgeBuild.ps1) assigns temporary drive
-aliases to those two existing directories before starting validation. This avoids
-libgit2's Windows ancestor lookup failing beneath Forge's protected installation
+aliases to the existing workspace container and temporary directory before
+starting validation. The checkout keeps its own folder below the aliased drive
+root so Git and .NET can discover its repository and local tool manifest. This
+avoids libgit2's Windows ancestor lookup failing beneath Forge's protected installation
 folders and shortens native-library paths. Files remain in the assigned agent
 directories with their existing permissions. The wrapper restores the environment
 and removes only its own unchanged aliases after normal success or failure. After

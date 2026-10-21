@@ -6,7 +6,7 @@
   "artifactRetention": { "keepRuns": 10 },
   "triggers": [
     { "type": "manual" },
-    { "type": "push" }
+    { "type": "push", "branches": ["master"] }
   ],
   "stages": [
     {

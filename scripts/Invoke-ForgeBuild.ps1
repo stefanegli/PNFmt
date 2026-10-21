@@ -27,8 +27,10 @@ function Mount-BuildPath([string]$Path)
 try
 {
     # libgit2's Windows path normalization requires readable ancestors. Alias only
-    # the assigned checkout and temp folder, without changing their storage or ACLs.
-    $mappedRoot = Mount-BuildPath $repoRoot
+    # the workspace container and temp folder, without changing storage or ACLs.
+    # Keep the checkout below the drive root: Git and .NET tool discovery stop there.
+    $mappedParent = Mount-BuildPath (Split-Path -Parent $repoRoot)
+    $mappedRoot = Join-Path $mappedParent (Split-Path -Leaf $repoRoot)
     $mappedTemp = Mount-BuildPath ([IO.Path]::GetTempPath())
     $env:TEMP = $mappedTemp
     $env:TMP = $mappedTemp
