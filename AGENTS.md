@@ -42,7 +42,7 @@ request.
 For source changes, run appropriate tests and the complete validation:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
 ```
 
 This runs Release tests, coverage, performance comparisons, packaging, and isolated

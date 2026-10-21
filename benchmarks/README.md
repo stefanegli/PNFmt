@@ -30,7 +30,7 @@ These are warm-process and warm-cache measurements; they exclude CLI startup, co
 ## Publish performance gate
 
 ```powershell
-./scripts/Test-Performance.ps1
+./build/Test-Performance.ps1
 ```
 
 The gate compiles this checkout's harness against the current formatter/CLI and the fixed references in [performance-baseline.json](performance-baseline.json). It runs 69 cases in isolated processes, three times per compared revision, and checks each case's elapsed time and total managed allocations. The repository scenarios use 128 files and seven samples, batching read-only operations after at least three operations/300 ms of warm-up. Formatter scenarios use 1,000 XML/XAML/MSBuild elements, 1,000 RESX entries, 200 C# methods, or 400 short multiline C# calls, with nine batched samples after warm-up. Both initial previews and already formatted checks are included. C# modes cover defaults, width, argument/parameter list styles, Microsoft blank-line preferences, headers, and short-call compaction; XML modes cover defaults, width, and one attribute per line. RESX modes cover LF and CRLF layout with single-line values, CRLF with multiline values, and CRLF with longer multiline values. These cases exercise the CRLF path that the existing LF-configured mixed-repository fixtures do not reach.

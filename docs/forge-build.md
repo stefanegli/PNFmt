@@ -22,7 +22,7 @@ publication credential is needed. Forge creates an isolated checkout of the exac
 source revision, including the history needed for pinned performance baselines,
 and supplies its agent-owned temporary directory.
 
-[Invoke-ForgeBuild.ps1](../scripts/Invoke-ForgeBuild.ps1) assigns temporary drive
+[Invoke-ForgeBuild.ps1](../.forge/scripts/Invoke-ForgeBuild.ps1) assigns temporary drive
 aliases to the existing workspace and temporary directory containers before
 starting validation. Both directories keep their own folder below the aliased
 drive root so repository discovery, local tools and temporary cleanup guards work.
@@ -35,7 +35,7 @@ before removing it. Two unused drive letters are required. The pipeline selects
 English .NET/MSBuild diagnostics so its unresolved-reference check also works
 under the service account's locale.
 
-The job calls [Test-ForgeBuild.ps1](../scripts/Test-ForgeBuild.ps1). It restores
+The job calls [Test-ForgeBuild.ps1](../.forge/scripts/Test-ForgeBuild.ps1). It restores
 dependencies, checks `dotnet format` including unresolved project references,
 builds Release, verifies repository formatting, checks the coverage and release
 package validators, runs the Node.js release-selection tests and benchmark
@@ -58,7 +58,7 @@ have their own server retention policy.
 To reproduce the job from a clean checkout on VELA:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-ForgeBuild.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\.forge\scripts\Test-ForgeBuild.ps1
 ```
 
 Generated results are ignored under `artifacts/`. Use a fresh checkout for each
@@ -69,9 +69,9 @@ build so earlier reports and packages cannot satisfy a later run. See
 
 The final stage restores the successful Build's exact `package` artifact into
 `incoming/validated-package` in its fresh checkout. It calls
-[New-ReleaseTag.ps1](../scripts/New-ReleaseTag.ps1), checks that package's source
+[New-ReleaseTag.ps1](../.forge/scripts/New-ReleaseTag.ps1), checks that package's source
 commit, and reads the intended version from the project. The
-[tag helper](../.github/scripts/create-release-tag.cjs) checks the clean captured
+[tag helper](../.forge/scripts/create-release-tag.cjs) checks the clean captured
 checkout, requires the exact commit at GitHub's current `master`, and applies the
 same successful default-branch Build/artifact selection as the publish workflow.
 It creates and pushes only the annotated `v<version>` tag to

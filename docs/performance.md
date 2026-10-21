@@ -1,6 +1,6 @@
 # Performance gates
 
-`scripts/Publish-GlobalTool.ps1` runs mandatory performance comparisons before packing or pushing. They run in `-PackOnly` mode and also when `-SkipTests`, `-SkipPack`, or `-SkipPackageValidation` are supplied. There is no performance skip switch. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
+`build/Publish-GlobalTool.ps1` runs mandatory performance comparisons before packing or pushing. They run in `-PackOnly` mode and also when `-SkipTests`, `-SkipPack`, or `-SkipPackageValidation` are supplied. There is no performance skip switch. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
 
 ## Timing policy and release machine
 
@@ -16,7 +16,7 @@ The policy is not inferred from environment variables or machine names. Both mod
 **VELA**, the maintainer's local Windows machine, is the designated controlled environment. Before creating or pushing a release tag, run the complete validation there on the release candidate:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
 ```
 
 Leave `-TimingPolicy` at its `Enforce` default and leave all skip switches off. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
@@ -29,10 +29,10 @@ and its retained release package remain separately required for tag publication.
 Run just the performance comparison independently from the repository root:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Test-Performance.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Test-Performance.ps1
 ```
 
-With PowerShell 7, including on Linux, use `./scripts/Test-Performance.ps1`. Allow several minutes and avoid other builds, tests, or CPU/disk-heavy work during measurement. A Git checkout with the pinned baseline commit available locally is required. CI checks out full history. The script never fetches or advances the baseline automatically.
+With PowerShell 7, including on Linux, use `./build/Test-Performance.ps1`. Allow several minutes and avoid other builds, tests, or CPU/disk-heavy work during measurement. A Git checkout with the pinned baseline commit available locally is required. CI checks out full history. The script never fetches or advances the baseline automatically.
 
 The Build workflow sets `TEMP` and `TMP` to GitHub's `runner.temp` directory for performance comparisons and installed-package validation. On Windows this places both benchmark harnesses and repository fixtures on the runner's scratch volume. Local runs retain the caller's temporary directory. Durable file writes, sample counts, the pinned baseline, and regression limits are unchanged.
 
@@ -81,7 +81,7 @@ CI adds the table to the GitHub Actions summary and uploads `performance-<os>` a
 The separate standalone [full and quick benchmark runs](../benchmarks/README.md) remain useful for exploration and correctness smoke tests; they do not enforce timing limits. Gate comparison logic has deterministic regression checks:
 
 ```powershell
-./scripts/Test-PerformanceReport.Tests.ps1
+./build/Test-PerformanceReport.Tests.ps1
 ```
 
 ## Intentional baseline changes

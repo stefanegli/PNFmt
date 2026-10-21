@@ -2,7 +2,7 @@
 
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
-const selectReleaseBuild = require('./select-release-build.cjs');
+const selectReleaseBuild = require('../../build/select-github-release-build.cjs');
 const remote = 'https://github.com/stefanegli/PNFmt.git';
 const repository = { owner: 'stefanegli', repo: 'PNFmt' };
 

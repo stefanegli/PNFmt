@@ -47,7 +47,7 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const select = require('./.github/scripts/select-release-build.cjs');
+            const select = require('./build/select-github-release-build.cjs');
             const result = await select({ github, context, commit: process.env.RELEASE_COMMIT });
             core.setOutput('run-id', result.runId);
             core.setOutput('artifact-id', result.artifactId);
@@ -68,7 +68,7 @@ jobs:
         env:
           PACKAGE_VERSION: ${{ steps.build.outputs.version }}
         run: |
-          $package = ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:RELEASE_COMMIT
+          $package = ./build/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:RELEASE_COMMIT
           "VALIDATED_PACKAGE_PATH=$package" >> $env:GITHUB_ENV
 
       - name: Set up .NET

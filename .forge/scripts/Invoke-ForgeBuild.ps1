@@ -3,7 +3,7 @@ param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 $mappings = [Collections.Generic.List[object]]::new()
 $previousTemp = $env:TEMP
 $previousTmp = $env:TMP
@@ -38,7 +38,7 @@ try
     $env:TMP = $mappedTemp
     Set-Location -LiteralPath $mappedRoot
     & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
-        -File (Join-Path $mappedRoot 'scripts/Test-ForgeBuild.ps1')
+        -File (Join-Path $mappedRoot '.forge/scripts/Test-ForgeBuild.ps1')
     if ($LASTEXITCODE -ne 0) { throw "Forge validation exited with code $LASTEXITCODE." }
 }
 finally

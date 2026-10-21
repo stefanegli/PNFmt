@@ -6,7 +6,7 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
-$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
 if ($env:PNFORGE_REPOSITORY_ID -cne 'pnfmt' -or $env:PNFORGE_JOB_ID -cne 'release-tag' -or
     $env:PNFORGE_SOURCE_COMMIT -cnotmatch '^[0-9a-f]{40}$' -or
     $env:PNFORGE_BUILD_NUMBER -notmatch '^[1-9][0-9]*$' -or
@@ -19,13 +19,13 @@ Push-Location $repoRoot
 try
 {
     # This input is bound by Forge to this run's successful complete validation.
-    & (Join-Path $PSScriptRoot 'Test-ReleasePackage.ps1') -PackageDirectory $PackageDirectory `
+    & (Join-Path $repoRoot 'build/Test-ReleasePackage.ps1') -PackageDirectory $PackageDirectory `
         -Version '0.0.0-validation.1' -Commit $env:PNFORGE_SOURCE_COMMIT | Out-Null
 
     $version = (& dotnet msbuild PNFmt.Cli/PNFmt.Cli.csproj -getProperty:Version -nologo | Out-String).Trim()
     if ($LASTEXITCODE -ne 0) { throw 'Could not read the release version.' }
     $arguments = @(
-        '.github/scripts/create-release-tag.cjs', $env:PNFORGE_SOURCE_COMMIT, $version,
+        '.forge/scripts/create-release-tag.cjs', $env:PNFORGE_SOURCE_COMMIT, $version,
         $env:PNFORGE_BUILD_NUMBER
     )
     if ($CheckOnly) { $arguments += '--check-only' }

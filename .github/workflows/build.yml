@@ -35,9 +35,9 @@ jobs:
       - name: Test release validation
         shell: pwsh
         run: |
-          node --test .github/scripts/select-release-build.test.cjs .github/scripts/create-release-tag.test.cjs
+          node --test build/select-github-release-build.test.cjs .forge/scripts/create-release-tag.test.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Release build selection tests failed.' }
-          ./scripts/Test-ReleasePackage.Tests.ps1
+          ./build/Test-ReleasePackage.Tests.ps1
 
       - name: Pack release candidate
         id: package
@@ -47,7 +47,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Could not read the package version.' }
           dotnet pack PNFmt.Cli/PNFmt.Cli.csproj --configuration Release --output artifacts/release-package "-p:RepositoryCommit=$env:GITHUB_SHA"
           if ($LASTEXITCODE -ne 0) { throw 'Package build failed.' }
-          ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $version -Commit $env:GITHUB_SHA
+          ./build/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $version -Commit $env:GITHUB_SHA
           "version=$version" >> $env:GITHUB_OUTPUT
 
       - name: Upload release candidate
@@ -116,7 +116,7 @@ jobs:
 
       - name: Verify coverage gate
         shell: pwsh
-        run: ./scripts/Test-CoverageReport.Tests.ps1
+        run: ./build/Test-CoverageReport.Tests.ps1
 
       - name: Restore coverage history
         uses: actions/cache/restore@v6
@@ -127,7 +127,7 @@ jobs:
 
       - name: Test with coverage
         shell: pwsh
-        run: ./scripts/Test-Coverage.ps1 -Configuration Release -NoBuild -NoRestore
+        run: ./build/Test-Coverage.ps1 -Configuration Release -NoBuild -NoRestore
 
       - name: Upload coverage reports
         if: always()
@@ -153,8 +153,8 @@ jobs:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: |
-          ./scripts/Test-PerformanceReport.Tests.ps1
-          ./scripts/Test-Performance.ps1 -TimingPolicy ReportOnly
+          ./build/Test-PerformanceReport.Tests.ps1
+          ./build/Test-Performance.ps1 -TimingPolicy ReportOnly
 
       - name: Download release candidate
         uses: actions/download-artifact@v8
@@ -169,8 +169,8 @@ jobs:
           TEMP: ${{ runner.temp }}
           TMP: ${{ runner.temp }}
         run: |
-          $package = ./scripts/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:GITHUB_SHA
-          ./scripts/Test-ToolPackage.ps1 -PackagePath $package -Version $env:PACKAGE_VERSION
+          $package = ./build/Test-ReleasePackage.ps1 -PackageDirectory artifacts/release-package -Version $env:PACKAGE_VERSION -Commit $env:GITHUB_SHA
+          ./build/Test-ToolPackage.ps1 -PackagePath $package -Version $env:PACKAGE_VERSION
 
       - name: Upload performance reports
         if: always()

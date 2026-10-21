@@ -26,7 +26,7 @@ The wrapper uses Windows PowerShell with execution policy bypass for that proces
 With PowerShell 7, including on Linux:
 
 ```powershell
-./scripts/Test-Coverage.ps1
+./build/Test-Coverage.ps1
 ```
 
 The command restores the pinned ReportGenerator tool, builds and tests in Release,
@@ -71,11 +71,11 @@ the other. Any failed test also fails the command, regardless of coverage.
 To check an existing report without rerunning tests:
 
 ```powershell
-./scripts/Test-CoverageReport.ps1 -ReportPath artifacts/coverage/<run-id>/report/Summary.json
+./build/Test-CoverageReport.ps1 -ReportPath artifacts/coverage/<run-id>/report/Summary.json
 ```
 
 Use `-ThresholdsPath` to evaluate a candidate configuration. The gate's regression
-checks run with `./scripts/Test-CoverageReport.Tests.ps1` and cover threshold
+checks run with `./build/Test-CoverageReport.Tests.ps1` and cover threshold
 boundaries, independent assemblies/metrics, missing data, and malformed input.
 
 ## CI and releases

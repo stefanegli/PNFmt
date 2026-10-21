@@ -2,7 +2,7 @@
 
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const select = require('./select-release-build.cjs');
+const select = require('./select-github-release-build.cjs');
 
 const commit = 'a'.repeat(40);
 const context = {

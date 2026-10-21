@@ -39,7 +39,7 @@ its contents.
    validation with timing enforcement and no skips, equivalent to:
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
    ```
 
 3. Wait for that commit's default-branch Build to pass on GitHub. Check that its
