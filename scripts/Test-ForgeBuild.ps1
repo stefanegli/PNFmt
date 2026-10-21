@@ -29,7 +29,7 @@ try
     & (Join-Path $PSScriptRoot 'Format-Repository.ps1') -Check -Configuration Release -NoBuild
     & (Join-Path $PSScriptRoot 'Test-CoverageReport.Tests.ps1')
     & (Join-Path $PSScriptRoot 'Test-ReleasePackage.Tests.ps1')
-    Invoke-NativeCommand 'node' @('--test', '.github/scripts/select-release-build.test.cjs')
+    Invoke-NativeCommand 'node' @('--test', '.github/scripts/select-release-build.test.cjs', '.github/scripts/create-release-tag.test.cjs')
     Invoke-NativeCommand 'dotnet' @(
         'run', '--project', 'benchmarks/PNFmt.Benchmarks.csproj',
         '--configuration', 'Release', '--no-build', '--', '--quick'

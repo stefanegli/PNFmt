@@ -1,13 +1,15 @@
 {
   "schemaVersion": 3,
   "id": "verify",
-  "name": "Build, test and validate PNFmt",
-  "description": "Release tests, coverage, formatting, enforced performance comparisons and isolated tool-package checks on VELA. Packages are retained without publication.",
+  "name": "Build, validate and tag PNFmt",
+  "description": "Complete validation on VELA. Continue a successful master build on demand to create its release tag on GitHub.",
   "artifactRetention": { "keepRuns": 10 },
   "triggers": [
     { "type": "manual" },
     { "type": "push", "branches": ["master"] }
   ],
+  "runThrough": { "push": "build", "manual": "build", "schedule": "build" },
+  "requiredCheck": { "throughStage": "build" },
   "stages": [
     {
       "id": "build",
@@ -46,6 +48,34 @@
                 "VSLANG": "1033"
               },
               "timeoutSeconds": 3600
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "tag",
+      "name": "Create release tag",
+      "jobs": [
+        {
+          "id": "release-tag",
+          "manualTrigger": true,
+          "manualTriggerLabel": "Create release tag",
+          "constraints": { "sourceBranches": ["master"], "triggers": ["manual", "push"] },
+          "requires": { "os": "windows", "dotnetSdk": "10.0" },
+          "inputs": [{ "job": "verify", "artifact": "package", "path": "incoming/validated-package" }],
+          "outputs": [{ "name": "release-tag", "path": "artifacts/release-tag" }],
+          "steps": [
+            {
+              "id": "tag",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                "-File", "scripts/New-ReleaseTag.ps1"
+              ],
+              "environment": { "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "Never", "DOTNET_NOLOGO": "1" },
+              "timeoutSeconds": 600
             }
           ]
         }

@@ -30,10 +30,13 @@ supply a release package. PR checks validate proposed changes but cannot supply
 the published artifact. This matters because merging can change the commit or
 its contents.
 
-## Validate locally and tag
+## Validate on VELA and create the tag on demand
 
-1. Check out the exact release candidate from `master` in a clean working tree.
-2. On VELA, run the complete validation with timing enforcement and no skips:
+1. Push the prepared `master` commit to both Forge and GitHub through the normal
+   contribution flow. Keep the version unused; the pipeline does not bump it or
+   move an existing tag.
+2. Wait for the exact commit's Forge Build on VELA to pass. It runs complete
+   validation with timing enforcement and no skips, equivalent to:
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
@@ -42,19 +45,23 @@ its contents.
 3. Wait for that commit's default-branch Build to pass on GitHub. Check that its
    `release-package` artifact is available and the project version is the intended
    new release version. Hosted timing warnings do not replace VELA validation.
-4. Create and push only the version tag. For example, with the repository's
-   `github` remote and the version read from the project:
+4. Open that successful Forge run, choose **Continue this build** through
+   **Create release tag**, then approve its **Create release tag** job. Forge
+   retains the exact Build artifact and source revision; this does not rerun
+   validation. A new manual **Run all stages** also validates and tags, but repeats
+   the full Build and should not replace continuing an eligible successful run.
 
-   ```powershell
-   $releaseVersion = (dotnet msbuild PNFmt.Cli/PNFmt.Cli.csproj -getProperty:Version -nologo | Out-String).Trim()
-   if ($LASTEXITCODE -ne 0) { throw 'Could not read the release version.' }
-   $releaseTag = "v$releaseVersion"
-   git tag -a $releaseTag -m "Release $releaseVersion"
-   git push github "refs/tags/$releaseTag"
-   ```
+Provision GitHub tag-write authentication in the executing agent's Git credential
+helper before using this stage. See [agent credentials and tagging checks](forge-build.md#release-tags-on-demand).
+No NuGet API key is needed on the Forge agent. Automatic builds and PR checks stop
+before tagging. Manual approval must be a deliberate release request: pushing the
+tag triggers NuGet publication.
 
 Tags must use `v<major>.<minor>.<patch>[-prerelease]`, match the package version,
-and point to a commit on the default branch. Never move an existing release tag.
+and point to the exact validated commit. The on-demand action additionally requires
+that commit to be GitHub's current `master` head and its checkout to have no tracked
+changes. Never move an existing release tag. An existing matching annotated tag is
+reported without pushing again; a conflicting or lightweight tag is rejected.
 
 The tag triggers **Publish .NET global tool**, which finds the successful Build,
 downloads its exact artifact, and verifies the package ID, version, and source

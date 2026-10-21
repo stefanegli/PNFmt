@@ -35,7 +35,7 @@ jobs:
       - name: Test release validation
         shell: pwsh
         run: |
-          node --test .github/scripts/select-release-build.test.cjs
+          node --test .github/scripts/select-release-build.test.cjs .github/scripts/create-release-tag.test.cjs
           if ($LASTEXITCODE -ne 0) { throw 'Release build selection tests failed.' }
           ./scripts/Test-ReleasePackage.Tests.ps1
 
