@@ -5,10 +5,8 @@ on:
     tags:
       - "v*.*.*"
 
-permissions:
-  contents: read
-  actions: read
-  id-token: write
+# Only the publishing job may request OIDC; future jobs inherit no permissions.
+permissions: {}
 
 concurrency:
   group: publish-global-tool
@@ -17,9 +15,14 @@ concurrency:
 jobs:
   publish:
     name: Publish PetchNaka.PNFmt.Cli
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'stefanegli/PNFmt'
     runs-on: ubuntu-latest
     environment: nuget
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read
+      id-token: write
 
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: "1"
@@ -30,6 +33,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Require a commit on the default branch
         shell: pwsh

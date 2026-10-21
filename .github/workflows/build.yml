@@ -26,6 +26,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
@@ -85,6 +86,7 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up .NET
         uses: actions/setup-dotnet@v6

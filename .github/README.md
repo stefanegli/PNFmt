@@ -12,6 +12,12 @@ Keep workflow responsibilities explicit when editing `workflows/`:
   NuGet trusted-publishing credentials. It uploads the existing package without
   compilation, tests, packing, or benchmarks.
 
+The publishing workflow defaults to no permissions; only its tag-push job in the
+canonical repository receives read access and `id-token: write`. Credentials are
+requested after artifact selection and package validation. Keep that ordering.
+Checkouts do not persist Git credentials. For permission semantics, see
+[GitHub's job permissions reference](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idpermissions).
+
 Keep the publishing workflow filename and `nuget` environment stable: NuGet
 trusted publishing is configured against them. Do not add publication to Build,
 accept PR artifacts for releases, fall back to rebuilding in Publish, grant Build
