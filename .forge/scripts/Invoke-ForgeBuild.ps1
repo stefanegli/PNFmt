@@ -1,5 +1,9 @@
 [CmdletBinding()]
-param()
+param(
+    [ValidateSet('All', 'Restore', 'DotnetFormat', 'Build', 'RepositoryFormat', 'GateTests',
+        'BenchmarkCorrectness', 'Tests', 'Performance', 'Package')]
+    [string]$Step = 'All'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -38,8 +42,9 @@ try
     $env:TMP = $mappedTemp
     Set-Location -LiteralPath $mappedRoot
     & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass `
-        -File (Join-Path $mappedRoot '.forge/scripts/Test-ForgeBuild.ps1')
-    if ($LASTEXITCODE -ne 0) { throw "Forge validation exited with code $LASTEXITCODE." }
+        -File (Join-Path $mappedRoot 'build/Invoke-Validation.ps1') -Step $Step `
+        -Version '0.0.0-validation.1' -TimingPolicy Enforce
+    if ($LASTEXITCODE -ne 0) { throw "Forge validation step '$Step' exited with code $LASTEXITCODE." }
 }
 finally
 {

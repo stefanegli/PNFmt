@@ -3,13 +3,28 @@
   "id": "verify",
   "name": "Build, validate and tag PNFmt",
   "description": "Complete validation on VELA. Continue a successful master build on demand to create its release tag on GitHub.",
-  "artifactRetention": { "keepRuns": 10 },
+  "artifactRetention": {
+    "keepRuns": 10
+  },
   "triggers": [
-    { "type": "manual" },
-    { "type": "push", "branches": ["master"] }
+    {
+      "type": "manual"
+    },
+    {
+      "type": "push",
+      "branches": [
+        "master"
+      ]
+    }
   ],
-  "runThrough": { "push": "build", "manual": "build", "schedule": "build" },
-  "requiredCheck": { "throughStage": "build" },
+  "runThrough": {
+    "push": "build",
+    "manual": "build",
+    "schedule": "build"
+  },
+  "requiredCheck": {
+    "throughStage": "build"
+  },
   "stages": [
     {
       "id": "build",
@@ -17,37 +32,197 @@
       "jobs": [
         {
           "id": "verify",
-          "requires": { "os": "windows", "dotnetSdk": "10.0" },
+          "requires": {
+            "os": "windows",
+            "dotnetSdk": "10.0"
+          },
           "reports": {
-            "tests": { "paths": ["artifacts/coverage"] },
+            "tests": {
+              "paths": [
+                "artifacts/coverage"
+              ]
+            },
             "coverage": {
-              "paths": ["artifacts/coverage"],
+              "paths": [
+                "artifacts/coverage"
+              ],
               "profile": "pnfmt-production-v1",
               "toolchain": "coverlet-10.0.1-reportgenerator-5.5.11",
-              "expectedAssemblies": ["PNFmt.Core", "pnfmt"]
+              "expectedAssemblies": [
+                "PNFmt.Core",
+                "pnfmt"
+              ]
             }
           },
           "outputs": [
-            { "name": "coverage", "path": "artifacts/coverage", "when": "always" },
-            { "name": "performance", "path": "artifacts/performance", "when": "always" },
-            { "name": "package", "path": "artifacts/packages" }
+            {
+              "name": "coverage",
+              "path": "artifacts/coverage",
+              "when": "always"
+            },
+            {
+              "name": "performance",
+              "path": "artifacts/performance",
+              "when": "always"
+            },
+            {
+              "name": "package",
+              "path": "artifacts/packages"
+            }
           ],
           "steps": [
             {
-              "id": "validate",
+              "id": "restore",
               "type": "process",
               "executable": "powershell.exe",
               "arguments": [
-                "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                "-File", ".forge/scripts/Invoke-ForgeBuild.ps1"
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "Restore"
               ],
-              "environment": {
-                "DOTNET_CLI_TELEMETRY_OPTOUT": "1",
-                "DOTNET_NOLOGO": "1",
-                "DOTNET_CLI_UI_LANGUAGE": "en",
-                "VSLANG": "1033"
-              },
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "dotnet-format",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "DotnetFormat"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "build",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "Build"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "repository-format",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "RepositoryFormat"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "gate-tests",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "GateTests"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "benchmark-correctness",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "BenchmarkCorrectness"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "tests-and-coverage",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "Tests"
+              ],
+              "timeoutSeconds": 600
+            },
+            {
+              "id": "performance",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "Performance"
+              ],
               "timeoutSeconds": 3600
+            },
+            {
+              "id": "package-and-install",
+              "type": "process",
+              "executable": "powershell.exe",
+              "arguments": [
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/Invoke-ForgeBuild.ps1",
+                "-Step",
+                "Package"
+              ],
+              "timeoutSeconds": 600
             }
           ]
         }
@@ -61,20 +236,51 @@
           "id": "release-tag",
           "manualTrigger": true,
           "manualTriggerLabel": "Create release tag",
-          "constraints": { "sourceBranches": ["master"], "triggers": ["manual", "push"] },
-          "requires": { "os": "windows", "dotnetSdk": "10.0" },
-          "inputs": [{ "job": "verify", "artifact": "package", "path": "incoming/validated-package" }],
-          "outputs": [{ "name": "release-tag", "path": "artifacts/release-tag" }],
+          "constraints": {
+            "sourceBranches": [
+              "master"
+            ],
+            "triggers": [
+              "manual",
+              "push"
+            ]
+          },
+          "requires": {
+            "os": "windows",
+            "dotnetSdk": "10.0"
+          },
+          "inputs": [
+            {
+              "job": "verify",
+              "artifact": "package",
+              "path": "incoming/validated-package"
+            }
+          ],
+          "outputs": [
+            {
+              "name": "release-tag",
+              "path": "artifacts/release-tag"
+            }
+          ],
           "steps": [
             {
               "id": "tag",
               "type": "process",
               "executable": "powershell.exe",
               "arguments": [
-                "-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
-                "-File", ".forge/scripts/New-ReleaseTag.ps1"
+                "-NoLogo",
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                ".forge/scripts/New-ReleaseTag.ps1"
               ],
-              "environment": { "GIT_TERMINAL_PROMPT": "0", "GCM_INTERACTIVE": "Never", "DOTNET_NOLOGO": "1" },
+              "environment": {
+                "GIT_TERMINAL_PROMPT": "0",
+                "GCM_INTERACTIVE": "Never",
+                "DOTNET_NOLOGO": "1"
+              },
               "timeoutSeconds": 600
             }
           ]

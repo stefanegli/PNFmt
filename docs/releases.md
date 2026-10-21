@@ -39,7 +39,7 @@ its contents.
    validation with timing enforcement and no skips, equivalent to:
 
    ```powershell
-   powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
    ```
 
 3. Wait for that commit's default-branch Build to pass on GitHub. Check that its
@@ -88,7 +88,10 @@ publication. There is no fallback that rebuilds or bypasses validation in Publis
 - If NuGet accepted the package but a later workflow step failed, check NuGet
   before retrying: publication deliberately does not ignore duplicate versions.
 
-Direct `Publish-GlobalTool.ps1` usage retains its complete local validation and
-existing switches. `Test-ToolPackage.ps1` only tests an existing package in
-isolation; invoking it alone does not approve a release. See the
-[performance policy](performance.md) for required VELA checks and reports.
+`build/Invoke-Validation.ps1` defaults to the complete nonpublishing gate. It has
+no skip or direct-publish switches and never reads a NuGet credential. Its `-Step`
+selector supports the named Forge operations; invoking a subset alone does not
+approve a release. `build/Test-ToolPackage.ps1` only tests an existing package in
+isolation. NuGet publication belongs exclusively to the GitHub tag workflow. See
+the [workflow boundary](../.github/README.md) and
+[performance policy](performance.md) for required checks and reports.

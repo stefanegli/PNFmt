@@ -35,16 +35,20 @@ before removing it. Two unused drive letters are required. The pipeline selects
 English .NET/MSBuild diagnostics so its unresolved-reference check also works
 under the service account's locale.
 
-The job calls [Test-ForgeBuild.ps1](../.forge/scripts/Test-ForgeBuild.ps1). It restores
-dependencies, checks `dotnet format` including unresolved project references,
-builds Release, verifies repository formatting, checks the coverage and release
-package validators, runs the Node.js release-selection tests and benchmark
-correctness cases, then runs the complete `Publish-GlobalTool.ps1` validation with
-`-Version 0.0.0-validation.1 -PackOnly -TimingPolicy Enforce`. All tests, per-assembly
-coverage thresholds, performance comparisons, packing and isolated installed-tool
-checks remain enabled. The final package manifest must identify the exact tested
-Git commit. Timing regressions fail on VELA; the hosted GitHub builds retain their
-separate `ReportOnly` timing policy.
+The job declares nine process steps: restore, .NET formatting, Release build,
+repository formatting, gate tests, benchmark correctness, tests with coverage,
+performance comparison, and packing with installed-tool validation. Each step
+enters through the drive wrapper and calls the corresponding operation in
+[Invoke-Validation.ps1](../build/Invoke-Validation.ps1). They share one checkout,
+Release output and validation version, `0.0.0-validation.1`. Restore and build run
+once; the test and pack commands use `--no-build --no-restore`. Building with that
+version from the start ensures the installed CLI reports the package version.
+
+All tests, per-assembly coverage thresholds, performance comparisons, packing and
+isolated installed-tool checks remain enabled. The final package manifest must
+identify the exact tested Git commit. Timing regressions fail on VELA; the hosted
+GitHub builds retain their separate `ReportOnly` timing policy. The shared program
+sets English .NET diagnostics and restores its process environment afterward.
 
 Forge imports the TRX results and Cobertura coverage into its native Tests and
 Results views. The existing coverage script enforces
@@ -58,12 +62,17 @@ have their own server retention policy.
 To reproduce the job from a clean checkout on VELA:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\.forge\scripts\Test-ForgeBuild.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
 ```
 
 Generated results are ignored under `artifacts/`. Use a fresh checkout for each
 build so earlier reports and packages cannot satisfy a later run. See
 [performance gates](performance.md) for investigating a comparison failure.
+`-Step` runs one named operation for pipeline orchestration or diagnosis; the
+default `-Step All` is required for complete local validation. Shared build code
+lives in `build/`, Forge adapters in `.forge/scripts/`, and GitHub policy in
+`.github/`. Their README files describe the boundaries. The removed direct
+publisher and nested Forge build wrapper are not needed by this sequence.
 
 ## Release tags on demand
 

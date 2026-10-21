@@ -1,10 +1,10 @@
 # Performance gates
 
-`build/Publish-GlobalTool.ps1` runs mandatory performance comparisons before packing or pushing. They run in `-PackOnly` mode and also when `-SkipTests`, `-SkipPack`, or `-SkipPackageValidation` are supplied. There is no performance skip switch. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
+The complete `build/Invoke-Validation.ps1` sequence runs mandatory performance comparisons before packing. Forge declares the same operation as its explicit performance step before package validation. There are no skip or publication switches. An individual `-Step` selection is for pipeline orchestration or diagnosis, not full release validation. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
 
 ## Timing policy and release machine
 
-`Publish-GlobalTool.ps1`, `Test-Performance.ps1`, and `Test-PerformanceReport.ps1` accept `-TimingPolicy`:
+`Invoke-Validation.ps1`, `Test-Performance.ps1`, and `Test-PerformanceReport.ps1` in `build/` accept `-TimingPolicy`:
 
 | Value | Behavior |
 | --- | --- |
@@ -16,10 +16,10 @@ The policy is not inferred from environment variables or machine names. Both mod
 **VELA**, the maintainer's local Windows machine, is the designated controlled environment. Before creating or pushing a release tag, run the complete validation there on the release candidate:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
 ```
 
-Leave `-TimingPolicy` at its `Enforce` default and leave all skip switches off. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
+Leave `-TimingPolicy` at its `Enforce` default and use the default `-Step All`. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
 
 The [PNForge verify pipeline](forge-build.md) runs this complete validation on
 VELA with `-TimingPolicy Enforce` and retains its performance reports. A successful
@@ -76,7 +76,7 @@ Each invocation writes fresh files to `artifacts/performance/<run-id>/`:
 - Worker JSON reports: runtime metadata, sample arrays, iteration counts, and output fingerprints.
 - Build and worker logs, retained even when a command fails before comparison.
 
-CI adds the table to the GitHub Actions summary and uploads `performance-<os>` artifacts, including on failure. Allocation regressions, invalid reports, and correctness or output-stability failures block publication; hosted timing warnings do not. Build creates a single versioned `release-package` artifact and runs all gates on Windows and Linux, including installing the same package on both systems. A release tag selects a successful default-branch Build for the exact tagged commit and publishes its retained package after verifying package identity, version, and source commit. It does not rebuild or repeat the gates. A different commit, a PR build, a failed or incomplete run, or a missing/expired package cannot satisfy publication. See [releasing PNFmt](releases.md) for recovery. Direct publish-script invocations with skip switches still perform a fresh comparison and default to timing enforcement.
+CI adds the table to the GitHub Actions summary and uploads `performance-<os>` artifacts, including on failure. Allocation regressions, invalid reports, and correctness or output-stability failures block publication; hosted timing warnings do not. Build creates a single versioned `release-package` artifact and runs all gates on Windows and Linux, including installing the same package on both systems. A release tag selects a successful default-branch Build for the exact tagged commit and publishes its retained package after verifying package identity, version, and source commit. It does not rebuild or repeat the gates. A different commit, a PR build, a failed or incomplete run, or a missing/expired package cannot satisfy publication. See [releasing PNFmt](releases.md) for recovery. Complete local validation always performs a fresh comparison and defaults to timing enforcement.
 
 The separate standalone [full and quick benchmark runs](../benchmarks/README.md) remain useful for exploration and correctness smoke tests; they do not enforce timing limits. Gate comparison logic has deterministic regression checks:
 

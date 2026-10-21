@@ -179,7 +179,8 @@ Validation on VELA passed:
 
 - Focused formatter/CLI suite: 2,015 cases.
 - Repository formatting and `-Check -NoBuild`; `git diff --check`.
-- Complete `Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly`, with no
+- Complete `Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly` (the
+  validation entry point at the audited revision), with no
   skip switches and the default `TimingPolicy Enforce`: 2,089 Release cases,
   coverage gates, 35 performance-gate regression checks, all 59 measured cases
   with zero timing warnings, packaging and isolated installed-tool checks.

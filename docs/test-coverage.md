@@ -110,15 +110,18 @@ two percentage points of headroom for each metric.
 
 ## Release and merge enforcement
 
-`Publish-GlobalTool.ps1` uses the same command before packing. The release workflow
-uploads a `coverage-release` artifact, and a failed check prevents publication.
-`-SkipTests` remains an explicit bypass for callers that have already validated
-the same source, such as the Build workflow's later packaging step.
-It does not skip the separate [performance gate](performance.md), which runs on
-every publish-script invocation, including `-PackOnly`. Performance comparisons
-default to `-TimingPolicy Enforce`. Hosted workflows explicitly use `ReportOnly`
-for timing while retaining allocation and correctness gates; coverage enforcement
-is unaffected. Release timing approval remains a required local validation on VELA.
+The complete `build/Invoke-Validation.ps1` sequence builds Release once, then calls
+the coverage command with `-NoBuild -NoRestore` before performance and packing.
+Forge declares those same operations as named process steps. A failed test or
+threshold prevents a successful Build. GitHub's tag publisher reuses the successful
+Build and its exact retained package; it does not rerun coverage or create a
+separate release-coverage artifact. There is no direct-publish or test-skip switch
+in the full validation program.
+
+Performance comparisons default to `-TimingPolicy Enforce`. Hosted workflows
+explicitly use `ReportOnly` for timing while retaining allocation and correctness
+gates; coverage enforcement is unaffected. Release timing approval remains a
+required complete validation on VELA.
 
 The repository's [Required build checks ruleset](https://github.com/stefanegli/PNFmt/rules/23625522)
 requires these GitHub Actions checks on the default branch to block merges when

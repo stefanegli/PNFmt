@@ -42,14 +42,27 @@ request.
 For source changes, run appropriate tests and the complete validation:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Publish-GlobalTool.ps1 -Version 0.0.0-validation.1 -PackOnly
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
 ```
 
 This runs Release tests, coverage, performance comparisons, packaging, and isolated
 installed-tool checks without publishing. Keep the validation version short to avoid
-Windows native-library path limits. Leave `-SkipTests`, `-SkipPack`, and
-`-SkipPackageValidation` off. Fix failures and rerun until all gates pass; do not
-lower coverage thresholds or bypass checks.
+Windows native-library path limits. Use the default `-Step All`; individual
+`-Step` selections are for pipeline orchestration and focused diagnosis, not full
+validation. Fix failures and rerun until all gates pass; do not lower coverage
+thresholds or bypass checks. A successful exact-commit Forge run on VELA executes
+the same full sequence and supplies this validation; avoid running another full
+suite concurrently with its performance measurements.
+
+Shared checks belong in `build/`; Forge-only adapters and tagging belong in
+`.forge/scripts/`; GitHub orchestration belongs in `.github/workflows/`. Read the
+README in each directory before changing their boundary. GitHub Build must remain
+read-only and validate the same release package on both required platforms. Only
+the tag workflow may obtain NuGet OIDC credentials, after checking the retained
+exact-commit Build package. Preserve its filename, environment, required check
+names, and gate-before-credentials order. Do not replace its artifact with a
+Forge validation package without implementing the authenticated handoff and
+migrating repository rules together.
 
 Keep the default `-TimingPolicy Enforce` locally. Before creating or pushing a
 release tag, run the complete validation on VELA, the maintainer's controlled
