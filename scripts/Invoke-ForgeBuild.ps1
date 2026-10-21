@@ -11,7 +11,10 @@ $previousLocation = Get-Location
 
 function Mount-BuildPath([string]$Path)
 {
-    $target = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
+    $directory = (Resolve-Path -LiteralPath $Path).Path.TrimEnd('\')
+    $target = Split-Path -Parent $directory
+    $name = Split-Path -Leaf $directory
+    if ([string]::IsNullOrEmpty($target)) { throw 'Build directories must be below a drive root.' }
     foreach ($letter in 'ZYXWVUTSRQPONMLKJIHGFED'.ToCharArray())
     {
         $drive = "$($letter):"
@@ -19,7 +22,7 @@ function Mount-BuildPath([string]$Path)
         & subst.exe $drive $target
         if ($LASTEXITCODE -ne 0) { throw "Could not map '$target' to $drive." }
         $mappings.Add([pscustomobject]@{ Drive = $drive; Target = $target })
-        return "$drive\"
+        return (Join-Path "$drive\" $name)
     }
     throw 'No unused drive letter is available for the build.'
 }
@@ -27,10 +30,9 @@ function Mount-BuildPath([string]$Path)
 try
 {
     # libgit2's Windows path normalization requires readable ancestors. Alias only
-    # the workspace container and temp folder, without changing storage or ACLs.
-    # Keep the checkout below the drive root: Git and .NET tool discovery stop there.
-    $mappedParent = Mount-BuildPath (Split-Path -Parent $repoRoot)
-    $mappedRoot = Join-Path $mappedParent (Split-Path -Leaf $repoRoot)
+    # their containing folders, without changing storage or ACLs. Keep each named
+    # directory below its alias root for discovery and temporary cleanup guards.
+    $mappedRoot = Mount-BuildPath $repoRoot
     $mappedTemp = Mount-BuildPath ([IO.Path]::GetTempPath())
     $env:TEMP = $mappedTemp
     $env:TMP = $mappedTemp
