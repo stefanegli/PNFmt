@@ -4,22 +4,23 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
+const os = require('node:os');
 const path = require('node:path');
-const { randomUUID } = require('node:crypto');
 const { createReleaseTag, publicGitHub } = require('./create-release-tag.cjs');
 
 const remoteUrl = 'https://github.com/stefanegli/PNFmt.git';
 const tag = 'v0.1.0-alpha.12';
 const ref = `refs/tags/${tag}`;
-const root = path.resolve(__dirname, '../../artifacts/release-tag-tests', randomUUID());
+const root = fs.mkdtempSync(path.join(os.tmpdir(), 'pnfmt-tags-'));
+let fixtureNumber = 0;
 
 // Exercise real Git tag objects, refspecs and concurrent creation against private bare repositories.
 function fixture() {
-    const directory = path.join(root, randomUUID());
+    const directory = path.join(root, String(++fixtureNumber));
     const checkout = path.join(directory, 'checkout');
     const remote = path.join(directory, 'remote.git');
     fs.mkdirSync(directory, { recursive: true });
-    const run = args => execFileSync('git', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    const run = args => execFileSync('git', ['-c', 'core.longpaths=true', ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, GIT_TERMINAL_PROMPT: '0', GCM_INTERACTIVE: 'Never' } }).trim();
     run(['init', '--bare', '--initial-branch=master', remote]);
     run(['init', '--initial-branch=master', checkout]);
