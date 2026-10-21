@@ -55,9 +55,12 @@ the same full sequence and supplies this validation; avoid running another full
 suite concurrently with its performance measurements.
 
 Shared checks belong in `build/`; Forge-only adapters and tagging belong in
-`.forge/scripts/`; GitHub orchestration belongs in `.github/workflows/`. Read the
-README in each directory before changing their boundary. GitHub Build must remain
-read-only and validate the same release package on both required platforms. Only
+`.forge/scripts/`; GitHub orchestration belongs in `.github/workflows/`. Read
+`build/README.md`, `.forge/README.md`, and `.github/WORKFLOWS.md` before changing
+their boundary. Keep workflow documentation in `.github/WORKFLOWS.md`; a README
+inside `.github/` takes precedence over the root product README on GitHub.
+GitHub Build must remain read-only and validate the same release package on both
+required platforms. Only
 the tag workflow may obtain NuGet OIDC credentials, after checking the retained
 exact-commit Build package. Preserve its filename, environment, required check
 names, and gate-before-credentials order. Do not replace its artifact with a

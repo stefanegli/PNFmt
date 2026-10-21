@@ -93,5 +93,5 @@ no skip or direct-publish switches and never reads a NuGet credential. Its `-Ste
 selector supports the named Forge operations; invoking a subset alone does not
 approve a release. `build/Test-ToolPackage.ps1` only tests an existing package in
 isolation. NuGet publication belongs exclusively to the GitHub tag workflow. See
-the [workflow boundary](../.github/README.md) and
+the [workflow boundary](../.github/WORKFLOWS.md) and
 [performance policy](performance.md) for required checks and reports.

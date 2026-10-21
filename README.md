@@ -171,7 +171,7 @@ Run `./build/Test-Performance.ps1` to compare Release performance with the pinne
 
 Releases use tags on already validated `master` commits, without release branches. GitHub Build creates one versioned package and runs all checks, including installing that same package on Windows and Linux. After the matching VELA and GitHub builds pass, continue the Forge build through **Create release tag** and approve that job to create the annotated version tag on demand. The tag workflow publishes the retained package from the successful GitHub Build for that exact commit; it does not rebuild or repeat tests and benchmarks. The tag version must match the package version. See [releasing PNFmt](docs/releases.md) for preparation, agent credentials, tagging, artifact retention, and recovery.
 
-Shared build checks live in [`build/`](build/README.md), Forge adapters in [`.forge/`](.forge/README.md), and GitHub workflow policy in [`.github/`](.github/README.md). The platform README files define credential and artifact ownership; moving or renaming scripts must preserve those boundaries.
+Shared build checks live in [`build/`](build/README.md), Forge adapters in [`.forge/`](.forge/README.md), and GitHub workflow policy in [`.github/`](.github/WORKFLOWS.md). The platform documentation defines credential and artifact ownership; moving or renaming scripts must preserve those boundaries.
 
 Use the [HTML snapshot viewer](tools/SnapshotViewer/README.md) to inspect test inputs, expected cleanup, and configuration by formatter.
 

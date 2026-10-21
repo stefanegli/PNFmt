@@ -1,5 +1,9 @@
 # GitHub Actions ownership
 
+This file is named `WORKFLOWS.md` because GitHub gives a README in `.github/`
+precedence over the repository's root README. Keep the product README at the root;
+see [GitHub's README selection rules](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-readmes#about-readmes).
+
 Keep workflow responsibilities explicit when editing `workflows/`:
 
 - `build.yml` runs on PRs and selected branch pushes with read-only repository
