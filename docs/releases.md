@@ -46,7 +46,7 @@ its contents.
    `release-package` artifact is available and the project version is the intended
    new release version. Hosted timing warnings do not replace VELA validation.
 4. Open that successful Forge run, choose **Continue this build** through
-   **Create release tag**, then approve its **Create release tag** job. Forge
+   **Release**, then approve its **Tag** job using **Create release tag**. Forge
    retains the exact Build artifact and source revision; this does not rerun
    validation. A new manual **Run all stages** also validates and tags, but repeats
    the full Build and should not replace continuing an eligible successful run.
@@ -56,6 +56,13 @@ helper before using this stage. See [agent credentials and tagging checks](forge
 No NuGet API key is needed on the Forge agent. Automatic builds and PR checks stop
 before tagging. Manual approval must be a deliberate release request: pushing the
 tag triggers NuGet publication.
+
+The pipeline retains its gated schema 3 release stage while schema 4 environment
+Git authorization cannot express the external GitHub tag write. The
+[migration audit](forge-build.md#builddeployment-migration) records the blocker
+and activation requirements. Do not remove this release path, put tagging in
+Build, or bypass the environment restriction with persistent credentials as part
+of a schema upgrade.
 
 Tags must use `v<major>.<minor>.<patch>[-prerelease]`, match the package version,
 and point to the exact validated commit. The on-demand action additionally requires

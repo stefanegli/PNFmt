@@ -194,11 +194,22 @@ test('public GitHub adapter fails closed for HTTP errors, malformed results and 
     }
 });
 
-test('Forge keeps automatic/required checks at build and gates tagging behind the successful artifact on master', () => {
+test('Forge preserves the gated release path until environments support authorized GitHub tag writes', () => {
     const pipeline = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../.forge/pipelines/verify.json'), 'utf8'));
+    assert.equal(pipeline.schemaVersion, 3);
+    assert.equal(pipeline.id, 'verify');
     assert.deepEqual(pipeline.runThrough, { push: 'build', manual: 'build', schedule: 'build' });
     assert.equal(pipeline.requiredCheck.throughStage, 'build');
+    assert.deepEqual(pipeline.triggers, [{ type: 'manual' }, { type: 'push', branches: ['master'] }]);
+    assert.deepEqual(pipeline.stages.map(stage => stage.id), ['build', 'tag']);
+    const build = pipeline.stages[0].jobs;
+    assert.deepEqual(build.map(job => job.id), ['verify']);
+    assert.equal(build[0].manualTrigger, undefined);
+    assert.equal(build[0].git, undefined);
+    assert.deepEqual(build[0].outputs.find(output => output.name === 'package'),
+        { name: 'package', path: 'artifacts/packages' });
     const job = pipeline.stages.find(stage => stage.id === 'tag').jobs[0];
+    assert.equal(job.id, 'release-tag');
     assert.equal(job.manualTrigger, true);
     assert.deepEqual(job.constraints, { sourceBranches: ['master'], triggers: ['manual', 'push'] });
     assert.deepEqual(job.inputs, [{ job: 'verify', artifact: 'package', path: 'incoming/validated-package' }]);

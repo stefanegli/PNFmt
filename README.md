@@ -161,7 +161,7 @@ installing it elsewhere; the skill does not require this repository's documentat
 
 See the [formatter architecture](docs/architecture.md) for module responsibilities and verification.
 
-PNForge runs the [verify pipeline](.forge/pipelines/verify.json) on pushes to `master` and for required pull request checks. Manual runs are also available. Its Windows build on VELA enforces formatting, tests, coverage, performance comparisons and isolated package validation, and retains native test results plus downloadable reports and packages. See [Forge builds](docs/forge-build.md) for agent requirements and local reproduction.
+PNForge runs the [Build pipeline](.forge/pipelines/verify.json) (stable ID `verify`) on pushes to `master` and for required pull request checks. Manual runs are also available. Its Windows build on VELA enforces formatting, tests, coverage, performance comparisons and isolated package validation, and retains native test results plus downloadable reports and packages. The approved release-tag stage remains on schema 3 pending supported environment Git authorization; automatic builds never tag. See [Forge builds](docs/forge-build.md) for the migration audit, agent requirements and local reproduction.
 
 Run `./scripts/Format-Repository.cmd` on Windows, or `./scripts/Format-Repository.ps1` in PowerShell 7, to format the repository with PNFmt. Add `-Check` to verify without writing. The command includes C# test code but excludes fixture data (`_files`, `_editor`), expected snapshots (`Snapshots/`), and build output. Use this command for repository-wide formatting: fixture `.editorconfig` files deliberately enable transformations and can override exclusions during a direct recursive PNFmt run.
 
