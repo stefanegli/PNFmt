@@ -27,7 +27,7 @@ tab_width = 4
 
 Omit `pnfmt_csproj_sort_item_types` to use the built-in item-type list.
 
-Enable processing with `pnfmt_enabled = true` and select `pnfmt_formatter = csproj`. Use `pnfmt_enabled = false` to disable both formatting and linting. Layout defaults on; `pnfmt_format = false` disables layout while allowing sorting or linting. Sorting defaults off and requires `pnfmt_sort_entries = true`. Parameter settings such as group spacing do not enable a behavior. See [activation and compatibility rules](../configuration-contracts.md).
+Enable processing with `pnfmt_enabled = true` and select `pnfmt_formatter = csproj`. Use `pnfmt_enabled = false` to disable both formatting and linting. Layout defaults on; `pnfmt_format = false` disables layout while allowing sorting or linting. Sorting defaults off and requires `pnfmt_sort_entries = true`, including when explicit enablement uses the extension for a missing formatter selection. Parameter settings such as group spacing do not enable a behavior. See [activation and compatibility rules](../configuration-contracts.md).
 
 For other MSBuild files, select the same formatter explicitly in a matching EditorConfig section, for example:
 

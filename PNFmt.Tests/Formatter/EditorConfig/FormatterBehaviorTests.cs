@@ -3,6 +3,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 
 using PNFmt.Cli;
 
@@ -138,6 +139,56 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             Assert.Equal("z.cs\na.cs", File.ReadAllText(disabled));
             Assert.Equal(FileFormatStatus.Updated, Run(enabled).Result.Status);
             Assert.Equal("a.cs\nz.cs", File.ReadAllText(enabled));
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void Project_enablement_without_selection_keeps_sorting_off(bool formatLayout, bool lint)
+        {
+            using var directory = new TestDirectory();
+            directory.Write(".editorconfig", "root = true\n[*.csproj]\npnfmt_enabled = true\n"
+                + "pnfmt_format = " + formatLayout + "\n");
+            const string Input = "<Project><PropertyGroup><Z>2</Z><A>1</A></PropertyGroup></Project>";
+            var path = directory.Write("Data.csproj", Input);
+            var runner = new FormattingRunner(FormatterCatalog.CreateDefault());
+            var expected = formatLayout ? FileFormatStatus.Updated : FileFormatStatus.Unchanged;
+
+            var preview = runner.Run(new[] { path }, false, lint, 1).Outcomes[0];
+            Assert.Null(preview.Error);
+            Assert.Equal(expected, preview.Result.Status);
+            Assert.Equal(Input, File.ReadAllText(path));
+            var result = runner.Run(new[] { path }, true, lint, 1).Outcomes[0];
+            Assert.Null(result.Error);
+            Assert.Empty(result.Result.Diagnostics);
+            Assert.Equal(expected, result.Result.Status);
+            var formatted = File.ReadAllText(path);
+            Assert.Equal(new[] { "Z", "A" },
+                XDocument.Parse(formatted).Root.Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
+            if (!formatLayout)
+            {
+                Assert.Equal(Input, formatted);
+            }
+            Assert.Contains(result.LogMessages, message => message.Code == "PNFMT004");
+            Assert.Equal(FileFormatStatus.Unchanged, runner.Run(new[] { path }, false, lint, 1).Outcomes[0].Result.Status);
+        }
+
+        [Fact]
+        public void Project_lint_without_activation_retains_legacy_sorting_defaults()
+        {
+            using var directory = new TestDirectory();
+            directory.Write(".editorconfig", "root = true\n");
+            var path = directory.Write("Data.csproj", "<Project><PropertyGroup><Z>2</Z><A>1</A></PropertyGroup></Project>");
+
+            var result = new FormattingRunner(FormatterCatalog.CreateDefault()).Run(new[] { path }, true, true, 1).Outcomes[0];
+
+            Assert.Null(result.Error);
+            Assert.Equal(FileFormatStatus.Updated, result.Result.Status);
+            Assert.Equal(new[] { "A", "Z" },
+                XDocument.Load(path).Root.Element("PropertyGroup").Elements().Select(element => element.Name.LocalName));
+            Assert.Contains(result.LogMessages, message => message.Code == "PNFMT004");
         }
 
         [Theory]

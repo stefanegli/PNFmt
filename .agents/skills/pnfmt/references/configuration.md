@@ -26,6 +26,8 @@ Enablement, selection, and behavior settings inherit independently. Disabling pr
 
 A formatter selection alone still enables processing. `pnfmt_enabled = true` without a selection uses the file extension. Either case emits `PNFMT004`; the warning also appears for activation under the legacy rules below, even without `--verbose`, and does not itself change the exit code. This compatibility path is deprecated; configure both controls when configuration changes are in scope.
 
+Explicit enablement retains the defaults for omitted behavior switches when the extension supplies selection. Project sorting still requires `pnfmt_sort_entries = true`; disabling layout with no optional behaviors or charset leaves the file unchanged. Unconfigured legacy project linting with neither activation control retains its historical sorting defaults.
+
 When both controls are missing or `unset`, the extension selects the formatter and these rules determine activation:
 
 | Formatter | Legacy activation |

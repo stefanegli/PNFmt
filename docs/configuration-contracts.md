@@ -38,6 +38,8 @@ Set `pnfmt_format = false` to run sorting or cleanup without the normal layout p
 
 For this version, a missing enablement or selection retains compatibility behavior. A selection alone still enables its formatter; `pnfmt_enabled = true` without a selection still uses the extension. If both are missing, the legacy activation rules below apply. Each such activation prints warning `PNFMT004`, even without `--verbose`, without changing exit codes. A future version will require both explicit enablement and selection. Missing values include `unset`.
 
+Explicit enablement retains the defaults for omitted behavior switches even when formatter selection comes from the extension. In particular, project sorting still requires `pnfmt_sort_entries = true`; `pnfmt_enabled = true` with `pnfmt_format = false` and no optional behaviors or charset leaves the file unchanged. Unconfigured legacy project linting, with neither activation control, retains its historical sorting defaults.
+
 `--write-default-config` writes enablement, selection, and explicit behavior choices. It preserves existing values, including `pnfmt_enabled = false` and formatter `None`. Its generated configuration explicitly turns on several optional behaviors; these are distinct from the defaults used when those switches are absent.
 
 | Formatter | Legacy activation when enablement and selection are both missing |

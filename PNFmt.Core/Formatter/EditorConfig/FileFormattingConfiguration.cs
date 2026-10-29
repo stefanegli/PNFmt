@@ -49,8 +49,8 @@ namespace PNFmt
         private string Selection { get; }
 
         public IniEditorConfigSettings IniSettings => this.ini.Value;
-        public ICsProjFormatSettings ProjectSettings => this.project.Value.IsActive || this.Selection is not null
-            ? this.project.Value : new DefaultCsProjFormatSettings();
+        public ICsProjFormatSettings ProjectSettings => this.IsLegacy && !this.project.Value.IsActive
+            ? new DefaultCsProjFormatSettings() : this.project.Value;
         public ResxEditorConfigSettings ResourceSettings => this.resource.Value;
 
         public EditorConfigSettingResolver CreateSettingResolver()
