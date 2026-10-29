@@ -67,6 +67,13 @@ names, and gate-before-credentials order. Do not replace its artifact with a
 Forge validation package without implementing the authenticated handoff and
 migrating repository rules together.
 
+Forge's `verify` pipeline is displayed as Build. Retain its schema 3 gated
+Release/Tag path until the environment contract supports authorized external
+GitHub tag writes and durable receipts; see `docs/forge-build.md`. Schema 4
+environment jobs prohibit authored Git access. Do not hide Git access behind
+persistent credentials, move tagging into Build, or drop the release action to
+force a schema upgrade. Preserve stable IDs, required checks, routes and grants.
+
 Keep the default `-TimingPolicy Enforce` locally. Before creating or pushing a
 release tag, run the complete validation on VELA, the maintainer's controlled
 Windows machine. Hosted Build uses `-TimingPolicy ReportOnly`:

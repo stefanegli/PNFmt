@@ -1,8 +1,8 @@
 {
   "schemaVersion": 3,
   "id": "verify",
-  "name": "Build, validate and tag PNFmt",
-  "description": "Complete validation on VELA. Continue a successful master build on demand to create its release tag on GitHub.",
+  "name": "Build",
+  "description": "Complete validation on VELA. Continue an eligible successful master Build on demand to create its GitHub release tag.",
   "artifactRetention": {
     "keepRuns": 10
   },
@@ -28,10 +28,11 @@
   "stages": [
     {
       "id": "build",
-      "name": "Build, test and package",
+      "name": "Build",
       "jobs": [
         {
           "id": "verify",
+          "name": "Package",
           "requires": {
             "os": "windows",
             "dotnetSdk": "10.0"
@@ -230,10 +231,11 @@
     },
     {
       "id": "tag",
-      "name": "Create release tag",
+      "name": "Release",
       "jobs": [
         {
           "id": "release-tag",
+          "name": "Tag",
           "manualTrigger": true,
           "manualTriggerLabel": "Create release tag",
           "constraints": {

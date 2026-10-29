@@ -8,8 +8,8 @@ Feature branches use those PR checks or a manual run, avoiding a second standalo
 build for the same feature-branch push.
 
 Automatic pushes, schedules, ordinary manual runs and required PR checks finish
-at **Build, test and package**. A successful standalone `master` push or manual
-build can be continued through **Create release tag** on demand. That final job
+at **Build** (job **Package**). A successful standalone `master` push or manual
+build can be continued through **Release** on demand. Its **Tag** job
 also requires explicit approval; PRs and feature branches cannot execute it.
 **Run all stages** explicitly authorizes both validation and tagging for a new
 eligible run. Normal builds never create tags.
@@ -49,6 +49,7 @@ isolated installed-tool checks remain enabled. The final package manifest must
 identify the exact tested Git commit. Timing regressions fail on VELA; the hosted
 GitHub builds retain their separate `ReportOnly` timing policy. The shared program
 sets English .NET diagnostics and restores its process environment afterward.
+The xUnit test assembly caps collection workers at 16 on every platform.
 
 Forge imports the TRX results and Cobertura coverage into its native Tests and
 Results views. The existing coverage script enforces
@@ -73,6 +74,55 @@ default `-Step All` is required for complete local validation. Shared build code
 lives in `build/`, Forge adapters in `.forge/scripts/`, and GitHub policy in
 `.github/`. Their README files describe the boundaries. The removed direct
 publisher and nested Forge build wrapper are not needed by this sequence.
+
+## Build/Deployment migration
+
+The 2026-10-24 audit against PNForge 0.1.0.354 found schema 4 environment APIs and
+protocol 5 support, but no supported environment authorization for this pipeline's
+GitHub tag write. The active definition therefore retains schema 3. This is a
+release-capability blocker, not an older-server compatibility requirement.
+
+Keep one product pipeline: **Build**, technical ID `verify`, in the existing file.
+Its **Build / Package** stage/job keep IDs `build` / `verify`; the legacy
+**Release / Tag** stage/job keep IDs `tag` / `release-tag`. No deployment environment
+is declared. Release tagging is a side effect that triggers NuGet publication;
+representing it as a successful validation job or an unauthenticated environment
+would change the authorization boundary.
+
+Schema 4 can express the existing verification work by moving the unchanged
+`build` stage into `build.stages`, removing legacy `stages`, `runThrough` and
+`requiredCheck` fields, and requiring every Build job to succeed. A Build-only
+conversion is technically supported, but activating it now would remove the
+on-demand release action. Moving `release-tag` into Build would instead make
+tagging part of every successful build. Neither change preserves this workflow.
+
+Environment jobs prohibit authored `git` requests, manual gates, dependencies,
+outputs and Build reports. They consume required immutable Build artifacts and
+run only after an explicit environment deployment request. The current tag job
+requires GitHub tag-write authentication through the executing account's Git
+credential helper and writes a `release-tag` artifact. Forge's lease-bound Git
+grants describe Forge repository IDs and an allowed write branch, not an external
+GitHub remote or a create-only tag ref. There are no PNFmt Git grants to migrate;
+adding a Forge branch-write grant would not authorize this operation. Do not omit
+`git` and rely on the persistent GitHub helper to evade the environment restriction.
+
+Before activation, Forge needs an approved way to authorize an external GitHub
+create-only tag write for the exact captured successful Build and retain its
+receipt. Revisit the live contract and artifact/provenance handoff then. Preserve
+the package identity/source checks, current GitHub `master` check, annotated
+create-only tag semantics and exact successful GitHub Build/package selection.
+An environment must consume this Build's captured `package` without restoring,
+compiling, retesting or packing, and must never depend on another environment.
+Replacing the retained tag artifact also requires a supported durable receipt.
+
+The audit found no schedules, upstream/dependent subscriptions, pipeline Git
+grants or PNFmt-specific agent routes. The required check remains `verify`, the
+default branch remains `master`, and Windows/.NET requirements, default-pool
+routing, retention and server-owned policies are unchanged. Manual and master
+push triggers remain; PR checks still come from repository settings. Any future
+schedule still stops at Build. No automatic publication is added or removed:
+ordinary builds never tag, and the existing release action still requires
+deliberate continuation and approval. This migration does not authorize that action.
 
 ## Release tags on demand
 
