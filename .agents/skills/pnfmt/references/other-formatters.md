@@ -4,14 +4,14 @@ Use the section for the selected formatter. Shared activation, encoding, final-n
 
 ## MSBuild project files (`csproj`)
 
-Both SDK-style and non-SDK documents with a `Project` root are supported, including the legacy MSBuild XML namespace. An `Sdk` declaration is not required. Check contents rather than inferring project style from target framework or extension. Select `pnfmt_formatter = csproj` explicitly for `.props`, `.targets`, and `.proj`.
+Both SDK-style and non-SDK documents with a `Project` root are supported, including the legacy MSBuild XML namespace. An `Sdk` declaration is not required; target framework and extension do not determine the project style. `pnfmt_formatter = csproj` also selects this formatter for `.props`, `.targets`, and `.proj`.
 
 - `pnfmt_sort_entries = true` sorts eligible project-level properties/items and canonicalizes eligible items while preserving evaluation-sensitive content.
 - `pnfmt_csproj_empty_lines_between_groups` is a non-negative number of blank lines between top-level groups.
-- `pnfmt_csproj_sort_item_types` replaces the built-in sortable type list. Separate names with commas or semicolons; `*` allows any homogeneous item type. Omit it to retain defaults; when extending the list, retain the desired built-in types explicitly.
+- `pnfmt_csproj_sort_item_types` replaces the built-in sortable type list. Names are separated with commas or semicolons; `*` allows any homogeneous item type. An omitted setting retains defaults; an explicit list replaces rather than extends them.
 - `indent_style`, `indent_size`, `tab_width`, and `end_of_line` control XML layout. `pnfmt_format = false` still permits sorting and linting.
 
-Imports, targets, tasks, and groups nested in targets or `Choose` retain order. Forward references, conditions, property functions, nested expansions, item/metadata references, and ambiguous `Include` expressions can block sorting. Preserve sorting disabled when custom tasks depend on item order, even without visible dependencies. `--lint` reports project-structure diagnostics without writing; `CSPROJ005` for implicit default items applies only to .NET SDK projects.
+Imports, targets, tasks, and groups nested in targets or `Choose` retain order. Forward references, conditions, property functions, nested expansions, item/metadata references, and ambiguous `Include` expressions can block sorting. Custom tasks can observe item order even without visible dependencies; enabled sorting can change that order. `--lint` reports project-structure diagnostics without writing; `CSPROJ005` for implicit default items applies only to .NET SDK projects.
 
 To enable layout without sorting for imported or non-SDK MSBuild files:
 
@@ -55,11 +55,11 @@ MSBuild serialization and enabled sorting run first; quote style `preserve` keep
 | `pnfmt_resx_insert_xsd_schema` | Insert missing schema when `true`. |
 | `pnfmt_resx_insert_documentation_comment` | Insert missing documentation when `true`. |
 
-All transformations default off in explicit configurations and work independently of layout. Removal wins over insertion for the same content. Standard XML layout settings apply; defaults are two-space indentation, platform newlines, and no final newline. With layout enabled, `end_of_line = lf`, `crlf`, or `cr` controls XML layout, XML comments, and processing instructions. Match Git's checkout line-ending convention for stable checks.
+All transformations default off in explicit configurations and work independently of layout. Removal wins over insertion for the same content. Standard XML layout settings apply; defaults are two-space indentation, platform newlines, and no final newline. With layout enabled, `end_of_line = lf`, `crlf`, or `cr` controls XML layout, XML comments, and processing instructions. Git checkout line-ending conversion can change these layout bytes and cause `--check` to report differences.
 
-Serialization preserves exact .NET resource-reader string values, including LF, CR, CRLF, and significant whitespace. It writes text newlines as `&#xA;` and `&#xD;`, so Git cannot alter values, metadata, or resource `<comment>` text. Newline-bearing CDATA becomes escaped text with character references; its value remains unchanged, but its CDATA spelling does not. This protection also applies to serialization caused by transformations with `pnfmt_format = false`; layout normalization is disabled. Encoding-only changes without layout or content changes keep the original text representation. Earlier PNFmt versions could normalize CR/CRLF resource text to LF. Formatting cannot recover characters already changed by a formatter or Git. Normalizing `XDocument.Load(path)` comparisons hide differences that compiled resources retain; validate actual resource strings when investigating preservation.
+Serialization preserves exact .NET resource-reader string values, including LF, CR, CRLF, and significant whitespace. It writes text newlines as `&#xA;` and `&#xD;`, so Git cannot alter values, metadata, or resource `<comment>` text. Newline-bearing CDATA becomes escaped text with character references; its value remains unchanged, but its CDATA spelling does not. This protection also applies to serialization caused by transformations with `pnfmt_format = false`; layout normalization is disabled. Encoding-only changes without layout or content changes keep the original text representation. Earlier PNFmt versions could normalize CR/CRLF resource text to LF. Formatting cannot recover characters already changed by a formatter or Git.
 
-Without explicit supported charset, serialization follows the declared encoding or defaults to UTF-8 with a BOM. In the legacy activation path, files without layout/charset settings are rewritten only for resource transformations, and missing schema/documentation can be inserted when removal is off. Do not assume those legacy insertion defaults apply to explicit configurations.
+Without explicit supported charset, serialization follows the declared encoding or defaults to UTF-8 with a BOM. In the legacy activation path, files without layout/charset settings are rewritten only for resource transformations, and missing schema/documentation can be inserted when removal is off. Those legacy insertion defaults do not apply to explicit configurations.
 
 Non-RESX XML or unnamed entries are skipped with `RESX001`, failing `--lint`; malformed XML is an execution error (`2`).
 
@@ -72,13 +72,13 @@ Layout normalizes assignments to `key = value` and collapses repeated blank line
 - `pnfmt_ini_merge_groups = true`: in `.editorconfig`, merge only adjacent sections whose headers match exactly, including case. In `.ini`, merge all same-named sections ignoring case. Contents retain occurrence order.
 - `pnfmt_ini_sort_groups = true`: in `.ini`, sort named sections ordinally ignoring case, keeping the preamble first. `.editorconfig` section order is always retained to preserve glob precedence.
 
-An `.editorconfig` containing `root = true` needs its own matching `[*.editorconfig]` section because it cannot inherit policy. Duplicate property order, including `unset`, is preserved during sorting/grouping. Generated configuration disables section sorting and merging for both file types. General INI consumers differ in repeated-section semantics; retain the task's existing policy.
+An `.editorconfig` containing `root = true` needs its own matching `[*.editorconfig]` section because it cannot inherit policy. Duplicate property order, including `unset`, is preserved during sorting/grouping. Generated configuration disables section sorting and merging for both file types. General INI consumers differ in repeated-section semantics.
 
 ## Response files (`rsp`)
 
 `pnfmt_sort_entries = true` sorts nonempty physical lines ordinally ignoring case, with an ordinal tie-breaker. It does not tokenize/rearrange arguments within a line. Blank lines do not split sortable content; a line whose first non-whitespace character is `#` is a fixed barrier. `pnfmt_format = false` sorts without normalizing whitespace/final newlines.
 
-Later compiler arguments may override earlier ones. Enable sorting only when line order is safe; comment barriers keep order-sensitive blocks separate.
+Later compiler arguments may override earlier ones, so sorting can change which option takes effect. Comment barriers keep blocks separate.
 
 Omitted sorting defaults off. Generated defaults also set `pnfmt_sort_entries = false` while enabling response-file layout; existing explicit sorting choices are retained.
 
@@ -90,7 +90,7 @@ Layout uses two-space indentation independently of `pnfmt_sort_entries`, which o
 
 These format structural whitespace without sorting elements, attributes, namespaces, resource dictionaries, or setters. `pnfmt_sort_entries` has no effect. Tags retain their original text unless attribute wrapping/arrangement, tag spacing, or quote style is explicitly enabled as described above. Parsed attribute values, existing references, comments, and CDATA remain intact; quote style is preserved by default. `indent_style`, `indent_size`, `tab_width`, and `end_of_line` control layout; defaults are spaces, four columns, and detected newlines. `indent_size = tab` uses `tab_width`; tab indentation emits one tab per level. No general trailing-whitespace cleanup or text wrapping is applied.
 
-Text/CDATA-containing elements preserve text and content whitespace throughout their subtree, including mixed content and whitespace-only leaf values. Opt-in tag formatting can change start-tag whitespace without inserting separators between inline elements; otherwise the entire subtree remains exact. Inherited `xml:space="preserve"` protects the subtree even if a descendant requests `default`. Ordinary XML treats whitespace-only gaps around child markup as layout without consulting schemas; use existing preservation policy when those gaps are data.
+Text/CDATA-containing elements preserve text and content whitespace throughout their subtree, including mixed content and whitespace-only leaf values. Opt-in tag formatting can change start-tag whitespace without inserting separators between inline elements; otherwise the entire subtree remains exact. Inherited `xml:space="preserve"` protects the subtree even if a descendant requests `default`. Ordinary XML treats whitespace-only gaps around child markup as layout without consulting schemas, even when a schema-dependent format interprets those gaps as data.
 
 XAML additionally protects text-oriented types such as `TextBlock`, `Run`, `Span`, and `FlowDocument`, and `.Inlines` property elements. Their start-tag attributes can still use opt-in wrapping, spacing, or quote style. Only recognized WPF/WinUI, Avalonia, and MAUI structural containers get child indentation. Unknown/custom/namespace-free elements retain their own whitespace; known descendants can still format outside protected subtrees. Bindings and markup extensions remain intact; runtime type/resource resolution is not validated.
 

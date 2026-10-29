@@ -4,7 +4,7 @@ Use this reference when configuring or troubleshooting the `csharp` formatter. S
 
 ## Layout and scope
 
-PNFmt formats one file at a time using Roslyn 5.9 and regular C# 14 parsing. It does not load projects, metadata references, target analyzers, or project-defined preprocessor symbols. Unresolved types are acceptable; file-local `#define` directives apply. Do not assume arbitrary analyzer code fixes run: brace insertion, namespace conversion, unused-import removal, `var` conversion, and name simplification are not implemented.
+PNFmt formats one file at a time using Roslyn 5.9 and regular C# 14 parsing. It does not load projects, metadata references, target analyzers, or project-defined preprocessor symbols. Unresolved types are acceptable; file-local `#define` directives apply. Analyzer code fixes such as brace insertion, namespace conversion, unused-import removal, `var` conversion, and name simplification are not implemented.
 
 Standard Roslyn indentation, spacing, newline, and wrapping preferences apply, including `csharp_new_line_before_open_brace` and `csharp_space_after_keywords_in_control_flow_statements`. Without explicit layout settings, indentation and tab width are four columns, using spaces and the detected newline. `end_of_line` accepts `lf`, `crlf`, or `cr`; `trim_trailing_whitespace = true` trims ordinary code whitespace. Comment contents, literal tokens, retained directives, and inactive text are protected from additional cleanup, although Roslyn can adjust comment indentation.
 
@@ -105,8 +105,6 @@ trailing comments do not count. Nested calls compact first, using Roslyn spacing
 Independent calls are processed in batches; calls sharing a line still use their
 combined resulting width. Calls that fit after layout separates enclosing
 declarations join during the first run, so an immediate check agrees with formatting.
-Whitespace cleanup avoids reparsing when its requested
-changes are already satisfied, without changing protected-content rules.
 Empty and single-argument lists are included. Comments/directives at list boundaries,
 multiline arguments, strings, interpolation contents, and excluded lists are protected.
 `csharp_wrap_arguments_style = chop_always` takes precedence and prevents joining;
@@ -188,7 +186,7 @@ pnfmt_csharp_member_accessibility_order = private,private_protected,protected,pr
 pnfmt_csharp_sort_members_by_name = false
 ```
 
-Import sorting retains scope and comment/directive barriers. Member sorting keeps nonconstant storage declarations, auto/initialized/`field` properties, record properties, ordinary comment headers, directives, exclusions, recognized module initializers, and unsupported syntax in place. Attributed interfaces retain member order. XML documentation and attributes travel with movable declarations. Top-level types, statements, local functions, enum values, and accessors are not sorted. This syntax-only transformation cannot resolve aliases of special attributes or account for reflection/source-generator dependencies; retain existing policy for such code.
+Import sorting retains scope and comment/directive barriers. Member sorting keeps nonconstant storage declarations, auto/initialized/`field` properties, record properties, ordinary comment headers, directives, exclusions, recognized module initializers, and unsupported syntax in place. Attributed interfaces retain member order. XML documentation and attributes travel with movable declarations. Top-level types, statements, local functions, enum values, and accessors are not sorted. This syntax-only transformation cannot resolve aliases of special attributes or account for reflection/source-generator dependencies.
 
 ## Blank lines
 

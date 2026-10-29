@@ -5,31 +5,30 @@ description: Check, format, lint, or configure C#, SDK-style and non-SDK MSBuild
 
 # PNFmt
 
-Use PNFmt within the requested scope. Formatter selection through EditorConfig can enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
+PNFmt checks, formats, and lints files using EditorConfig settings. Formatter selection can enable files with other extensions, including MSBuild `.props`, `.targets`, and `.proj` files.
 
-This skill's usage guidance is self-contained in this folder. Keep the bundled `references/` directory with `SKILL.md` when copying or installing it; no repository documentation is required.
+This skill's usage and configuration references are bundled in this folder.
 
 ## Invocation
 
-In the PNFmt source repository, replace `pnfmt` in the commands below with:
+The installed CLI is `pnfmt`:
 
 ```powershell
-dotnet run --project PNFmt.Cli/PNFmt.Cli.csproj --configuration Release -- <pnfmt-arguments>
+pnfmt --help
+pnfmt --version
 ```
 
-Elsewhere, use the installed `pnfmt` command and check `pnfmt --version` when feature availability matters. An installed release may predate the checkout. Do not install or update the tool unless requested.
-
-For repository-wide formatting of PNFmt itself, use `scripts/Format-Repository.cmd` from the repository root (or `scripts/Format-Repository.ps1` with PowerShell 7/Linux), then verify with `-Check -NoBuild`. This script excludes fixture inputs and expected snapshots; recursive formatting over the repository root can modify them because fixture EditorConfig files can override exclusions.
+`--help` lists the installed version's options; `--version` reports its version.
 
 ## Scope and operations
 
-With no path, PNFmt uses the current directory. Directory scope is non-recursive unless `--recursive` is passed. Inside Git, each target uses its own repository and only staged, unstaged, and untracked files in scope are processed by default. Use `--all` when the task includes unchanged files. Outside Git, all supported files in scope are processed.
+With no path, PNFmt uses the current directory. Directory scope is non-recursive unless `--recursive` is passed. Inside Git, each target uses its own repository and only staged, unstaged, and untracked files in scope are processed by default. `--all` includes unchanged files. Outside Git, all supported files in scope are processed.
 
 - Check without writing: `pnfmt --check <paths>`.
 - Preview without failing for differences: `pnfmt --dry-run <paths>`.
-- Format when the task permits writes: `pnfmt <paths>`.
+- Format files: `pnfmt <paths>`.
 - Check formatting and formatter diagnostics without writing: `pnfmt --lint <paths>`.
-- Add missing default configuration when requested: `pnfmt --write-default-config <directory-or-editorconfig>`.
+- Add missing default configuration: `pnfmt --write-default-config <directory-or-editorconfig>`.
 
 Useful narrowing and execution options:
 
@@ -38,7 +37,7 @@ Useful narrowing and execution options:
 - `-m:N` or `-maxCpuCount:N`: override concurrency. Plain `-m` uses the processor count.
 - `--verbose`: show per-file statuses and detailed errors. `--help` lists the current CLI options.
 
-Exit `0` means success; `1` means `--check` found changes or `--lint` found changes or diagnostics; `2` means a usage, path, or formatting error. A skipped file with a diagnostic does not by itself fail ordinary formatting or `--check`. Inspect diagnostics when a file unexpectedly stays unchanged.
+Exit `0` means success; `1` means `--check` found changes or `--lint` found changes or diagnostics; `2` means a usage, path, or formatting error. A skipped file with a diagnostic does not by itself fail ordinary formatting or `--check`.
 
 ## Configuration and formatter guidance
 
@@ -46,7 +45,7 @@ Configure `pnfmt_enabled = true` and `pnfmt_formatter = <name>` in the matching 
 
 Layout defaults on (`pnfmt_format = true`); optional sorting and cleanup switches default off. Explicitly enabled project files keep sorting off when omitted, even when the extension supplies a missing formatter selection. Setting `pnfmt_format = false` allows independently enabled transformations and explicit encoding changes to proceed. C# wrapping, Microsoft blank-line preferences, headers, and XML/MSBuild attribute wrapping, arrangement, tag spacing, and quote style require layout. The older `pnfmt_csharp_format`, `pnfmt_xml_format`, and `pnfmt_xaml_format` switches are layout fallbacks; `pnfmt_format` takes precedence.
 
-Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`; do not enable skipped files unless configuration changes are part of the task. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. Read the bundled [configuration reference](references/configuration.md) when diagnosing activation, precedence, or legacy migration.
+Normal inheritance applies independently to each setting. `unset` removes an inherited value. Missing activation controls retain compatibility behavior with warning `PNFMT004`. Legacy `csproj_formatter_*` and `resx_formatter_*` names remain fallback aliases with warning `PNFMT001`; current names take precedence. The bundled [configuration reference](references/configuration.md) covers activation, precedence, and legacy migration.
 
 Read only the guidance relevant to the selected formatter:
 
@@ -76,7 +75,7 @@ The optional `.pnfmt` JSON file supports `maxCpuCount`, a positive integer defau
 
 `--write-default-config` enables every formatter and writes explicit behavior choices. It reuses matching sections, preserves existing values and line order, inserts missing keys at sorted positions, appends missing sections, and adds no comments. A new file gets `root = true`; earlier marked PNFmt default blocks are migrated. Existing disabled settings remain disabled.
 
-Generated defaults enable sorting except for response files, C# modifier/member sorting and declaration blank-line cleanup, prefix grouping for `.ini` files, and RESX schema/documentation removal. They disable response-file sorting to preserve compiler argument order, C# region removal, INI/EditorConfig section sorting and merging, and RESX insertion. They preserve existing explicit sorting preferences. They do not add C# width/list styles, XML/MSBuild wrapping/attribute styles, tag spacing, and quote style, Microsoft blank-line preferences, or header templates. Distinguish these generated choices from defaults for omitted settings.
+Generated defaults enable sorting except for response files, C# modifier/member sorting and declaration blank-line cleanup, prefix grouping for `.ini` files, and RESX schema/documentation removal. They disable response-file sorting to preserve compiler argument order, C# region removal, INI/EditorConfig section sorting and merging, and RESX insertion. They preserve existing explicit sorting preferences. They do not add C# width/list styles, XML/MSBuild wrapping/attribute styles, tag spacing, and quote style, Microsoft blank-line preferences, or header templates. These explicit generated choices differ from the defaults for omitted settings above.
 
 The command creates `.pnfmt` with `maxCpuCount` set to `4` only when missing: at the Git root, or beside `.editorconfig` outside Git. It never modifies an existing `.pnfmt`.
 
@@ -88,18 +87,4 @@ When legacy settings exist, supply both migration choices for non-interactive ru
 pnfmt --write-default-config --migrate-legacy-config=<true|false> --remove-legacy-config=<true|false> <directory-or-editorconfig>
 ```
 
-Migration adds current names with legacy values in the same sections. Removal is independent; enable it only when deleting legacy names is in scope.
-
-## Completion
-
-After formatting, verify with `--check` on the same paths, recursion, and selection options. Review the diff and report changes and diagnostics.
-
-For changes to PNFmt itself, keep this skill and its bundled references aligned with user-facing behavior. Format with the repository script described above, review the diff, and commit completed work in coherent increments after relevant checks. Before finishing source changes, run the Release tests, coverage, performance, packaging, and installed-tool gates without publishing:
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
-```
-
-Keep the validation version short for Windows native-library paths and use the default `-Step All`. Individual steps support pipeline orchestration and diagnosis; they do not supply full validation. The program builds once with the requested version, then reuses those Release binaries for coverage tests and packing. It has no skip or direct-publication switches and never reads NuGet credentials. Fix gate failures without lowering coverage thresholds. `-TimingPolicy Enforce` is the default and gates timing and managed allocations using the same harness and machine. The established 67 cases retain their original pinned revision; the two new short-call cases use a separately pinned pre-fix implementation that supports compaction, and require identical output across revisions. Both pins and reasons are recorded in the policy and reports. Hosted workflows explicitly use `ReportOnly`: timing regressions become warnings, but allocations, correctness, report validity, and output stability still fail the gate. Before pushing a release tag, require complete validation on the designated controlled machine, VELA, with default timing enforcement. A successful exact-commit Forge run executes the complete sequence and supplies that validation; hosted results do not replace it. Inspect the per-case report on failure; do not widen tolerances or silently advance the baseline. An intentional feature cost needs before/after measurements and a documented baseline update in a separate commit.
-
-Repository releases use tags on already validated `master` commits, without release branches. Set the intended package version in `PNFmt.Cli/PNFmt.Cli.csproj` through the normal contribution flow before tagging; the `v<version>` tag must match it. Build packs once, runs all gates on Windows and Linux, and installs that same package on both systems. The tag workflow accepts only a successful default-branch push Build for the exact tagged commit and publishes its retained package after checking its identity, version, and source commit. It does not rebuild or repeat benchmarks. Packages are retained for 30 days; if missing or expired, rerun all jobs in the original Build for that commit, then retry publication. Never substitute a PR artifact or another commit's package. Local VELA validation remains required before tagging.
+Migration adds current names with legacy values in the same sections. Removal independently deletes legacy names when `--remove-legacy-config=true`.

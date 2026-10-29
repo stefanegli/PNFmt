@@ -28,6 +28,11 @@ requirements, supported values, and preservation limits; distinguish defaults fo
 omitted settings from generated configuration. Verify examples and links before
 considering the change complete.
 
+The distributed skill is for users of the tool. Limit it to invocation,
+configuration, behavior, diagnostics, and preservation limits. Keep development,
+validation, release, commit, and output-review workflows in repository maintenance
+documentation rather than in the skill or its references.
+
 # Commits and quality gates
 
 Always commit completed work in useful, cohesive increments after relevant checks.

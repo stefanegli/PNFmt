@@ -153,11 +153,14 @@ PNFmt reads optional tool settings from `.pnfmt` at each target's Git repository
 
 `--write-default-config` creates `.pnfmt` with the suggested value `4` when it does not exist. An existing file is never modified. Inside a Git working tree, the file is created at the repository root; otherwise it is created beside `.editorconfig`.
 
-## Contributing
+## Agent skill
 
-The optional [PNFmt skill](.agents/skills/pnfmt/SKILL.md) includes its own usage and
-configuration references. Copy the entire `.agents/skills/pnfmt/` folder when
-installing it elsewhere; the skill does not require this repository's documentation.
+The optional [PNFmt skill](.agents/skills/pnfmt/SKILL.md) describes the installed
+tool's commands, configuration, diagnostics, and preservation limits. Its scope is
+tool usage and behavior. Copy the entire `.agents/skills/pnfmt/` folder when
+installing it elsewhere; its bundled references are self-contained.
+
+## Contributing
 
 See the [formatter architecture](docs/architecture.md) for module responsibilities and verification.
 

@@ -24,7 +24,7 @@ Enablement, selection, and behavior settings inherit independently. Disabling pr
 
 ## Missing activation controls
 
-A formatter selection alone still enables processing. `pnfmt_enabled = true` without a selection uses the file extension. Either case emits `PNFMT004`; the warning also appears for activation under the legacy rules below, even without `--verbose`, and does not itself change the exit code. This compatibility path is deprecated; configure both controls when configuration changes are in scope.
+A formatter selection alone still enables processing. `pnfmt_enabled = true` without a selection uses the file extension. Either case emits `PNFMT004`; the warning also appears for activation under the legacy rules below, even without `--verbose`, and does not itself change the exit code. This compatibility path is deprecated; explicit configuration uses both controls.
 
 Explicit enablement retains the defaults for omitted behavior switches when the extension supplies selection. Project sorting still requires `pnfmt_sort_entries = true`; disabling layout with no optional behaviors or charset leaves the file unchanged. Unconfigured legacy project linting with neither activation control retains its historical sorting defaults.
 
@@ -64,4 +64,4 @@ The current name takes precedence over its alias, including when explicitly `fal
 pnfmt --write-default-config --migrate-legacy-config=true --remove-legacy-config=false .
 ```
 
-Migration adds missing current names with legacy values in the same section; existing current names are preserved. Conflicting legacy values mapping to the same missing current name in one section are an error. Removal is independent and should be enabled only when deleting old names is in scope. The command also fills missing generated defaults; it is not a migration-only operation.
+Migration adds missing current names with legacy values in the same section; existing current names are preserved. Conflicting legacy values mapping to the same missing current name in one section are an error. Removal independently deletes legacy names when enabled. The command also fills missing generated defaults; it is not a migration-only operation.
