@@ -123,6 +123,8 @@ Roslyn's configured delimiter/comma spacing applies. Nested calls compact first.
 
 Independent calls compact in batches. Calls sharing a line are checked separately against their combined resulting width; batching does not relax width or protected-content rules.
 
+Calls that fit after layout separates their enclosing declarations join during the first formatting run. Formatting and an immediate check therefore agree even when those declarations started on one line.
+
 `true`, omitted, invalid, or unset values preserve existing line breaks. The
 case-insensitive boolean also accepts `resharper_csharp_keep_existing_linebreaks`;
 the unprefixed C# name takes precedence even when invalid, and `unset` allows alias

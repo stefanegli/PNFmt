@@ -103,7 +103,9 @@ declarations. A positive `max_line_length` is required. The complete resulting c
 line must fit, including indentation, tab stops, and the closing delimiter's suffix;
 trailing comments do not count. Nested calls compact first, using Roslyn spacing.
 Independent calls are processed in batches; calls sharing a line still use their
-combined resulting width. Whitespace cleanup avoids reparsing when its requested
+combined resulting width. Calls that fit after layout separates enclosing
+declarations join during the first run, so an immediate check agrees with formatting.
+Whitespace cleanup avoids reparsing when its requested
 changes are already satisfied, without changing protected-content rules.
 Empty and single-argument lists are included. Comments/directives at list boundaries,
 multiline arguments, strings, interpolation contents, and excluded lists are protected.

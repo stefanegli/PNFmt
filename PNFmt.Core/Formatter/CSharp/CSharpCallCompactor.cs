@@ -56,7 +56,20 @@ namespace PNFmt
                 }
                 if (batch.Count == 0)
                 {
-                    return formatInput ? CSharpLineWrapper.FormatDocument(document, preserveSwitchArmSpacing) : document;
+                    if (!formatInput)
+                    {
+                        return document;
+                    }
+                    document = CSharpLineWrapper.FormatDocument(document, preserveSwitchArmSpacing);
+                    if (rejected.Count == 0)
+                    {
+                        return document;
+                    }
+                    // Deferred layout can separate enclosing declarations, shortening
+                    // a rejected call's line. Reconsider it once against that layout.
+                    formatInput = false;
+                    rejected.Clear();
+                    continue;
                 }
 
                 var candidate = Join(document, source, batch, preserveSwitchArmSpacing);

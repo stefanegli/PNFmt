@@ -161,6 +161,25 @@ namespace PNFmt.Tests.Formatter.CSharp
             Assert.Equal(Input, Format(Input, value is null ? settings : settings.Append(("csharp_keep_existing_linebreaks", value)).ToArray()));
         }
 
+        [Theory]
+        [InlineData(null)]
+        [InlineData("wrap_if_long")]
+        [InlineData("chop_if_long")]
+        public void Short_calls_inside_compact_declarations_join_in_one_run(string style)
+        {
+            const string Input = "class C{void M(){Use(\n  First(aaaaaaaaaaa,bbbbbbbbbb),\n  Second(cccccccccc,dddddddddd)\n);}}";
+            var settings = new[] { ("csharp_keep_existing_linebreaks", "false"), ("max_line_length", "80") };
+            if (style is not null)
+            {
+                settings = settings.Append(("csharp_wrap_arguments_style", style)).ToArray();
+            }
+
+            var result = Format(Input, settings);
+
+            Assert.Equal("class C\n{\n    void M()\n    {\n"
+                + "        Use(First(aaaaaaaaaaa, bbbbbbbbbb), Second(cccccccccc, dddddddddd));\n    }\n}", result);
+        }
+
         private static string Format(string input, params (string Key, string Value)[] settings)
         {
             var result = CSharpFormatterTests.Format(input, settings);
