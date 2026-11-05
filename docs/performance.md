@@ -1,6 +1,6 @@
 # Performance gates
 
-The complete `build/Invoke-Validation.ps1` sequence runs mandatory performance comparisons before packing. Forge declares the same operation as its explicit performance step before package validation. There are no skip or publication switches. An individual `-Step` selection is for pipeline orchestration or diagnosis, not full release validation. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
+The complete `build/Invoke-Validation.ps1` sequence runs mandatory performance comparisons before packing. There are no skip or publication switches. An individual `-Step` selection is for pipeline orchestration or diagnosis, not full release validation. Allocation limits, correctness checks, report validity, and output stability remain enforced everywhere. Timing enforcement depends on the explicit policy below.
 
 ## Timing policy and release machine
 
@@ -13,18 +13,17 @@ The complete `build/Invoke-Validation.ps1` sequence runs mandatory performance c
 
 The policy is not inferred from environment variables or machine names. Both modes run all 69 cases with the same samples, pinned baseline, and tolerances. Hosted runners can experience changing CPU contention and I/O latency even when baseline and current code run on the same machine. Their timing results are advisory, not a release timing approval.
 
-**VELA**, the maintainer's local Windows machine, is the designated controlled environment. Before creating or pushing a release tag, run the complete validation there on the release candidate:
+Before creating or pushing a release tag, run the complete validation on the exact release candidate in a controlled environment:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
 ```
 
-Leave `-TimingPolicy` at its `Enforce` default and use the default `-Step All`. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that validation on VELA occurred. A different controlled machine requires an explicit policy decision.
+Leave `-TimingPolicy` at its `Enforce` default and use the default `-Step All`. Avoid other builds, tests, or CPU/disk-heavy work during measurement. Investigate failures and retain the report; do not use report-only mode to approve a local release. This is a maintainer release requirement: the hosted workflow does not attest that controlled local validation occurred.
 
-The [PNForge verify pipeline](forge-build.md) runs this complete validation on
-VELA with `-TimingPolicy Enforce` and retains its performance reports. A successful
-VELA run supplies the local validation for its exact source commit. The GitHub Build
-and its retained release package remain separately required for tag publication.
+Retain the successful local validation reports with the exact tested source
+commit. The GitHub Build and its retained release package remain separately
+required for tag publication.
 
 Run just the performance comparison independently from the repository root:
 
@@ -46,7 +45,7 @@ starting measurements. This preserves the already tested build for packing with
 
 During alpha.10 release validation, three Windows hosted-runner attempts using the system-volume temporary directory failed serial repository-write comparisons despite identical formatter/CLI source apart from the package version. In the first run, small-project writes measured 1,235 ms for the baseline and 2,556 ms for the current version; the baseline's final round also slowed to 2,778 ms. A second run passed that case at 1,159/1,161 ms but failed mixed-format writes at 1,190/2,675 ms, with the baseline's final round at 2,688 ms. Allocations remained effectively unchanged. These measurements motivated using the runner's scratch directory for both sides of the comparison, without accepting a formatter cost or changing the baseline.
 
-Scratch storage did not eliminate hosted-runner timing variability. The same alpha.10 commit passed Windows validation, then failed three timing comparisons in the master build while allocations and output checks passed. Hosted timing is therefore report-only; VELA retains timing enforcement. Neither the pinned revision nor the tolerance values changed with this policy.
+Scratch storage did not eliminate hosted-runner timing variability. The same alpha.10 commit passed Windows validation, then failed three timing comparisons in the master build while allocations and output checks passed. Hosted timing is therefore report-only; controlled local validation retains timing enforcement. Neither the pinned revision nor the tolerance values changed with this policy.
 
 ## What is compared
 
@@ -123,7 +122,7 @@ A same-machine Release comparison of the initial batched implementation against 
 
 Batching removes repeated whole-document formatting per independent call and repeated token scans during width checks. Cleanup also skips reparsing when requested whitespace is already satisfied. These measurements demonstrate the allocation scaling improvement; they are not portable timing promises or a replacement for the mandatory pinned-baseline comparison. The pinned revision and tolerance values are unchanged.
 
-After initial-layout reuse, complete three-round `Enforce` validation of `1364f8a` on VELA passed all 69 cases, coverage, packaging, and isolated installed-tool checks. The mandatory 400-call preview measured 1,664.60 to 17.32 ms and 381.93 to 8.02 MiB per file (97.9% lower allocations), with identical output fingerprints. Already formatted checks measured 8.82 to 7.74 ms. These results use the fixed pre-batching compaction reference; the other 67 cases retain their original reference and all tolerances remain unchanged.
+After initial-layout reuse, complete three-round `Enforce` validation of `1364f8a` on the controlled Windows machine passed all 69 cases, coverage, packaging, and isolated installed-tool checks. The mandatory 400-call preview measured 1,664.60 to 17.32 ms and 381.93 to 8.02 MiB per file (97.9% lower allocations), with identical output fingerprints. Already formatted checks measured 8.82 to 7.74 ms. These results use the fixed pre-batching compaction reference; the other 67 cases retain their original reference and all tolerances remain unchanged.
 
 ### Repository dependency sorting
 

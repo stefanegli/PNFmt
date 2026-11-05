@@ -4,3 +4,4 @@ artifacts/
 .dotnet/
 .vs/
 .idea/
+/local.md

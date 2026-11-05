@@ -65,8 +65,12 @@ try
                 & (Join-Path $PSScriptRoot 'Test-CoverageReport.Tests.ps1')
                 & (Join-Path $PSScriptRoot 'Test-PerformanceReport.Tests.ps1')
                 & (Join-Path $PSScriptRoot 'Test-ReleasePackage.Tests.ps1')
-                Invoke-NativeCommand 'node' @('--test', 'build/select-github-release-build.test.cjs',
-                    '.forge/scripts/create-release-tag.test.cjs')
+                # Shared build checks and included platform adapters are standalone.
+                # Viewer checks require separately generated HTML fixtures.
+                $nodeTests = @(& git ls-files --cached --others --exclude-standard -- 'build/*.test.cjs' ':(glob).*/scripts/*.test.cjs')
+                if ($LASTEXITCODE -ne 0 -or $nodeTests.Count -eq 0)
+                { throw 'Could not discover repository Node.js checks.' }
+                Invoke-NativeCommand 'node' (@('--test') + $nodeTests)
             }
             'BenchmarkCorrectness'
             {

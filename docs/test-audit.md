@@ -172,10 +172,9 @@ tightened the new configuration error assertion to the complete target path.
 | Standalone test-support lines | 740 | 740 |
 
 Production changed by +1/-6 lines (net -5); test files by +92/-613 (net -521).
-Fixtures and snapshots are unchanged. Test ownership guidance is recorded in
-[PNFmt.Tests/AGENTS.md](../PNFmt.Tests/AGENTS.md).
+Fixtures and snapshots are unchanged.
 
-Validation on VELA passed:
+Validation on the controlled Windows machine passed:
 
 - Focused formatter/CLI suite: 2,015 cases.
 - Repository formatting and `-Check -NoBuild`; `git diff --check`.
