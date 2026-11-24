@@ -40,7 +40,7 @@ For this version, a missing enablement or selection retains compatibility behavi
 
 Explicit enablement retains the defaults for omitted behavior switches even when formatter selection comes from the extension. In particular, project sorting still requires `pnfmt_sort_entries = true`; `pnfmt_enabled = true` with `pnfmt_format = false` and no optional behaviors or charset leaves the file unchanged. Unconfigured legacy project linting, with neither activation control, retains its historical sorting defaults.
 
-`--write-default-config` writes enablement, selection, and explicit behavior choices. It preserves existing values, including `pnfmt_enabled = false` and formatter `None`. Its generated configuration explicitly turns on several optional behaviors; these are distinct from the defaults used when those switches are absent.
+`--write-default-config` writes enablement, selection, and explicit behavior choices. New sections follow the preamble and precede existing rules. Defaults that would override an earlier section are also inserted before it. This preserves existing values, including `pnfmt_enabled = false` and formatter `None`. Invalid managed-block markers or conflicting legacy migration values return exit code 2 and preserve both configuration files. Its generated configuration explicitly turns on several optional behaviors; these are distinct from the defaults used when those switches are absent.
 
 | Formatter | Legacy activation when enablement and selection are both missing |
 | --- | --- |
@@ -52,7 +52,7 @@ Explicit enablement retains the defaults for omitted behavior switches even when
 | XML | `pnfmt_xml_format = true`. |
 | XAML | `pnfmt_xaml_format = true`. |
 
-Legacy project and resource setting names remain accepted as fallbacks. `charset` alone never activates a formatter. A setting removed by EditorConfig's `unset` is treated as absent. Project `--lint` also retains its legacy activation when both controls are missing, with the same warning. Legacy INI prefix grouping also sorts properties; explicit configurations can group without sorting. Legacy RESX behavior may insert missing schema/documentation when removal is disabled; explicit configurations require the separate insertion switches. Removal takes precedence if both insertion and removal are enabled for the same content.
+Legacy project and resource setting names remain accepted as fallbacks. `charset` alone never activates a formatter. A setting removed by EditorConfig's `unset` is treated as absent for activation and alias precedence. An inherited legacy alias still applies if only its current name is unset. Project `--lint` also retains its legacy activation when both controls are missing, with the same warning. Legacy INI prefix grouping also sorts properties; explicit configurations can group without sorting. Legacy RESX behavior may insert missing schema/documentation when removal is disabled; explicit configurations require the separate insertion switches. Removal takes precedence if both insertion and removal are enabled for the same content.
 
 When layout formatting is on, `insert_final_newline` has these effects for enabled, nonempty files that are rewritten:
 

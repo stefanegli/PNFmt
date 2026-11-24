@@ -28,44 +28,6 @@ namespace PNFmt
                 (text, encoding) => this.Format(text, request.FilePath, request.Lint, formatLayout, request.Configuration.Properties, encoding), xml: true);
         }
 
-        private static string ApplyTopLevelGroupSpacing(
-            string formattedText,
-            ICsProjFormatSettings settings,
-            string newLineChars,
-            string indentChars)
-        {
-            if (settings.EmptyLinesBetweenGroups <= 0 || string.IsNullOrEmpty(formattedText))
-            {
-                return formattedText;
-            }
-
-            var lines = formattedText.Split(new[] { newLineChars }, StringSplitOptions.None);
-            if (lines.Length < 3)
-            {
-                return formattedText;
-            }
-
-            var outputLines = new List<string>(lines.Length + 16);
-            for (var i = 0; i < lines.Length; i++)
-            {
-                outputLines.Add(lines[i]);
-                if (i >= lines.Length - 1)
-                {
-                    continue;
-                }
-
-                if (ShouldSeparateTopLevelGroups(lines[i], lines[i + 1], indentChars))
-                {
-                    for (var j = 0; j < settings.EmptyLinesBetweenGroups; j++)
-                    {
-                        outputLines.Add(string.Empty);
-                    }
-                }
-            }
-
-            return string.Join(newLineChars, outputLines);
-        }
-
         private static bool CanSafelySortItemGroup(XElement itemGroup, string elementName)
         {
             var identities = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -141,6 +103,15 @@ namespace PNFmt
             using (var stringWriter = new Utf8StringWriter())
             using (var xmlWriter = XmlWriter.Create(stringWriter, writerSettings))
             {
+                if (formatLayout && settings.EmptyLinesBetweenGroups > 0 && !document.Root.Nodes().OfType<XText>().Any())
+                {
+                    var separator = string.Concat(Enumerable.Repeat(newLineChars, settings.EmptyLinesBetweenGroups));
+                    foreach (var group in document.Root.Elements().Where(element => element.PreviousNode is XElement).ToList())
+                    {
+                        group.AddBeforeSelf(new GroupSeparator(stringWriter, separator));
+                    }
+                }
+
                 document.Save(xmlWriter);
                 xmlWriter.Flush();
                 if (!formatLayout)
@@ -148,11 +119,7 @@ namespace PNFmt
                     return stringWriter.ToString();
                 }
 
-                var formatted = ApplyTopLevelGroupSpacing(
-                    stringWriter.ToString(),
-                    settings,
-                    newLineChars,
-                    indentChars).TrimEnd('\r', '\n');
+                var formatted = stringWriter.ToString().TrimEnd('\r', '\n');
                 return settings.InsertFinalNewline
                     ? formatted + newLineChars
                     : formatted;
@@ -267,36 +234,6 @@ namespace PNFmt
 
             newNodes.AddRange(trailingNodes);
             parent.ReplaceNodes(newNodes);
-        }
-
-        private static bool ShouldSeparateTopLevelGroups(string currentLine, string nextLine, string indentChars)
-        {
-            if (!TryGetTopLevelTagText(currentLine, indentChars, out var currentTagText))
-            {
-                return false;
-            }
-
-            if (!TryGetTopLevelTagText(nextLine, indentChars, out var nextTagText))
-            {
-                return false;
-            }
-
-            if (!(currentTagText.StartsWith("</", StringComparison.Ordinal) || currentTagText.EndsWith("/>", StringComparison.Ordinal)))
-            {
-                return false;
-            }
-
-            if (!nextTagText.StartsWith("<", StringComparison.Ordinal) || nextTagText.StartsWith("</", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            if (nextTagText.StartsWith("<?", StringComparison.Ordinal) || nextTagText.StartsWith("<!--", StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            return true;
         }
 
         private static List<ElementGroup> SortElementGroupsWithDependencies(List<ElementGroup> groups)
@@ -492,26 +429,22 @@ namespace PNFmt
             return groups.Count > 0;
         }
 
-        private static bool TryGetTopLevelTagText(string line, string indentChars, out string tagText)
+        // Emit extra layout between actual siblings without putting the indenting
+        // XmlWriter into mixed-content mode or inspecting serialized property values.
+        private sealed class GroupSeparator : XText
         {
-            tagText = null;
-            if (string.IsNullOrWhiteSpace(line))
+            private readonly Utf8StringWriter output;
+
+            public GroupSeparator(Utf8StringWriter output, string newLines) : base(newLines)
             {
-                return false;
+                this.output = output;
             }
 
-            if (!line.StartsWith(indentChars, StringComparison.Ordinal))
+            public override void WriteTo(XmlWriter writer)
             {
-                return false;
+                writer.Flush();
+                this.output.Write(this.Value);
             }
-
-            if (line.StartsWith(indentChars + indentChars, StringComparison.Ordinal))
-            {
-                return false;
-            }
-
-            tagText = line.Substring(indentChars.Length).Trim();
-            return tagText.Length > 0;
         }
 
         private sealed class ElementGroup

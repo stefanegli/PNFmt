@@ -3,6 +3,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PNFmt
 {
@@ -31,7 +32,14 @@ namespace PNFmt
                 // Share parsed files while resolving the hierarchy afresh on each
                 // request, including newly created or removed child configurations.
                 var parser = new EditorConfig.Core.EditorConfigParser(null, FileCache);
-                return parser.Parse(targetFile).Properties;
+                var properties = parser.Parse(targetFile).Properties;
+                // The parser resolves hierarchy but retains the literal unset value.
+                if (properties.Values.Contains("unset", StringComparer.OrdinalIgnoreCase))
+                {
+                    return properties.Where(pair => !string.Equals(pair.Value, "unset", StringComparison.OrdinalIgnoreCase))
+                        .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+                }
+                return properties;
             }
             catch (Exception ex)
             {

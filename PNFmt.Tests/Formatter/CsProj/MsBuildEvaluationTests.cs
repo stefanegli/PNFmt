@@ -42,6 +42,24 @@ namespace PNFmt.Tests.Formatter.CsProj
             }
         }
 
+        [Fact]
+        public async Task Group_spacing_preserves_tag_like_lines_in_property_values()
+        {
+            const string Value = "example\n  <A/>\n  <B/>\nend";
+            using var project = new EvaluationProject("<PropertyGroup><Observed><![CDATA[" + Value
+                + "]]></Observed></PropertyGroup>", "end_of_line = lf\nindent_size = 2\n");
+            async Task<string> ReadValue()
+            {
+                using var properties = JsonDocument.Parse(await project.EvaluateAsync("-getProperty:Observed,EnableDefaultItems"));
+                return properties.RootElement.GetProperty("Properties").GetProperty("Observed").GetString();
+            }
+
+            Assert.Equal(Value, await ReadValue());
+            project.Format();
+            Assert.Equal(Value, await ReadValue());
+            project.AssertIdempotent();
+        }
+
         [Theory]
         [InlineData("")]
         [InlineData("xmlns=\"http://schemas.microsoft.com/developer/msbuild/2003\"")]

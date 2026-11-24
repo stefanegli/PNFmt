@@ -303,15 +303,21 @@ namespace PNFmt
 
         private static bool IsPropertyDisabled(XElement project, string propertyName)
         {
-            return project
-                .Elements()
-                .Where(e => e.Name.LocalName == "PropertyGroup")
-                .Elements()
-                .Any(property => string.Equals(
-                        property.Name.LocalName,
-                        propertyName,
-                        StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(property.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase));
+            var disabled = false;
+            foreach (var group in project.Elements().Where(element => element.Name.LocalName == "PropertyGroup"))
+            {
+                foreach (var property in group.Elements().Where(element =>
+                    string.Equals(element.Name.LocalName, propertyName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var assignsFalse = string.Equals(property.Value.Trim(), "false", StringComparison.OrdinalIgnoreCase);
+                    var conditional = !string.IsNullOrWhiteSpace((string)group.Attribute("Condition"))
+                        || !string.IsNullOrWhiteSpace((string)property.Attribute("Condition"));
+                    // A conditional assignment can leave the previous value in effect.
+                    disabled = assignsFalse && (!conditional || disabled);
+                }
+            }
+
+            return disabled;
         }
 
         private static bool MatchesSegment(string name, string pattern)

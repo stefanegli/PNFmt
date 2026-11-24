@@ -244,6 +244,23 @@ namespace PNFmt.Tests.Formatter.Resx
         }
 
         [Fact]
+        public void Sort_without_layout_moves_indented_comments_with_each_entry_and_keeps_the_footer()
+        {
+            using var directory = new TestDirectory();
+            directory.Write(".editorconfig", "root = true\n[*.resx]\npnfmt_enabled = true\npnfmt_formatter = resx\npnfmt_sort_entries = true\npnfmt_format = false\n");
+            const string First = "\r\n  <!-- A -->\r\n  <data name=\"a\"><value>1</value></data>";
+            const string Second = "\r\n  <!-- B -->\r\n  <data name=\"b\"><value>2</value></data>";
+            const string Footer = "\r\n  <!-- footer -->\r\n</root>";
+            var path = directory.Write("Messages.resx", "<root>\r\n  " + Header + Second + First + Footer);
+            var formatter = new ResxFormatter();
+            var request = new FileFormatRequest(path, true, false, NullFormatterLog.Instance);
+
+            Assert.Equal(FileFormatStatus.Updated, formatter.Format(request).Status);
+            Assert.EndsWith(First + Second + Footer, File.ReadAllText(path));
+            Assert.Equal(FileFormatStatus.Unchanged, formatter.Format(request).Status);
+        }
+
+        [Fact]
         public void Unnamed_resource_entry_invalidates_the_file_without_partial_rewrites()
         {
             var contents = Resx("<data><value>unnamed</value></data><data name=\"b\"><value>2</value></data><data name=\"a\"><value>1</value></data>");

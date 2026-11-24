@@ -80,11 +80,6 @@ boundaries, independent assemblies/metrics, missing data, and malformed input.
 
 ## CI and releases
 
-The [PNForge build](forge-build.md) uses the same coverage command and thresholds
-on VELA. It imports TRX and Cobertura results into Forge and retains the coverage
-directory as a downloadable artifact, including reports from failed tests when
-collection produced them.
-
 The Build workflow runs the shared coverage command on Windows and Linux. It adds
 coverage and threshold results to the GitHub Actions summary and uploads a
 `coverage-<os>` artifact even when a test or threshold fails. Download the artifact
@@ -112,8 +107,7 @@ two percentage points of headroom for each metric.
 
 The complete `build/Invoke-Validation.ps1` sequence builds Release once, then calls
 the coverage command with `-NoBuild -NoRestore` before performance and packing.
-Forge declares those same operations as named process steps. A failed test or
-threshold prevents a successful Build. GitHub's tag publisher reuses the successful
+A failed test or threshold prevents a successful Build. GitHub's tag publisher reuses the successful
 Build and its exact retained package; it does not rerun coverage or create a
 separate release-coverage artifact. There is no direct-publish or test-skip switch
 in the full validation program.
@@ -121,7 +115,7 @@ in the full validation program.
 Performance comparisons default to `-TimingPolicy Enforce`. Hosted workflows
 explicitly use `ReportOnly` for timing while retaining allocation and correctness
 gates; coverage enforcement is unaffected. Release timing approval remains a
-required complete validation on VELA.
+required complete validation in a controlled local environment.
 
 The repository's [Required build checks ruleset](https://github.com/stefanegli/PNFmt/rules/23625522)
 requires these GitHub Actions checks on the default branch to block merges when

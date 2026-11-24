@@ -23,6 +23,11 @@ namespace PNFmt
                 (text, encoding) => this.FormatResx(text, encoding, formatLayout, hasExplicitLayout), xml: true);
         }
 
+        internal static bool IsLayoutWhitespace(string value)
+        {
+            return value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n');
+        }
+
         private DocumentFormatResult FormatResx(string originalText, Encoding encoding, bool formatLayout, bool hasExplicitLayout)
         {
             XDocument document;
@@ -125,7 +130,7 @@ namespace PNFmt
             // reader's existing xml:space behavior elsewhere in the document.
             var layout = document.DescendantNodes().OfType<XText>()
                 .Where(text => text.NodeType == XmlNodeType.Text
-                    && text.Value.All(character => character == ' ' || character == '\t' || character == '\r' || character == '\n')
+                    && IsLayoutWhitespace(text.Value)
                     && !(text.Parent is not null && IsResourceEntry(text.Parent) && !text.Parent.HasElements)
                     && !text.Ancestors().Any(element => element.Parent is not null
                         && IsResourceEntry(element.Parent))
@@ -191,7 +196,7 @@ namespace PNFmt
             private readonly IResxFormatSettings settings;
             private readonly List<XNode> preserved = new List<XNode>();
             private readonly List<ResourceEntry> entries = new List<ResourceEntry>();
-            private readonly List<XNode> pendingComments = new List<XNode>();
+            private readonly List<XNode> pendingLeadingNodes = new List<XNode>();
             private bool schemaRemoved;
             private bool commentRemoved;
 
@@ -220,12 +225,12 @@ namespace PNFmt
 
                 foreach (var entry in sorted)
                 {
-                    this.preserved.AddRange(entry.LeadingComments);
+                    this.preserved.AddRange(entry.LeadingNodes);
                     this.preserved.Add(entry.Element);
                 }
 
                 // Comments without a following resource entry are file footers.
-                this.preserved.AddRange(this.pendingComments);
+                this.preserved.AddRange(this.pendingLeadingNodes);
                 document.Root.ReplaceNodes(this.preserved);
                 return true;
             }
@@ -239,12 +244,13 @@ namespace PNFmt
 
                 if (node is XElement element && IsResourceEntry(element))
                 {
-                    this.entries.Add(new ResourceEntry(element, this.pendingComments.ToArray()));
-                    this.pendingComments.Clear();
+                    this.entries.Add(new ResourceEntry(element, this.pendingLeadingNodes.ToArray()));
+                    this.pendingLeadingNodes.Clear();
                 }
-                else if (node is XComment comment && !IsDocumentationComment(comment))
+                else if (node is XComment comment && !IsDocumentationComment(comment)
+                    || node.NodeType == XmlNodeType.Text && IsLayoutWhitespace(((XText)node).Value))
                 {
-                    this.pendingComments.Add(node);
+                    this.pendingLeadingNodes.Add(node);
                 }
                 else
                 {
@@ -276,8 +282,8 @@ namespace PNFmt
 
             private void PreserveNode(XNode node)
             {
-                this.preserved.AddRange(this.pendingComments);
-                this.pendingComments.Clear();
+                this.preserved.AddRange(this.pendingLeadingNodes);
+                this.pendingLeadingNodes.Clear();
                 this.preserved.Add(node);
             }
 
@@ -302,14 +308,14 @@ namespace PNFmt
 
         private sealed class ResourceEntry
         {
-            public ResourceEntry(XElement element, IReadOnlyList<XNode> leadingComments)
+            public ResourceEntry(XElement element, IReadOnlyList<XNode> leadingNodes)
             {
                 this.Element = element;
-                this.LeadingComments = leadingComments;
+                this.LeadingNodes = leadingNodes;
             }
 
             public XElement Element { get; }
-            public IReadOnlyList<XNode> LeadingComments { get; }
+            public IReadOnlyList<XNode> LeadingNodes { get; }
         }
     }
 }

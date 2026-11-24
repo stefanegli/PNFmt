@@ -48,6 +48,13 @@ namespace PNFmt
 
         public override void WriteString(string text)
         {
+            if (this.depth == 1 && this.layoutNewLine is null && this.writer.WriteState != WriteState.Attribute
+                && this.writer.XmlSpace != XmlSpace.Preserve && text is not null && ResxDocumentFormatter.IsLayoutWhitespace(text))
+            {
+                this.WriteWhitespace(text);
+                return;
+            }
+
             if (this.inEntry && this.depth == 2 && this.writer.WriteState != WriteState.Attribute && string.IsNullOrWhiteSpace(text))
             {
                 // The entry's own indentation is layout, not its <value> or

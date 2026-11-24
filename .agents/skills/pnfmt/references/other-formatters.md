@@ -11,7 +11,7 @@ Both SDK-style and non-SDK documents with a `Project` root are supported, includ
 - `pnfmt_csproj_sort_item_types` replaces the built-in sortable type list. Names are separated with commas or semicolons; `*` allows any homogeneous item type. An omitted setting retains defaults; an explicit list replaces rather than extends them.
 - `indent_style`, `indent_size`, `tab_width`, and `end_of_line` control XML layout. `pnfmt_format = false` still permits sorting and linting.
 
-Imports, targets, tasks, and groups nested in targets or `Choose` retain order. Forward references, conditions, property functions, nested expansions, item/metadata references, and ambiguous `Include` expressions can block sorting. Custom tasks can observe item order even without visible dependencies; enabled sorting can change that order. `--lint` reports project-structure diagnostics without writing; `CSPROJ005` for implicit default items applies only to .NET SDK projects.
+Top-level group spacing preserves tag-like text inside property values and comments. Imports, targets, tasks, and groups nested in targets or `Choose` retain order. Forward references, conditions, property functions, nested expansions, item/metadata references, and ambiguous `Include` expressions can block sorting. Custom tasks can observe item order even without visible dependencies; enabled sorting can change that order. `--lint` reports project-structure diagnostics without writing; `CSPROJ005` for implicit default items applies only to .NET SDK projects. It considers later assignments and conditional overrides of default-item settings.
 
 To enable layout without sorting for imported or non-SDK MSBuild files:
 
@@ -45,6 +45,8 @@ The XML declaration can wrap with one continuation indent; ordinary processing-i
 MSBuild serialization and enabled sorting run first; quote style `preserve` keeps the serializer's quotes, which can differ from the input; `do_not_touch` does not preserve source layout already normalized by that serializer. Explicit charset declaration changes happen before wrapping so the first result is stable. Projects with DTDs skip wrapping while retaining existing project formatting behavior.
 
 ## Resources (`resx`)
+
+Entry comments stay with their resources during sorting. With layout disabled, the whitespace around those comments moves with them and footer comments stay at the end.
 
 | Setting | Behavior |
 | --- | --- |

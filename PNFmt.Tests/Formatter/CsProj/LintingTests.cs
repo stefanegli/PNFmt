@@ -15,6 +15,22 @@ namespace PNFmt.Tests.Formatter.CsProj
     public class LintingTests
     {
         [Theory]
+        [InlineData("false", "true", "", "", true)]
+        [InlineData("true", "false", "", "", false)]
+        [InlineData("true", "false", "Condition=\"'$(Configuration)' == 'Debug'\"", "", true)]
+        [InlineData("true", "false", "", "Condition=\"'$(Configuration)' == 'Debug'\"", true)]
+        [InlineData("false", "false", "", "Condition=\"'$(Configuration)' == 'Debug'\"", false)]
+        public void Default_item_lint_accounts_for_later_and_conditional_assignments(
+            string first, string last, string groupCondition, string propertyCondition, bool expectWarning)
+        {
+            var project = "<Project Sdk='Microsoft.NET.Sdk'><PropertyGroup><EnableDefaultCompileItems>" + first
+                + "</EnableDefaultCompileItems></PropertyGroup><PropertyGroup " + groupCondition
+                + "><EnableDefaultCompileItems " + propertyCondition + ">" + last + "</EnableDefaultCompileItems>"
+                + "</PropertyGroup><ItemGroup><Compile Include='Program.cs'/></ItemGroup></Project>";
+            Assert.Equal(expectWarning, Analyze(project).Any(diagnostic => diagnostic.Code == "CSPROJ005"));
+        }
+
+        [Theory]
         [InlineData("Compile", "Missing*.cs", "Existing.cs", false)]
         [InlineData("Compile", "Existing*.cs", "Existing.cs", true)]
         [InlineData("Compile", "*.cs", "nested/Existing.cs", false)]

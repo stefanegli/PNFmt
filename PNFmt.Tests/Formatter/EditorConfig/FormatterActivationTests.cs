@@ -153,6 +153,34 @@ namespace PNFmt.Tests.Formatter.EditorConfig
             }
         }
 
+        [Fact]
+        public void Unsetting_the_current_key_reveals_a_remaining_legacy_alias()
+        {
+            using var directory = new TestDirectory();
+            directory.Write(".editorconfig", "root = true\n[*.resx]\nresx_formatter_sort_entries = true\npnfmt_sort_entries = false\n");
+            directory.Write("nested/.editorconfig", "[*.resx]\npnfmt_sort_entries = unset\n");
+            var path = directory.Write("nested/R.resx", string.Empty);
+            var settings = new ResxEditorConfigSettings(new RecordingLog(), path);
+            Assert.True(settings.SortEntries);
+        }
+
+        [Theory]
+        [InlineData("pnfmt_sort_entries")]
+        [InlineData("resx_formatter_sort_entries")]
+        public void Unsetting_the_only_resource_activation_setting_skips_the_file(string key)
+        {
+            using var directory = new TestDirectory();
+            directory.Write(".editorconfig", $"root = true\n[*.resx]\n{key} = true\n");
+            directory.Write("nested/.editorconfig", $"[*.resx]\n{key} = unset\n");
+            var path = directory.Write("nested/R.resx", "<root><resheader name='resmimetype'><value>text/microsoft-resx</value></resheader></root>");
+            var original = File.ReadAllBytes(path);
+            var log = new RecordingLog();
+            var result = new ResxFormatter().Format(new FileFormatRequest(path, true, false, log));
+            Assert.Equal(FileFormatStatus.Skipped, result.Status);
+            Assert.Equal(original, File.ReadAllBytes(path));
+            Assert.DoesNotContain(log.Messages, message => message.Contains("PNFMT004") || message.Contains("PNFMT001"));
+        }
+
         private sealed class RecordingLog : IFormatterLog
         {
             public List<string> Messages { get; } = new List<string>();

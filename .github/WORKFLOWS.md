@@ -28,8 +28,7 @@ accept PR artifacts for releases, fall back to rebuilding in Publish, grant Buil
 write/OIDC permissions, or remove required platform checks without migrating the
 repository rules and release-artifact handoff together.
 
-Shared checks and release selection belong in `build/`. Forge-only tagging code
-belongs in `.forge/scripts/`. The current Windows validation overlap is deliberate:
-Forge supplies controlled-machine timing enforcement, while GitHub's required
-platform jobs validate the exact package used by its publisher. Forge's validation
-package cannot silently replace that artifact. See [releases](../docs/releases.md).
+Shared checks and release selection belong in `build/`. Local validation supplies
+controlled-machine timing enforcement, while the required platform jobs validate
+the exact package used by the publisher. A separately produced package cannot
+replace that artifact. See [releases](../docs/releases.md).

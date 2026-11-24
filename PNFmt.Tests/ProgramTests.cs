@@ -294,6 +294,22 @@ namespace PNFmt.Tests
             Assert.Equal(new[] { path }, Directory.GetFiles(directory.Path));
         }
 
+        [Theory]
+        [InlineData("# <pnfmt-defaults>\n", "markers")]
+        [InlineData("[*.{csproj,resx}]\ncsproj_formatter_sort_entries=true\nresx_formatter_sort_entries=false\n", "conflicting values")]
+        public void Default_configuration_reports_invalid_input_without_writing(string contents, string reason)
+        {
+            using var directory = new TemporaryDirectory();
+            var path = Path.Combine(directory.Path, ".editorconfig");
+            File.WriteAllText(path, contents);
+            var original = File.ReadAllBytes(path);
+            var result = Run("--write-default-config", "--migrate-legacy-config=true", "--remove-legacy-config=true", path);
+            Assert.Equal(2, result.ExitCode);
+            Assert.Contains(reason, result.Error);
+            Assert.Equal(original, File.ReadAllBytes(path));
+            Assert.Equal(new[] { path }, Directory.GetFiles(directory.Path));
+        }
+
         [Fact]
         public void Default_editorconfig_creation_does_not_overwrite_a_concurrent_file()
         {

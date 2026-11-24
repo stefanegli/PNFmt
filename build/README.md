@@ -1,9 +1,8 @@
 # Shared build and validation code
 
-This folder contains repository checks and package validation used by PNForge,
-GitHub Actions, and local maintenance. Platform-specific entry points belong in
-`.forge/scripts/` or `.github/workflows/`; developer formatting wrappers remain in
-`scripts/`.
+This folder contains repository checks and package validation used by GitHub
+Actions and local maintenance. GitHub orchestration belongs in
+`.github/workflows/`; developer formatting wrappers remain in `scripts/`.
 
 Run the complete local gate with:
 
@@ -15,7 +14,7 @@ The default `-Step All` restores once, checks formatting, builds Release with th
 requested version, tests the gates, checks benchmark correctness, runs tests with
 coverage, compares performance, packs without rebuilding, and validates the
 installed package. There are no publication credentials, publishing commands, or
-skip switches. `-Step` selects one operation for the explicit Forge pipeline;
+skip switches. `-Step` selects one operation for pipeline orchestration;
 running an individual step does not approve a release. Local timing defaults to
 `Enforce`; hosted jobs use `ReportOnly` explicitly.
 
@@ -27,7 +26,12 @@ running an individual step does not approve a release. Local timing defaults to
 - `Test-ToolPackage.ps1` installs an existing package in isolation and checks its
   preview, formatting, and idempotence behavior.
 - `select-github-release-build.cjs` selects the exact successful default-branch
-  GitHub Build and retained package for release; both platforms use that policy.
+  GitHub Build and retained package for release.
 
-See [Forge builds](../docs/forge-build.md) and [release policy](../docs/releases.md)
+The gate-test step discovers shared `build/*.test.cjs` checks and hidden platform
+adapter `*/scripts/*.test.cjs` checks through Git, including new untracked files.
+An exported checkout runs its included adapters. Viewer checks, which require
+separately generated HTML fixtures, retain their own workflow.
+
+See [release policy](../docs/releases.md)
 for orchestration, artifact ownership, credentials, and publication requirements.

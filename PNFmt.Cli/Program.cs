@@ -265,6 +265,7 @@ namespace PNFmt.Cli
                 return 0;
             }
             catch (Exception ex) when (ex is ArgumentException
+                || ex is InvalidDataException
                 || ex is GitRepositoryContextException
                 || ex is IOException
                 || ex is UnauthorizedAccessException)

@@ -32,7 +32,7 @@ Enable processing with `pnfmt_enabled = true` and select `pnfmt_formatter = resx
 
 Sorting applies to resource data and metadata entries while retaining comments and other meaningful XML content. Schema and documentation removal are independent options; they do not need entry sorting to be enabled.
 
-XML comments immediately preceding a resource entry travel with that entry when sorting. Comments preceding headers or schema stay with that content, and trailing comments remain after the last resource. The standard generated documentation comment is handled by its own setting.
+XML comments immediately preceding a resource entry travel with that entry when sorting, including their intervening indentation when layout is disabled. Comments preceding headers or schema stay with that content, and trailing comments remain after the last resource. The standard generated documentation comment is handled by its own setting.
 
 Layout settings apply when `pnfmt_format` is on, including when entries are already sorted. An explicit `charset` can also request an encoding change independently of layout. With both activation controls missing, the legacy behavior remains: files without layout or charset settings are only rewritten for sorting or schema/documentation changes. Legacy configurations can insert missing schema or documentation when removal is off; explicit configurations require the insertion switches. Layout defaults are two-space indentation, the platform line ending, and no final newline. An explicit `indent_size` takes precedence over `tab_width`; tab indentation uses one tab per level.
 

@@ -123,16 +123,36 @@ namespace PNFmt
                 lines.Add("root = true");
             }
 
+            var fallbackSections = new List<string>();
             foreach (var section in Sections)
             {
-                MergeSection(lines, section);
+                MergeSection(lines, section, fallbackSections);
+            }
+
+            if (fallbackSections.Count > 0)
+            {
+                var index = lines.FindIndex(IniSyntax.IsSectionHeader);
+                if (index < 0)
+                {
+                    index = lines.Count;
+                }
+                else
+                {
+                    fallbackSections.Add(string.Empty);
+                }
+
+                if (index > 0 && !string.IsNullOrWhiteSpace(lines[index - 1]))
+                {
+                    fallbackSections.Insert(0, string.Empty);
+                }
+                lines.InsertRange(index, fallbackSections);
             }
 
             RemoveTrailingBlankLines(lines);
             return string.Join(newLine, lines) + newLine;
         }
 
-        private static void AppendSection(List<string> lines, DefaultSection section)
+        private static void AppendSection(List<string> lines, string header, IEnumerable<DefaultSetting> settings)
         {
             RemoveTrailingBlankLines(lines);
             if (lines.Count > 0)
@@ -140,8 +160,8 @@ namespace PNFmt
                 lines.Add(string.Empty);
             }
 
-            lines.Add(section.Header);
-            lines.AddRange(section.Settings.Select(setting => setting.Formatted));
+            lines.Add(header);
+            lines.AddRange(settings.Select(setting => setting.Formatted));
         }
 
         private static IReadOnlyList<int> FindMarkerIndexes(
@@ -229,21 +249,31 @@ namespace PNFmt
             return names;
         }
 
-        private static void MergeSection(List<string> lines, DefaultSection section)
+        private static void MergeSection(List<string> lines, DefaultSection section, List<string> fallbackSections)
         {
             var sectionIndexes = FindSectionIndexes(lines, section.Header);
             if (sectionIndexes.Count == 0)
             {
-                AppendSection(lines, section);
+                AppendSection(fallbackSections, section.Header, section.Settings);
                 return;
             }
 
             var existingNames = GetPropertyNames(lines, sectionIndexes);
             var targetSectionIndex = sectionIndexes[0];
+            var earlierKeys = GetPropertyNames(lines, Enumerable.Range(0, targetSectionIndex)
+                .Where(index => IniSyntax.IsSectionHeader(lines[index])
+                    && !Sections.Any(other => other.Header == lines[index].Trim())).ToArray());
+            var fallback = new List<DefaultSetting>();
             foreach (var setting in section.Settings)
             {
                 if (existingNames.Contains(setting.Key))
                 {
+                    continue;
+                }
+
+                if (earlierKeys.Contains(setting.Key))
+                {
+                    fallback.Add(setting);
                     continue;
                 }
 
@@ -253,6 +283,11 @@ namespace PNFmt
                     setting.Key);
                 lines.Insert(insertionIndex, setting.Formatted);
                 existingNames.Add(setting.Key);
+            }
+
+            if (fallback.Count > 0)
+            {
+                AppendSection(fallbackSections, section.Header, fallback);
             }
         }
 

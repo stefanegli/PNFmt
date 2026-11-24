@@ -1,11 +1,10 @@
 # Releasing PNFmt
 
-Releases use a version tag on an already validated `master` commit. Do not create
+Releases use a version tag on an already validated GitHub default-branch commit. Do not create
 a release branch or push another commit just to trigger publication.
 
-The [PNForge build](forge-build.md) provides complete Windows validation on VELA
-with enforced timing checks. Its validation package is separate from the GitHub
-`release-package` required by the tag workflow below.
+Complete local validation enforces timing checks. Its validation package is
+separate from the GitHub `release-package` required by the tag workflow below.
 
 ## Prepare through normal development
 
@@ -30,13 +29,13 @@ supply a release package. PR checks validate proposed changes but cannot supply
 the published artifact. This matters because merging can change the commit or
 its contents.
 
-## Validate on VELA and create the tag on demand
+## Validate locally and create the tag
 
-1. Push the prepared `master` commit to both Forge and GitHub through the normal
+1. Integrate the prepared commit into GitHub's default branch through the normal
    contribution flow. Keep the version unused; the pipeline does not bump it or
    move an existing tag.
-2. Wait for the exact commit's Forge Build on VELA to pass. It runs complete
-   validation with timing enforcement and no skips, equivalent to:
+2. Run complete validation on that exact public commit in a controlled local
+   checkout, with timing enforcement and no skips:
 
    ```powershell
    powershell -NoProfile -ExecutionPolicy Bypass -File .\build\Invoke-Validation.ps1 -Version 0.0.0-validation.1
@@ -44,31 +43,17 @@ its contents.
 
 3. Wait for that commit's default-branch Build to pass on GitHub. Check that its
    `release-package` artifact is available and the project version is the intended
-   new release version. Hosted timing warnings do not replace VELA validation.
-4. Open that successful Forge run, choose **Continue this build** through
-   **Release**, then approve its **Tag** job using **Create release tag**. Forge
-   retains the exact Build artifact and source revision; this does not rerun
-   validation. A new manual **Run all stages** also validates and tags, but repeats
-   the full Build and should not replace continuing an eligible successful run.
-
-Provision GitHub tag-write authentication in the executing agent's Git credential
-helper before using this stage. See [agent credentials and tagging checks](forge-build.md#release-tags-on-demand).
-No NuGet API key is needed on the Forge agent. Automatic builds and PR checks stop
-before tagging. Manual approval must be a deliberate release request: pushing the
-tag triggers NuGet publication.
-
-The pipeline retains its gated schema 3 release stage while schema 4 environment
-Git authorization cannot express the external GitHub tag write. The
-[migration audit](forge-build.md#builddeployment-migration) records the blocker
-and activation requirements. Do not remove this release path, put tagging in
-Build, or bypass the environment restriction with persistent credentials as part
-of a schema upgrade.
+   new release version. Hosted timing warnings do not replace local validation.
+4. A maintainer with GitHub tag-write access creates an annotated `v<version>` tag
+   on that exact successful default-branch commit and pushes only that tag. This
+   is a deliberate release request: pushing the tag triggers NuGet publication.
+   No NuGet API key is needed locally.
 
 Tags must use `v<major>.<minor>.<patch>[-prerelease]`, match the package version,
-and point to the exact validated commit. The on-demand action additionally requires
-that commit to be GitHub's current `master` head and its checkout to have no tracked
-changes. Never move an existing release tag. An existing matching annotated tag is
-reported without pushing again; a conflicting or lightweight tag is rejected.
+and point to the exact validated commit. Verify that commit is GitHub's current
+default-branch head and the checkout has no tracked changes. Never move an
+existing release tag. If a tag already exists, inspect its annotation and target
+before proceeding; a conflicting or lightweight tag must not be replaced.
 
 The tag triggers **Publish .NET global tool**, which finds the successful Build,
 downloads its exact artifact, and verifies the package ID, version, and source
@@ -97,7 +82,7 @@ publication. There is no fallback that rebuilds or bypasses validation in Publis
 
 `build/Invoke-Validation.ps1` defaults to the complete nonpublishing gate. It has
 no skip or direct-publish switches and never reads a NuGet credential. Its `-Step`
-selector supports the named Forge operations; invoking a subset alone does not
+selector supports named validation operations; invoking a subset alone does not
 approve a release. `build/Test-ToolPackage.ps1` only tests an existing package in
 isolation. NuGet publication belongs exclusively to the GitHub tag workflow. See
 the [workflow boundary](../.github/WORKFLOWS.md) and

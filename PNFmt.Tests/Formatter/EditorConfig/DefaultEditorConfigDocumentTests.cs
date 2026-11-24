@@ -58,7 +58,7 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             var updated = DefaultEditorConfigDocument.Update(Existing);
 
-            Assert.StartsWith(Existing, updated);
+            Assert.EndsWith(Existing, updated);
             Assert.Contains(
                 "[*.editorconfig]\n"
                 + "pnfmt_enabled = true\n"
@@ -103,11 +103,34 @@ namespace PNFmt.Tests.Formatter.EditorConfig
 
             var updated = DefaultEditorConfigDocument.Update(Existing);
 
-            Assert.StartsWith("root = false\n\n[*]\ncharset = utf-8", updated);
+            Assert.StartsWith("root = false\n\n", updated);
+            Assert.Contains("[*]\ncharset = utf-8", updated);
             Assert.DoesNotContain("old = value", updated);
             Assert.DoesNotContain(DefaultEditorConfigDocument.StartMarker, updated);
             Assert.DoesNotContain(DefaultEditorConfigDocument.EndMarker, updated);
             Assert.Contains("[*.md]\ntrim_trailing_whitespace = true", updated);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("[*.cs]\npnfmt_format = true\n")]
+        public void Generated_defaults_preserve_existing_exclusions(string existingSection)
+        {
+            using var directory = new TestDirectory();
+            var excluded = directory.Write("Generated/Example.cs", "class    Example { }");
+            var included = directory.Write("Example.cs", "class    Example { }");
+            var existing = "root = true\n[Generated/**]\npnfmt_enabled = false\n" + existingSection;
+            directory.Write(".editorconfig", existing);
+            var formatter = new CSharpFormatter();
+            FileFormatStatus Preview(string path) =>
+                formatter.Format(new FileFormatRequest(path, false, false, NullFormatterLog.Instance)).Status;
+
+            Assert.Equal(FileFormatStatus.Skipped, Preview(excluded));
+            var updated = DefaultEditorConfigDocument.Update(existing);
+            directory.Write(".editorconfig", updated);
+            Assert.Equal(FileFormatStatus.Skipped, Preview(excluded));
+            Assert.Equal(FileFormatStatus.Updated, Preview(included));
+            Assert.Equal(updated, DefaultEditorConfigDocument.Update(updated));
         }
 
         [Theory]

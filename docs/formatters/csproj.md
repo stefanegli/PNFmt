@@ -20,7 +20,7 @@ tab_width = 4
 | Setting | Description |
 | --- | --- |
 | `pnfmt_sort_entries` | Sort eligible properties and items when set to `true`. |
-| `pnfmt_csproj_empty_lines_between_groups` | Set the non-negative number of empty lines between top-level groups. |
+| `pnfmt_csproj_empty_lines_between_groups` | Set the non-negative number of empty lines between adjacent top-level elements. Tag-like lines inside CDATA and comments retain their spacing. |
 | `pnfmt_csproj_sort_item_types` | Replace the built-in list of sortable item types. Separate names with commas or semicolons, or use `*` for any homogeneous item type. |
 | `indent_style`, `indent_size`, `tab_width`, `end_of_line` | Control standard XML layout through EditorConfig. |
 | `insert_final_newline` | End the file with one configured newline when `true` (the default), or omit the final newline when `false`. |
@@ -57,6 +57,8 @@ Item groups containing item or metadata references in any item value or attribut
 Groups with property expressions, globs, lists, or escaped characters in `Include` retain their item order because distinct expressions can resolve to the same item. Metadata attributes containing references also retain their order.
 
 Sorting applies only to immediate `PropertyGroup` and `ItemGroup` children of `Project`. Imports, targets, task execution order, and groups nested inside targets or `Choose` blocks retain their order. The implicit-default-item diagnostic (`CSPROJ005`) applies only to projects that declare the .NET SDK, not to ordinary non-SDK projects.
+
+For `CSPROJ005`, the linter reads top-level default-item property assignments in source order. A conditional assignment alone cannot establish that default items are disabled in every configuration.
 
 Run `pnfmt --lint <paths>` to report project-structure diagnostics and formatting changes without writing files. The command returns exit code `1` when it finds either.
 
